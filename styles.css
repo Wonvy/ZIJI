@@ -491,6 +491,10 @@ kbd,
 .font-info-grid dd.copyable { position: relative; padding-right: 18px; cursor: copy; border-radius: 2px; }
 .font-info-grid dd.copyable::after { content: "⧉"; position: absolute; right: 1px; color: var(--muted); opacity: .45; }
 .font-info-grid dd.copyable:hover { color: var(--accent); }
+.font-info-grid .span-2 { grid-column: 1 / -1; }
+.font-info-grid dd.wrap { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.45; }
+.info-section-label { grid-column: 1 / -1; padding: 12px 8px 5px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); background: color-mix(in srgb, var(--paper) 72%, var(--panel)); font-size: 10px; letter-spacing: .12em; }
+.info-section-label:first-child { margin-top: 0; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgba(20,19,16,.46); backdrop-filter: blur(4px); }
 .modal-backdrop[hidden] { display: none; }
 .category-modal { width: min(780px, 94vw); max-height: min(720px, 88vh); overflow: auto; padding: 22px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); box-shadow: 0 24px 80px rgba(0,0,0,.3); }

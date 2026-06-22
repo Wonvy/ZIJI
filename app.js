@@ -69,8 +69,17 @@ const ui = {
   infoFamily: $("#infoFamily"), infoPostscript: $("#infoPostscript"), infoFormat: $("#infoFormat"), infoSize: $("#infoSize"),
   infoGlyphs: $("#infoGlyphs"), infoUpm: $("#infoUpm"), infoWeight: $("#infoWeight"), infoWidth: $("#infoWidth"),
   infoLanguage: $("#infoLanguage"), infoAspect: $("#infoAspect"), infoTables: $("#infoTables"),
+  infoVersion: $("#infoVersion"), infoCopyright: $("#infoCopyright"), infoDesigner: $("#infoDesigner"),
+  infoManufacturer: $("#infoManufacturer"), infoLicense: $("#infoLicense"), infoSubfamily: $("#infoSubfamily"),
+  infoAscender: $("#infoAscender"), infoDescender: $("#infoDescender"), infoLineGap: $("#infoLineGap"),
+  infoCapHeight: $("#infoCapHeight"), infoXHeight: $("#infoXHeight"), infoItalicAngle: $("#infoItalicAngle"),
+  infoFixedPitch: $("#infoFixedPitch"), infoCreated: $("#infoCreated"), infoModified: $("#infoModified"),
+  infoBBox: $("#infoBBox"), infoEmbedding: $("#infoEmbedding"), infoFeatures: $("#infoFeatures"),
   categoryButton: $("#categoryAssignmentButton"), favoriteSidebar: $("#favoriteSidebar"), favoriteCategoryList: $("#favoriteCategoryList")
 };
+const INFO_BASIC_FIELDS = [ui.infoFormat, ui.infoSize, ui.infoGlyphs, ui.infoUpm, ui.infoWeight, ui.infoWidth, ui.infoLanguage, ui.infoAspect, ui.infoTables];
+const INFO_EXTENDED_FIELDS = [ui.infoVersion, ui.infoCopyright, ui.infoDesigner, ui.infoManufacturer, ui.infoLicense, ui.infoSubfamily, ui.infoAscender, ui.infoDescender, ui.infoLineGap, ui.infoCapHeight, ui.infoXHeight, ui.infoItalicAngle, ui.infoFixedPitch, ui.infoCreated, ui.infoModified, ui.infoBBox, ui.infoEmbedding, ui.infoFeatures];
+const INFO_COPY_TARGETS = [[ui.infoFamily, "字体名称"], [ui.infoPostscript, "PostScript 名称"], [ui.infoCopyright, "版权信息"], [ui.infoDesigner, "设计师"], [ui.infoLicense, "许可证"]];
 ui.contextMenu = $("#cardContextMenu");
 ui.searchSuggestions = $("#searchSuggestions");
 ui.commonSearchTags = $("#commonSearchTags");
@@ -645,7 +654,13 @@ function previewFont(font, temporary = true) {
   if (font.details) renderFontDetails(font, font.details);
   else renderFontDetails(font);
   previewFont.timer = setTimeout(async () => {
-    const [axesResult, detailsResult] = await Promise.allSettled([getVariationAxes(font), getFontDetails(font), getFontAspect(font)]);
+    const tasks = [
+      getVariationAxes(font),
+      getFontDetails(font),
+      getFontAspect(font),
+      getExtendedFontDetails(font)
+    ];
+    const [axesResult, detailsResult, aspectResult, extendedResult] = await Promise.allSettled(tasks);
     if (state.selectionVersion !== selectionVersion) return;
     const axes = axesResult.status === "fulfilled" ? axesResult.value : [];
     font.variable = axes.length > 0;
@@ -669,8 +684,7 @@ function clearPreview() {
   ui.axes.replaceChildren();
   ui.favorite.textContent = "☆";
   updateFontStatus(null);
-  [ui.infoFamily, ui.infoPostscript, ui.infoFormat, ui.infoSize, ui.infoGlyphs, ui.infoUpm, ui.infoWeight, ui.infoWidth, ui.infoLanguage, ui.infoAspect, ui.infoTables]
-    .forEach(item => item.textContent = "—");
+  [ui.infoFamily, ui.infoPostscript, ...INFO_BASIC_FIELDS, ...INFO_EXTENDED_FIELDS].forEach(item => item.textContent = "—");
 }
 
 function restorePinnedPreview() {
@@ -778,6 +792,144 @@ function getFontBlob(font) {
   return font.blobPromise;
 }
 
+const FONT_FORMATS = {
+  0x00010000: "TrueType outlines",
+  0x4F54544F: "OpenType CFF",
+  0x74727565: "TrueType",
+  0x74746366: "TrueType Collection",
+  0x774F4646: "WOFF",
+  0x774F4632: "WOFF2"
+};
+const UNSUPPORTED_FONT_SIGNATURES = new Set([0x774F4646, 0x774F4632, 0x74746366]);
+const NAME_FIELD_IDS = { 0: "copyright", 2: "subfamily", 5: "version", 8: "manufacturer", 9: "designer", 13: "license" };
+const FEATURE_TABLE_TAGS = new Set(["GSUB", "GPOS", "GDEF", "kern", "math", "morx", "mort", "feat", "aalt", "calt", "liga"]);
+
+async function getFontContext(font) {
+  if (!font.contextPromise) {
+    font.contextPromise = (async () => {
+      const blob = await getFontBlob(font);
+      const header = new DataView(await blob.slice(0, 12).arrayBuffer());
+      const signature = header.byteLength >= 12 ? header.getUint32(0) : 0;
+      const unsupported = UNSUPPORTED_FONT_SIGNATURES.has(signature);
+      const tableMap = new Map();
+      if (!unsupported && header.byteLength >= 12) {
+        const numTables = header.getUint16(4);
+        const directory = new DataView(await blob.slice(12, 12 + numTables * 16).arrayBuffer());
+        for (let i = 0; i < numTables; i++) {
+          const p = i * 16;
+          const tag = String.fromCharCode(directory.getUint8(p), directory.getUint8(p + 1), directory.getUint8(p + 2), directory.getUint8(p + 3));
+          tableMap.set(tag, { offset: directory.getUint32(p + 8), length: directory.getUint32(p + 12) });
+        }
+      }
+      const readTable = async tag => {
+        const table = tableMap.get(tag);
+        return table ? new DataView(await blob.slice(table.offset, table.offset + table.length).arrayBuffer()) : null;
+      };
+      return {
+        blob,
+        signature,
+        unsupported,
+        format: FONT_FORMATS[signature] || "OpenType",
+        tables: [...tableMap.keys()],
+        readTable
+      };
+    })();
+  }
+  return font.contextPromise;
+}
+
+function decodeNameString(view, offset, length, platform) {
+  if (length <= 0 || offset + length > view.byteLength) return "";
+  if (platform === 3) {
+    let value = "";
+    for (let index = 0; index + 1 < length; index += 2) value += String.fromCharCode(view.getUint16(offset + index));
+    return value.replace(/\0/g, "").trim();
+  }
+  let value = "";
+  for (let index = 0; index < length; index++) value += String.fromCharCode(view.getUint8(offset + index));
+  return value.replace(/\0/g, "").trim();
+}
+
+function scoreNameRecord(platform, language, nameId) {
+  return (platform === 3 ? 100 : 60) +
+    (language === 0x0804 ? 30 : language === 0x0409 ? 18 : [0x0404, 0x0C04, 0x1004, 0x1404].includes(language) ? 22 : 0) +
+    (nameId === 16 ? 8 : 0);
+}
+
+function parseNameFields(nameView) {
+  if (!nameView || nameView.byteLength < 6) return {};
+  const recordCount = nameView.getUint16(2);
+  const stringsOffset = nameView.getUint16(4);
+  const best = {};
+  for (let i = 0; i < recordCount; i++) {
+    const p = 6 + i * 12;
+    if (p + 12 > nameView.byteLength) break;
+    const platform = nameView.getUint16(p);
+    const language = nameView.getUint16(p + 4);
+    const nameId = nameView.getUint16(p + 6);
+    const field = NAME_FIELD_IDS[nameId];
+    if (!field) continue;
+    const length = nameView.getUint16(p + 8);
+    const offset = stringsOffset + nameView.getUint16(p + 10);
+    const value = decodeNameString(nameView, offset, length, platform);
+    if (!value) continue;
+    const score = scoreNameRecord(platform, language, nameId);
+    if (!best[field] || score > best[field].score) best[field] = { value, score };
+  }
+  return Object.fromEntries(Object.entries(best).map(([key, item]) => [key, item.value]));
+}
+
+function pickChineseDisplayName(nameView) {
+  if (!nameView || nameView.byteLength < 6) return null;
+  const recordCount = nameView.getUint16(2);
+  const stringsOffset = nameView.getUint16(4);
+  const chineseLanguages = new Set([0x0804, 0x0404, 0x0C04, 0x1004, 0x1404]);
+  let best = null, bestScore = -1;
+  for (let i = 0; i < recordCount; i++) {
+    const p = 6 + i * 12;
+    if (p + 12 > nameView.byteLength) break;
+    const platform = nameView.getUint16(p);
+    const language = nameView.getUint16(p + 4);
+    const nameId = nameView.getUint16(p + 6);
+    if (![0, 3].includes(platform) || ![1, 4, 16].includes(nameId)) continue;
+    const length = nameView.getUint16(p + 8);
+    const offset = stringsOffset + nameView.getUint16(p + 10);
+    const value = decodeNameString(nameView, offset, length, platform);
+    if (!/\p{Script=Han}/u.test(value)) continue;
+    const score = (nameId === 16 ? 300 : nameId === 1 ? 200 : 100) +
+      (language === 0x0804 ? 50 : chineseLanguages.has(language) ? 35 : 0) + (platform === 3 ? 10 : 0);
+    if (score > bestScore) { best = value; bestScore = score; }
+  }
+  return best;
+}
+
+function formatMacTimestamp(view, offset) {
+  if (!view || view.byteLength < offset + 4) return null;
+  const seconds = view.getUint32(offset);
+  if (!seconds) return null;
+  return new Date((seconds - 2082844800) * 1000);
+}
+
+function formatFontDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("zh-CN");
+}
+
+function formatFsType(value) {
+  if (!Number.isFinite(value) || value === 0) return "无限制";
+  const flags = [];
+  if (value & 0x0008) flags.push("可编辑嵌入");
+  else if (value & 0x0004) flags.push("可预览与打印");
+  else if (value & 0x0002) flags.push("Restricted License");
+  if (value & 0x0001) flags.push("可安装嵌入");
+  if (!flags.length) flags.push(`位标记 ${value}`);
+  return flags.join(" · ");
+}
+
+function formatPostFixed(value) {
+  return Number((value / 65536).toFixed(2));
+}
+
 function getLocalizedName(font) {
   if (!font.namePromise) {
     font.namePromise = readLocalizedName(font).then(name => {
@@ -794,41 +946,10 @@ function getLocalizedName(font) {
 }
 
 async function readLocalizedName(font) {
-  const blob = await getFontBlob(font);
-  const header = new DataView(await blob.slice(0, 12).arrayBuffer());
-  if (header.byteLength < 12) return null;
-  const signature = header.getUint32(0);
-  if ([0x774F4646, 0x774F4632, 0x74746366].includes(signature)) return null;
-  const count = header.getUint16(4);
-  const directory = new DataView(await blob.slice(12, 12 + count * 16).arrayBuffer());
-  let nameOffset = 0, nameLength = 0;
-  for (let i = 0; i < count; i++) {
-    const p = i * 16;
-    const tag = String.fromCharCode(directory.getUint8(p), directory.getUint8(p+1), directory.getUint8(p+2), directory.getUint8(p+3));
-    if (tag === "name") { nameOffset = directory.getUint32(p + 8); nameLength = directory.getUint32(p + 12); break; }
-  }
-  if (!nameOffset || !nameLength) return null;
-  const table = new DataView(await blob.slice(nameOffset, nameOffset + nameLength).arrayBuffer());
-  if (table.byteLength < 6) return null;
-  const recordCount = table.getUint16(2), stringsOffset = table.getUint16(4);
-  const chineseLanguages = new Set([0x0804, 0x0404, 0x0C04, 0x1004, 0x1404]);
-  let best = null, bestScore = -1;
-  for (let i = 0; i < recordCount; i++) {
-    const p = 6 + i * 12;
-    if (p + 12 > table.byteLength) break;
-    const platform = table.getUint16(p), language = table.getUint16(p + 4), nameId = table.getUint16(p + 6);
-    if (![0, 3].includes(platform) || ![1, 4, 16].includes(nameId)) continue;
-    const length = table.getUint16(p + 8), offset = stringsOffset + table.getUint16(p + 10);
-    if (offset + length > table.byteLength || length < 2) continue;
-    let value = "";
-    for (let j = 0; j + 1 < length; j += 2) value += String.fromCharCode(table.getUint16(offset + j));
-    value = value.replace(/\0/g, "").trim();
-    if (!/\p{Script=Han}/u.test(value)) continue;
-    const score = (nameId === 16 ? 300 : nameId === 1 ? 200 : 100) +
-      (language === 0x0804 ? 50 : chineseLanguages.has(language) ? 35 : 0) + (platform === 3 ? 10 : 0);
-    if (score > bestScore) { best = value; bestScore = score; }
-  }
-  return best;
+  const ctx = await getFontContext(font);
+  if (ctx.unsupported) return null;
+  const name = await ctx.readTable("name");
+  return pickChineseDisplayName(name);
 }
 
 function getFontDetails(font) {
@@ -837,44 +958,88 @@ function getFontDetails(font) {
 }
 
 async function readFontDetails(font) {
-  const blob = await getFontBlob(font);
-  const header = new DataView(await blob.slice(0, 12).arrayBuffer());
-  if (header.byteLength < 12) throw new Error("Invalid font header");
-  const signature = header.getUint32(0);
-  const formats = {
-    0x00010000: "TrueType outlines",
-    0x4F54544F: "OpenType CFF",
-    0x74727565: "TrueType",
-    0x74746366: "TrueType Collection",
-    0x774F4646: "WOFF",
-    0x774F4632: "WOFF2"
+  const ctx = await getFontContext(font);
+  const details = {
+    format: ctx.format,
+    size: ctx.blob.size,
+    glyphs: null,
+    upm: null,
+    weight: null,
+    width: null,
+    supportsChinese: false,
+    supportsLatin: false,
+    tables: ctx.tables
   };
-  const details = { format: formats[signature] || "OpenType", size: blob.size, glyphs: null, upm: null, weight: null, width: null, supportsChinese: false, supportsLatin: false, tables: [] };
-  if (signature === 0x774F4646 || signature === 0x774F4632 || signature === 0x74746366) return details;
-  const numTables = header.getUint16(4);
-  const directory = new DataView(await blob.slice(12, 12 + numTables * 16).arrayBuffer());
-  const tableMap = new Map();
-  for (let i = 0; i < numTables; i++) {
-    const p = i * 16;
-    const tag = String.fromCharCode(directory.getUint8(p), directory.getUint8(p+1), directory.getUint8(p+2), directory.getUint8(p+3));
-    const table = { offset: directory.getUint32(p + 8), length: directory.getUint32(p + 12) };
-    tableMap.set(tag, table);
-    details.tables.push(tag);
-  }
-  const readTable = async tag => {
-    const table = tableMap.get(tag);
-    return table ? new DataView(await blob.slice(table.offset, table.offset + table.length).arrayBuffer()) : null;
-  };
-  const [head, maxp, os2, cmap] = await Promise.all([readTable("head"), readTable("maxp"), readTable("OS/2"), readTable("cmap")]);
+  if (ctx.unsupported) return details;
+  const [head, maxp, os2, cmap] = await Promise.all([ctx.readTable("head"), ctx.readTable("maxp"), ctx.readTable("OS/2"), ctx.readTable("cmap")]);
   if (head?.byteLength >= 20) details.upm = head.getUint16(18);
   if (maxp?.byteLength >= 6) details.glyphs = maxp.getUint16(4);
-  if (os2?.byteLength >= 8) { details.weight = os2.getUint16(4); details.width = os2.getUint16(6); }
+  if (os2?.byteLength >= 8) {
+    details.weight = os2.getUint16(4);
+    details.width = os2.getUint16(6);
+  }
   if (cmap) {
     details.supportsLatin = cmapHasCodepoint(cmap, 0x41);
     details.supportsChinese = cmapHasCodepoint(cmap, 0x5B57) || cmapHasCodepoint(cmap, 0x4E2D);
   }
   await getLocalizedName(font);
   return details;
+}
+
+function getExtendedFontDetails(font) {
+  if (!font.extendedDetailsPromise) {
+    font.extendedDetailsPromise = readExtendedFontDetails(font).then(details => font.extendedDetails = details);
+  }
+  return font.extendedDetailsPromise;
+}
+
+async function readExtendedFontDetails(font) {
+  const ctx = await getFontContext(font);
+  if (ctx.unsupported) return null;
+  const [name, head, hhea, post, os2] = await Promise.all([
+    ctx.readTable("name"), ctx.readTable("head"), ctx.readTable("hhea"), ctx.readTable("post"), ctx.readTable("OS/2")
+  ]);
+  const names = parseNameFields(name);
+  const extended = {
+    version: names.version || null,
+    copyright: names.copyright || null,
+    designer: names.designer || null,
+    manufacturer: names.manufacturer || null,
+    license: names.license || null,
+    subfamily: names.subfamily || null,
+    ascender: null,
+    descender: null,
+    lineGap: null,
+    capHeight: null,
+    xHeight: null,
+    italicAngle: null,
+    fixedPitch: null,
+    created: null,
+    modified: null,
+    bbox: null,
+    embedding: null,
+    features: ctx.tables.filter(tag => FEATURE_TABLE_TAGS.has(tag))
+  };
+  if (hhea?.byteLength >= 10) {
+    extended.ascender = hhea.getInt16(4);
+    extended.descender = hhea.getInt16(6);
+    extended.lineGap = hhea.getInt16(8);
+  }
+  if (post?.byteLength >= 16) {
+    extended.italicAngle = formatPostFixed(post.getInt32(4));
+    extended.fixedPitch = post.getUint32(12) !== 0;
+  }
+  if (head?.byteLength >= 36) {
+    extended.created = formatFontDate(formatMacTimestamp(head, 8));
+    extended.modified = formatFontDate(formatMacTimestamp(head, 12));
+    extended.bbox = [head.getInt16(36), head.getInt16(38), head.getInt16(40), head.getInt16(42)].join(", ");
+  }
+  if (os2?.byteLength >= 10) extended.embedding = formatFsType(os2.getUint16(8));
+  if (os2?.byteLength >= 90) {
+    extended.xHeight = os2.getInt16(86) || null;
+    extended.capHeight = os2.getInt16(88) || null;
+  }
+  return extended;
 }
 
 function cmapHasCodepoint(cmap, codepoint) {
@@ -922,15 +1087,25 @@ function cmapHasCodepoint(cmap, codepoint) {
   return false;
 }
 
+function setInfoText(element, value, { title } = {}) {
+  const text = value ?? "—";
+  element.textContent = text;
+  element.title = title ?? (text === "—" ? "" : String(text));
+}
+
 function renderFontDetails(font, details = null) {
   ui.infoFamily.textContent = font.displayName || font.family || "—";
   ui.infoPostscript.textContent = font.postscriptName || "—";
+  const extended = font.extendedDetails;
+  const extendedPending = details !== false && state.previewed === font && !extended;
   if (details === null) {
-    [ui.infoFormat, ui.infoSize, ui.infoGlyphs, ui.infoUpm, ui.infoWeight, ui.infoWidth, ui.infoLanguage, ui.infoAspect, ui.infoTables].forEach(item => item.textContent = "读取中…");
+    INFO_BASIC_FIELDS.forEach(item => item.textContent = "读取中…");
+    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
     return;
   }
   if (details === false) {
-    [ui.infoFormat, ui.infoSize, ui.infoGlyphs, ui.infoUpm, ui.infoWeight, ui.infoWidth, ui.infoLanguage, ui.infoAspect, ui.infoTables].forEach(item => item.textContent = "不可用");
+    INFO_BASIC_FIELDS.forEach(item => item.textContent = "不可用");
+    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "不可用");
     return;
   }
   ui.infoFormat.textContent = details.format;
@@ -941,8 +1116,34 @@ function renderFontDetails(font, details = null) {
   ui.infoWidth.textContent = details.width || "—";
   ui.infoLanguage.textContent = [details.supportsChinese ? "中文" : "", details.supportsLatin ? "英文" : ""].filter(Boolean).join(" / ") || "其他";
   ui.infoAspect.textContent = Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(3)} : 1` : "—";
-  ui.infoTables.textContent = details.tables.length ? `${details.tables.length} · ${details.tables.slice(0, 5).join(" ")}` : "—";
+  ui.infoTables.textContent = details.tables.length ? `${details.tables.length} · ${details.tables.slice(0, 8).join(" ")}` : "—";
   ui.infoTables.title = details.tables.join(", ");
+  if (extendedPending) {
+    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
+    return;
+  }
+  if (!extended) {
+    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "—");
+    return;
+  }
+  setInfoText(ui.infoSubfamily, extended.subfamily);
+  setInfoText(ui.infoVersion, extended.version);
+  setInfoText(ui.infoCopyright, extended.copyright);
+  setInfoText(ui.infoDesigner, extended.designer);
+  setInfoText(ui.infoManufacturer, extended.manufacturer);
+  setInfoText(ui.infoLicense, extended.license);
+  setInfoText(ui.infoAscender, extended.ascender);
+  setInfoText(ui.infoDescender, extended.descender);
+  setInfoText(ui.infoLineGap, extended.lineGap);
+  setInfoText(ui.infoCapHeight, extended.capHeight);
+  setInfoText(ui.infoXHeight, extended.xHeight);
+  setInfoText(ui.infoItalicAngle, extended.italicAngle == null ? null : `${extended.italicAngle}°`);
+  setInfoText(ui.infoFixedPitch, extended.fixedPitch == null ? null : extended.fixedPitch ? "是" : "否");
+  setInfoText(ui.infoCreated, extended.created);
+  setInfoText(ui.infoModified, extended.modified);
+  setInfoText(ui.infoBBox, extended.bbox);
+  setInfoText(ui.infoEmbedding, extended.embedding);
+  setInfoText(ui.infoFeatures, extended.features?.length ? extended.features.join(" · ") : "无");
 }
 
 function formatFileSize(bytes) {
@@ -952,29 +1153,19 @@ function formatFileSize(bytes) {
 
 async function readVariationAxes(font) {
   if (font.axes) return font.axes;
-  const blob = await getFontBlob(font);
-  const head = new DataView(await blob.slice(0, 12).arrayBuffer());
-  if (head.byteLength < 12) return [];
-  const signature = head.getUint32(0);
-  if (signature === 0x774F4646 || signature === 0x774F4632) return [];
-  const numTables = head.getUint16(4);
-  const directory = new DataView(await blob.slice(12, 12 + numTables * 16).arrayBuffer());
-  let offset = 0, length = 0;
-  for (let i = 0; i < numTables; i++) {
-    const p = i * 16;
-    const tag = String.fromCharCode(directory.getUint8(p), directory.getUint8(p+1), directory.getUint8(p+2), directory.getUint8(p+3));
-    if (tag === "fvar") { offset = directory.getUint32(p + 8); length = directory.getUint32(p + 12); break; }
-  }
-  if (!offset || !length) return font.axes = [];
-  const table = new DataView(await blob.slice(offset, offset + length).arrayBuffer());
+  const ctx = await getFontContext(font);
+  if (ctx.unsupported) return font.axes = [];
+  const table = await ctx.readTable("fvar");
+  if (!table || table.byteLength < 12) return font.axes = [];
   const axesOffset = table.getUint16(4);
   const axisCount = table.getUint16(8);
   const axisSize = table.getUint16(10);
   const axes = [];
   for (let i = 0; i < axisCount; i++) {
     const p = axesOffset + i * axisSize;
-    const tag = String.fromCharCode(table.getUint8(p), table.getUint8(p+1), table.getUint8(p+2), table.getUint8(p+3));
-    axes.push({ tag, min: fixed(table.getInt32(p+4)), default: fixed(table.getInt32(p+8)), max: fixed(table.getInt32(p+12)) });
+    if (p + 16 > table.byteLength) break;
+    const tag = String.fromCharCode(table.getUint8(p), table.getUint8(p + 1), table.getUint8(p + 2), table.getUint8(p + 3));
+    axes.push({ tag, min: fixed(table.getInt32(p + 4)), default: fixed(table.getInt32(p + 8)), max: fixed(table.getInt32(p + 12)) });
   }
   return font.axes = axes;
 }
@@ -1464,7 +1655,7 @@ $("#favoritesFile").addEventListener("change", event => {
   if (file) importFavorites(file);
   event.target.value = "";
 });
-[[ui.infoFamily, "字体名称"], [ui.infoPostscript, " PostScript 名称"]].forEach(([element, label]) => {
+INFO_COPY_TARGETS.forEach(([element, label]) => {
   element.addEventListener("click", () => copyDetailValue(element, label));
   element.addEventListener("keydown", event => {
     if (event.key === "Enter" || event.key === " ") {
