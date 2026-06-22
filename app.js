@@ -228,6 +228,25 @@ async function scanChineseSearchBrands() {
 }
 
 function cssName(font) { return `local-font-${font.id}`; }
+
+function toolbarVariationSettings() {
+  const value = Object.entries(state.axes).map(([tag, amount]) => `"${tag}" ${amount}`).join(", ");
+  return value || "normal";
+}
+
+function syncToolbarPreview(font) {
+  if (!font) {
+    ui.previewInput.style.fontFamily = "";
+    ui.previewInput.style.fontVariationSettings = "";
+    $("#previewInputWrap")?.classList.remove("is-previewing");
+    return;
+  }
+  registerFont(font);
+  ui.previewInput.style.fontFamily = cssName(font);
+  ui.previewInput.style.fontVariationSettings = toolbarVariationSettings();
+  $("#previewInputWrap")?.classList.add("is-previewing");
+}
+
 function registerFont(font) {
   if (font.registered) return;
   const style = document.createElement("style");
@@ -639,6 +658,7 @@ function previewFont(font, temporary = true) {
   const selectionVersion = ++state.selectionVersion;
   clearTimeout(previewFont.timer);
   registerFont(font);
+  syncToolbarPreview(font);
   ui.selectedName.textContent = font.displayName || font.fullName || font.family;
   ui.selectedStyle.textContent = font.style || "REGULAR";
   ui.previewText.style.fontFamily = cssName(font);
@@ -680,6 +700,7 @@ function clearPreview() {
   ui.previewText.textContent = "";
   ui.magnifiedText.textContent = "";
   ui.previewText.style.fontFamily = "";
+  syncToolbarPreview(null);
   ui.axisStatus.textContent = "暂无字体参数";
   ui.axes.replaceChildren();
   ui.favorite.textContent = "☆";
@@ -1195,9 +1216,10 @@ function renderAxes(axes) {
 function axisLabel(tag) { return ({wght:"粗细 Wght", wdth:"宽度 Wdth", slnt:"倾斜 Slnt", ital:"斜体 Ital", opsz:"光学尺寸 Opsz"})[tag] || tag.toUpperCase(); }
 function formatNumber(value) { return Number(value).toFixed(Number(value) % 1 ? 1 : 0); }
 function updateVariation() {
-  const value = Object.entries(state.axes).map(([tag, amount]) => `"${tag}" ${amount}`).join(", ") || "normal";
+  const value = toolbarVariationSettings();
   ui.previewText.style.fontVariationSettings = value;
   ui.magnifiedText.style.fontVariationSettings = value;
+  if (state.previewed) ui.previewInput.style.fontVariationSettings = value;
 }
 
 function updatePreview() {
