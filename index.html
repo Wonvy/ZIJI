@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>字观 · 本地字体预览</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="字观首页">
+        <span class="brand-mark">字</span>
+        <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
+        <span class="version-badge" title="当前版本">v1.0.24</span>
+      </a>
+      <div class="header-actions">
+        <span class="privacy"><i></i> 字体仅在本机处理</span>
+        <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="welcome" class="welcome">
+        <div class="eyebrow">系统字体浏览器</div>
+        <h1>看见你电脑里的<br><em>每一种字。</em></h1>
+        <p>授权后即可搜索、比较并细看系统中安装的字体。所有处理都在浏览器内完成。</p>
+        <button id="loadFontsButton" class="primary-button">
+          <span>读取系统字体</span><b>→</b>
+        </button>
+        <div id="loadProgress" class="load-progress" hidden aria-live="polite">
+          <div class="progress-track"><i id="progressBar"></i></div>
+          <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+        </div>
+        <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问。</p>
+      </section>
+
+      <section id="workspace" class="workspace" hidden>
+        <div class="library-body">
+          <section class="card-area">
+            <div class="card-controlbar">
+              <div class="search-control">
+                <label class="search-box card-search">
+                  <span>⌕</span>
+                  <input id="searchInput" type="search" placeholder="搜索字体 / 拼音首字母" autocomplete="off" />
+                  <kbd>⌘ K</kbd>
+                </label>
+                <div id="searchSuggestions" class="search-suggestions" hidden>
+                  <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                  <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                </div>
+              </div>
+              <label class="preview-input-wrap card-preview-input">
+                <span>预览文字</span>
+                <input id="previewInput" value="字体有光" maxlength="80" />
+              </label>
+              <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
+              </button>
+            </div>
+            <div class="command-row">
+            <div class="library-subbar">
+              <div class="library-heading">
+                <div><span class="eyebrow">系统字体库</span><strong id="fontCount">0 款字体</strong></div>
+                <button id="reloadButton" class="text-button">重新读取</button>
+              </div>
+            </div>
+            <div class="filter-panel">
+              <span class="filter-label">筛选</span>
+              <div class="filter-row" role="group" aria-label="字体筛选">
+                <button class="chip active" data-filter="all">全部</button>
+                <button class="chip" data-filter="favorite">收藏</button>
+                <span class="filter-divider"></span>
+                <details class="filter-menu" id="languageMenu">
+                  <summary>字符支持 <b id="languageBadge">全部</b></summary>
+                  <div class="filter-popover">
+                    <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
+                    <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
+                    <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                    <span class="popover-divider"></span>
+                    <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                  </div>
+                </details>
+                <details class="filter-menu" id="weightMenu">
+                  <summary>字重 <b id="weightBadge">全部</b></summary>
+                  <div class="filter-popover">
+                    <label><input type="checkbox" data-weight="light"> 细体 100–300</label>
+                    <label><input type="checkbox" data-weight="regular"> 常规 400–500</label>
+                    <label><input type="checkbox" data-weight="bold"> 粗体 600–900</label>
+                  </div>
+                </details>
+                <span class="filter-spacer"></span>
+              </div>
+              <div class="view-controls" aria-label="视图控制栏">
+                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
+                <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
+                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <button id="focusViewButton" class="view-button" title="无干扰视图" aria-label="无干扰视图">净</button>
+                <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
+                <select id="sortSelect" class="sort-select" aria-label="字体排序">
+                  <option value="name">名称排序</option>
+                  <option value="favorite">收藏优先</option>
+                  <option value="square">首字接近正方形</option>
+                  <option value="narrow">首字由瘦到宽</option>
+                  <option value="wide">首字由宽到瘦</option>
+                </select>
+              </div>
+            </div>
+            </div>
+            <div id="scanProgress" class="scan-progress" hidden>
+              <span id="scanText">正在识别可变字体</span>
+              <div class="progress-track"><i id="scanBar"></i></div>
+            </div>
+            <div class="font-view-shell">
+              <aside id="favoriteSidebar" class="favorite-sidebar" hidden>
+                <div class="favorite-sidebar-header"><span>收藏分类</span><button id="addCategoryButton" type="button" title="新建分类">＋</button></div>
+                <div id="favoriteCategoryList" class="favorite-category-list"></div>
+                <div class="favorite-sidebar-data">
+                  <button id="exportFavorites" class="data-button" type="button">导出 JSON</button>
+                  <button id="importFavorites" class="data-button" type="button">导入 JSON</button>
+                  <input id="favoritesFile" type="file" accept="application/json,.json" hidden />
+                </div>
+              </aside>
+              <div class="font-page-area">
+                <div id="fontList" class="font-list card-grid" aria-live="polite"></div>
+                <div id="emptyState" class="empty-state" hidden>没有找到匹配的字体</div>
+              </div>
+            </div>
+            <footer id="statusBar" class="status-bar">
+              <div id="fontStatus" class="font-status">将鼠标移到字体卡片查看信息</div>
+              <nav id="paginationBar" class="pagination-bar" aria-label="字体分页">
+                <button id="previousPage" class="page-button" type="button">← 上一页</button>
+                <span id="pageInfo">第 1 / 1 页</span>
+                <button id="nextPage" class="page-button" type="button">下一页 →</button>
+              </nav>
+              <div id="viewStatus" class="view-status">网格视图</div>
+            </footer>
+          </section>
+
+          <aside id="detailPanel" class="detail-panel">
+            <div id="resizeHandle" class="resize-handle" title="拖动调整栏宽" aria-hidden="true"></div>
+            <button id="detailToggle" class="detail-toggle" title="折叠详情" aria-label="折叠详情">›</button>
+            <div class="detail-content">
+              <div class="font-meta-row">
+                <div>
+                  <span id="selectedStyle" class="eyebrow">REGULAR</span>
+                  <h2 id="selectedName">请选择字体</h2>
+                </div>
+                <div class="meta-actions">
+                  <button id="categoryAssignmentButton" class="icon-button" title="设置收藏分类" aria-label="设置收藏分类">≡</button>
+                  <button id="favoriteButton" class="icon-button" title="收藏字体" aria-label="收藏字体">☆</button>
+                </div>
+              </div>
+
+              <div id="previewStage" class="preview-stage">
+                <div id="previewText" class="preview-text">天地玄黄 宇宙洪荒
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+，。！？；：“”「」</div>
+                <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
+                <div class="stage-hint">移动鼠标查看字形细节</div>
+              </div>
+
+              <div class="detail-actions">
+                <span class="detail-hint">卡片与预览区均可使用放大镜</span>
+                <button id="resetButton" class="text-button">恢复默认</button>
+              </div>
+
+              <details class="font-info-panel collapsible-panel" open>
+                <summary class="panel-title"><div><span class="eyebrow">字体内部信息</span><strong>OpenType 属性</strong></div><span class="collapse-icon">⌄</span></summary>
+                <dl class="font-info-grid">
+                  <div><dt>字体家族</dt><dd id="infoFamily" class="copyable" role="button" tabindex="0" title="点击复制字体名称">—</dd></div>
+                  <div><dt>PostScript</dt><dd id="infoPostscript" class="copyable" role="button" tabindex="0" title="点击复制 PostScript 名称">—</dd></div>
+                  <div><dt>轮廓格式</dt><dd id="infoFormat">—</dd></div>
+                  <div><dt>文件大小</dt><dd id="infoSize">—</dd></div>
+                  <div><dt>字形数量</dt><dd id="infoGlyphs">—</dd></div>
+                  <div><dt>Units per em</dt><dd id="infoUpm">—</dd></div>
+                  <div><dt>内部字重</dt><dd id="infoWeight">—</dd></div>
+                  <div><dt>内部宽度</dt><dd id="infoWidth">—</dd></div>
+                  <div><dt>字符支持</dt><dd id="infoLanguage">—</dd></div>
+                  <div><dt>首字宽高比</dt><dd id="infoAspect">—</dd></div>
+                  <div><dt>数据表</dt><dd id="infoTables">—</dd></div>
+                </dl>
+              </details>
+
+              <details class="bottom-panel collapsible-panel" open>
+                <summary class="panel-title">
+                  <div><span class="eyebrow">预览与字体参数</span><strong id="axisStatus">正在检测可变轴…</strong></div>
+                  <span class="collapse-icon">⌄</span>
+                </summary>
+                <div id="standardControls" class="standard-controls">
+                  <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
+                  <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
+                  <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
+                  <label><span>背景</span><input id="backgroundColor" type="color" value="#f3efe7" /></label>
+                  <label><span>文字</span><input id="textColor" type="color" value="#171714" /></label>
+                </div>
+                <div id="axisControls" class="axis-controls"></div>
+              </details>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="cardMagnifier" class="card-magnifier" hidden><span id="cardMagnifiedText"></span></div>
+  <div id="cardContextMenu" class="context-menu" role="menu" hidden></div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
