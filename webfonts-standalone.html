@@ -32,18 +32,27 @@ body {
 }
 button, input { font: inherit; }
 button { color: inherit; }
-.app-shell { height: 100vh; overflow: hidden; }
-main { position: relative; height: calc(100vh - var(--topbar-height)); overflow: hidden; }
+.app-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .topbar {
   position: relative;
   z-index: 12;
-  height: var(--topbar-height);
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: var(--topbar-height);
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.topbar-row { width: 100%; min-width: 0; }
+.topbar-main {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
+  width: 100%;
+  min-height: 38px;
 }
 .brand { position: relative; z-index: 2; display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
 .brand-mark {
@@ -69,6 +78,61 @@ main { position: relative; height: calc(100vh - var(--topbar-height)); overflow:
 }
 body.workspace-active .header-preview { display: flex; }
 .header-preview-input { flex: 1; min-width: 0; background: var(--panel); }
+.toolbar-meta {
+  flex: none;
+  gap: 8px;
+  justify-self: start;
+  grid-column: 1;
+  padding-right: 8px;
+  border-right: 1px solid var(--line);
+}
+.toolbar-meta .eyebrow { font-size: 8px; letter-spacing: .14em; }
+.toolbar-meta strong { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.toolbar-meta .text-button { padding: 2px 4px; font-size: 11px; }
+.toolbar-center {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  justify-self: center;
+  grid-column: 2;
+  overflow: visible;
+}
+.toolbar-search-wrap { position: relative; flex: 0 0 200px; width: 200px; z-index: 12; }
+.toolbar-search,
+.card-toolbar .search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: var(--toolbar-control-height);
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+.toolbar-search input { font-size: 12px; }
+.toolbar-search kbd { font-size: 9px; }
+.toolbar-filters {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+.toolbar-filters .chip { padding: 4px 8px; font-size: 10px; }
+.toolbar-filters .filter-divider { height: 16px; margin: 0 1px; }
+.toolbar-view { flex: none; justify-self: end; grid-column: 3; margin-left: auto; }
+.weight-filter-popover { min-width: 168px; max-height: 280px; overflow-y: auto; }
+.weight-filter-popover label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weight-filter-popover small { color: var(--muted); font-size: 10px; }
+.filter-empty { display: block; padding: 8px; color: var(--muted); font-size: 11px; }
 .privacy { color: var(--muted); font-size: 11px; }
 .privacy i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #55a36a; }
 .icon-button, .text-button, .pill-button, .chip { cursor: pointer; border: 0; background: transparent; }
@@ -96,7 +160,7 @@ body.workspace-active .header-preview { display: flex; }
 .progress-copy strong { color: var(--ink); font-weight: 600; }
 @keyframes indeterminate { from { transform: translateX(-110%); } to { transform: translateX(290%); } }
 .welcome .support-note { margin-top: 15px; font-size: 12px; }
-.workspace { height: calc(100vh - var(--topbar-height)); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
+.workspace { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
 .sidebar { display: flex; flex-direction: column; min-height: 0; padding: 25px 20px 0; border-right: 1px solid var(--line); background: var(--panel); }
 .sidebar-heading, .panel-title, .font-meta-row { display: flex; align-items: center; justify-content: space-between; }
 .sidebar-heading strong, .panel-title strong { display: block; margin-top: 5px; font-family: Georgia, "Songti SC", serif; font-size: 19px; font-weight: 500; }
@@ -206,50 +270,23 @@ kbd,
 .workspace-active .welcome { opacity: 0; transform: translateY(-100%); pointer-events: none; }
 .workspace-active .workspace { transform: translateY(-100%); }
 .library-body { display: flex; width: 100%; min-width: 0; min-height: 0; overflow: hidden; }
-.card-area { min-width: 360px; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; padding: 6px 12px 0; }
-.library-toolbar {
-  display: flex;
-  flex-wrap: wrap;
+.card-area { min-width: 360px; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; padding: 4px 12px 0; }
+.card-toolbar {
+  position: relative;
+  z-index: 12;
+  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px 8px;
-  padding: 0 0 6px;
+  gap: 10px;
+  padding: 6px 0 8px;
   border-bottom: 1px solid var(--line);
+  overflow: visible;
 }
 .toolbar-section { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.toolbar-meta {
-  flex: none;
-  gap: 8px;
-  padding-right: 8px;
-  margin-right: 2px;
-  border-right: 1px solid var(--line);
-}
-.toolbar-meta .eyebrow { font-size: 8px; letter-spacing: .14em; }
-.toolbar-meta strong { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 14px; font-weight: 500; white-space: nowrap; }
-.toolbar-meta .text-button { padding: 2px 4px; font-size: 11px; }
-.toolbar-search-wrap { position: relative; flex: 1 1 180px; max-width: 280px; z-index: 8; }
-.toolbar-search {
-  width: 100%;
-  height: var(--toolbar-control-height);
-  margin: 0;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--paper);
-}
-.toolbar-search input { font-size: 12px; }
-.toolbar-search kbd { font-size: 9px; }
-.toolbar-filters {
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 0 2px;
-}
-.toolbar-filters .chip { padding: 4px 8px; font-size: 10px; }
-.toolbar-filters .filter-divider { height: 16px; margin: 0 1px; }
-.toolbar-view { flex: none; margin-left: auto; }
 .search-control { position: relative; min-width: 0; width: 100%; }
 .card-search { width: 100%; min-width: 0; height: var(--toolbar-control-height); margin: 0; }
-.search-suggestions { position: absolute; z-index: 40; top: calc(var(--toolbar-control-height) + 4px); left: 0; width: min(460px, 75vw); padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); box-shadow: var(--shadow); }
+.search-suggestions { position: absolute; z-index: 60; top: calc(var(--toolbar-control-height) + 4px); left: 0; width: min(460px, 75vw); padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); box-shadow: var(--shadow); }
 .search-suggestions[hidden] { display: none; }
 .suggestion-group + .suggestion-group { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); }
 .suggestion-group > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
@@ -286,10 +323,12 @@ kbd,
 .magnifier-toolbar-button { flex: none; width: var(--toolbar-control-height); height: var(--toolbar-control-height); border-radius: 4px; color: var(--muted); background: var(--paper); }
 .magnifier-toolbar-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .magnifier-toolbar-button.active { color: white; border-color: var(--accent); background: var(--accent); }
+.toolbar-filters .filter-menu { position: relative; z-index: 1; }
+.toolbar-filters .filter-menu[open] { z-index: 40; }
 .toolbar-filters .filter-menu,
 .toolbar-filters .filter-menu summary { height: 26px; }
 .toolbar-filters .filter-menu summary { padding: 0 6px; font-size: 10px; }
-.toolbar-filters .filter-popover { top: calc(26px + 4px); }
+.toolbar-filters .filter-popover { top: calc(100% + 4px); z-index: 50; }
 .toolbar-view .view-button { width: 28px; height: 28px; font-size: 14px; }
 .toolbar-view .view-button:nth-child(3) { font-size: 13px; }
 .toolbar-view .view-button:nth-child(4) { font-size: 13px; }
@@ -297,13 +336,14 @@ kbd,
 .toolbar-view .density-control input { width: 52px; }
 .toolbar-view .sort-select { height: 28px; max-width: 108px; padding: 0 24px 0 7px; font-size: 10px; }
 .filter-divider { width: 1px; height: 16px; margin: 0 1px; background: var(--line); }
-.filter-menu { position: relative; height: 26px; }
+.filter-menu { position: relative; height: 26px; z-index: 1; }
+.filter-menu[open] { z-index: 40; }
 .filter-menu summary { height: 26px; display: flex; align-items: center; gap: 4px; padding: 0 7px; cursor: pointer; list-style: none; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); font-size: 10px; }
 .filter-menu summary::-webkit-details-marker { display: none; }
 .filter-menu summary::after { content: "⌄"; margin-left: 2px; color: var(--muted); }
 .filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
 .filter-menu[open] summary { border-color: var(--ink); }
-.filter-popover { position: absolute; z-index: 20; top: calc(26px + 4px); left: 0; min-width: 145px; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); box-shadow: var(--shadow); }
+.filter-popover { position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; min-width: 145px; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); box-shadow: var(--shadow); }
 .data-button { height: 28px; padding: 0 8px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: transparent; font-size: 12px; }
 .data-button:hover { color: var(--accent); border-color: var(--accent); background: var(--panel); }
 .filter-popover label { display: block; padding: 7px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; white-space: nowrap; }
@@ -637,11 +677,11 @@ kbd,
 @media (max-width: 1100px) {
   .detail-panel { width: 350px; min-width: 350px; }
   .density-control { display: none; }
-  .library-toolbar { gap: 6px; }
-  .toolbar-search-wrap { flex-basis: 100%; max-width: none; order: 2; }
-  .toolbar-meta { order: 1; }
-  .toolbar-filters { order: 3; flex-basis: 100%; }
-  .toolbar-view { order: 4; margin-left: 0; flex-wrap: wrap; }
+  .card-toolbar { grid-template-columns: 1fr; gap: 6px; }
+  .toolbar-meta { grid-column: 1; border-right: 0; padding-right: 0; }
+  .toolbar-center { grid-column: 1; width: 100%; justify-content: flex-start; }
+  .toolbar-search-wrap { flex: 0 0 180px; width: 180px; }
+  .toolbar-view { grid-column: 1; justify-self: stretch; flex-wrap: wrap; }
   .header-preview { width: min(360px, calc(100vw - 240px)); }
   .privacy { display: none; }
   .status-bar { grid-template-columns: minmax(0,1fr) auto; }
@@ -654,23 +694,25 @@ kbd,
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#" aria-label="字观首页">
-        <span class="brand-mark">字</span>
-        <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
-        <span class="version-badge" title="当前版本">v1.0.24</span>
-      </a>
-      <div class="header-preview">
-        <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
-          <span class="preview-control-label">预览文字</span>
-          <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
-        </label>
-        <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
-        </button>
-      </div>
-      <div class="header-actions">
-        <span class="privacy"><i></i> 字体仅在本机处理</span>
-        <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+      <div class="topbar-row topbar-main">
+        <a class="brand" href="#" aria-label="字观首页">
+          <span class="brand-mark">字</span>
+          <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
+          <span class="version-badge" title="当前版本">v1.0.24</span>
+        </a>
+        <div class="header-preview">
+          <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
+            <span class="preview-control-label">预览文字</span>
+            <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
+          </label>
+          <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
+          </button>
+        </div>
+        <div class="header-actions">
+          <span class="privacy"><i></i> 字体仅在本机处理</span>
+          <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+        </div>
       </div>
     </header>
 
@@ -692,47 +734,47 @@ kbd,
       <section id="workspace" class="workspace" hidden>
         <div class="library-body">
           <section class="card-area">
-            <div class="library-toolbar">
+            <div class="card-toolbar">
               <div class="toolbar-section toolbar-meta">
                 <span class="eyebrow">字体库</span>
                 <strong id="fontCount">0 款字体</strong>
                 <button id="reloadButton" class="text-button" type="button">刷新</button>
               </div>
 
-              <div class="toolbar-section toolbar-search-wrap search-control">
-                <label class="search-box toolbar-search">
-                  <span>⌕</span>
-                  <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                  <kbd>⌘ K</kbd>
-                </label>
-                <div id="searchSuggestions" class="search-suggestions" hidden>
-                  <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                  <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+              <div class="toolbar-section toolbar-center">
+                <div class="toolbar-search-wrap search-control">
+                  <label class="search-box toolbar-search">
+                    <span>⌕</span>
+                    <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                    <kbd>⌘ K</kbd>
+                  </label>
+                  <div id="searchSuggestions" class="search-suggestions" hidden>
+                    <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                    <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                  </div>
                 </div>
-              </div>
 
-              <div class="toolbar-section toolbar-filters filter-row" role="group" aria-label="字体筛选">
-                <button class="chip active" data-filter="all">全部</button>
-                <button class="chip" data-filter="favorite">收藏</button>
-                <span class="filter-divider"></span>
-                <details class="filter-menu" id="languageMenu">
-                  <summary>语言 <b id="languageBadge">全部</b></summary>
-                  <div class="filter-popover">
-                    <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
-                    <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
-                    <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
-                    <span class="popover-divider"></span>
-                    <label><input type="checkbox" data-capability="variable"> 可变字体</label>
-                  </div>
-                </details>
-                <details class="filter-menu" id="weightMenu">
-                  <summary>字重 <b id="weightBadge">全部</b></summary>
-                  <div class="filter-popover">
-                    <label><input type="checkbox" data-weight="light"> 细体 100–300</label>
-                    <label><input type="checkbox" data-weight="regular"> 常规 400–500</label>
-                    <label><input type="checkbox" data-weight="bold"> 粗体 600–900</label>
-                  </div>
-                </details>
+                <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
+                  <button class="chip active" data-filter="all">全部</button>
+                  <button class="chip" data-filter="favorite">收藏</button>
+                  <span class="filter-divider"></span>
+                  <details class="filter-menu" id="languageMenu">
+                    <summary>语言 <b id="languageBadge">全部</b></summary>
+                    <div class="filter-popover">
+                      <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
+                      <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
+                      <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                      <span class="popover-divider"></span>
+                      <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                    </div>
+                  </details>
+                  <details class="filter-menu" id="weightMenu">
+                    <summary>字重 <b id="weightBadge">全部</b></summary>
+                    <div class="filter-popover weight-filter-popover" id="weightFilterList">
+                      <span class="filter-empty">正在扫描字重…</span>
+                    </div>
+                  </details>
+                </div>
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
@@ -749,7 +791,6 @@ kbd,
                   <option value="wide">首字由宽到瘦</option>
                 </select>
               </div>
-
             </div>
             <div id="scanProgress" class="scan-progress" hidden>
               <span id="scanText">正在识别可变字体</span>
@@ -913,7 +954,7 @@ function loadFavoriteData() {
 }
 const cachedFavoriteData = loadFavoriteData();
 const state = {
-  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
+  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
   view: "grid", sort: "name", cardWidth: 245, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
@@ -1166,6 +1207,7 @@ async function loadFonts() {
       const key = `${font.postscriptName}|${font.style}`;
       if (seen.has(key)) return false; seen.add(key); return true;
     }).sort((a, b) => a.family.localeCompare(b.family, "zh-CN"));
+    buildWeightOptions();
     setLoadProgress(`索引建立完成，共 ${state.fonts.length} 款字体`, 100);
     await new Promise(resolve => setTimeout(resolve, 250));
     ui.workspace.hidden = false;
@@ -1193,11 +1235,7 @@ function applyFilter() {
     const languageMatch = state.languageFilters.size === 0 ||
       (state.languageFilters.has("chinese") && font.details?.supportsChinese) ||
       (state.languageFilters.has("latin") && font.details?.supportsLatin && !font.details?.supportsChinese);
-    const weight = font.details?.weight || font.weightClass;
-    const weightMatch = state.weightFilters.size === 0 ||
-      (state.weightFilters.has("light") && weight >= 100 && weight <= 300) ||
-      (state.weightFilters.has("regular") && weight >= 400 && weight <= 500) ||
-      (state.weightFilters.has("bold") && weight >= 600 && weight <= 900);
+    const weightMatch = state.weightFilters.size === 0 || state.weightFilters.has(font.weightLabel);
     const assignments = state.categoryAssignments.get(font.postscriptName) || new Set();
     const categoryIds = expandedFavoriteCategoryView();
     const categoryMatch = !state.filters.has("favorite") || state.favoriteCategoryView === "all" ||
@@ -1230,6 +1268,101 @@ function inferWeight(name = "") {
   if (/black|extrablack|ultrablack/.test(value)) return 900;
   if (/bold|粗体|粗/.test(value)) return 700;
   return 400;
+}
+
+const WEIGHT_CATALOG = [
+  { label: "Thin", value: 100, aliases: ["thin", "hairline", "extrathin", "ultrathin", "纤细", "极细"] },
+  { label: "ExtraLight", value: 200, aliases: ["extralight", "ultralight"] },
+  { label: "Light", value: 300, aliases: ["light", "细体", "细"] },
+  { label: "Regular", value: 400, aliases: ["regular", "normal", "book", "roman", "常规", "标准"] },
+  { label: "Medium", value: 500, aliases: ["medium", "中等", "中黑"] },
+  { label: "SemiBold", value: 600, aliases: ["semibold", "demibold", "半粗"] },
+  { label: "Bold", value: 700, aliases: ["bold", "粗体", "粗"] },
+  { label: "ExtraBold", value: 800, aliases: ["extrabold", "ultrabold", "heavy", "特粗"] },
+  { label: "Black", value: 900, aliases: ["black", "extrablack", "ultrablack"] }
+];
+
+function normalizeWeightToken(value = "") {
+  return value.toLowerCase().replace(/[\s._-]+/g, "");
+}
+
+function weightLabelOrder(label) {
+  return WEIGHT_CATALOG.find(item => item.label === label)?.value ?? 450;
+}
+
+function matchWeightLabel(text = "") {
+  if (!text || /^italic$/i.test(text.trim())) return null;
+  const spaced = text.replace(/([a-z])([A-Z])/g, "$1 $2");
+  const compact = normalizeWeightToken(spaced);
+  const matches = [];
+  for (const item of WEIGHT_CATALOG) {
+    const labelToken = normalizeWeightToken(item.label);
+    if (compact === labelToken || compact.includes(labelToken)) {
+      matches.push({ label: item.label, value: item.value, len: labelToken.length });
+    }
+    for (const alias of item.aliases) {
+      const token = normalizeWeightToken(alias);
+      if (!token) continue;
+      if (compact === token || compact.includes(token)) {
+        matches.push({ label: item.label, value: item.value, len: token.length });
+      }
+    }
+  }
+  if (!matches.length) return null;
+  matches.sort((a, b) => b.len - a.len || b.value - a.value);
+  return matches[0].label;
+}
+
+function extractWeightLabel(font) {
+  const styleLabel = matchWeightLabel(font.style || "");
+  if (styleLabel) return styleLabel;
+  for (const source of [font.fullName, font.postscriptName, font.family]) {
+    const label = matchWeightLabel(source || "");
+    if (label) return label;
+  }
+  return weightClassToLabel(font.weightClass);
+}
+
+function weightClassToLabel(weightClass) {
+  if (!Number.isFinite(weightClass)) return "Regular";
+  let best = WEIGHT_CATALOG.find(item => item.label === "Regular");
+  let bestDiff = Infinity;
+  for (const item of WEIGHT_CATALOG) {
+    const diff = Math.abs(item.value - weightClass);
+    if (diff < bestDiff) { best = item; bestDiff = diff; }
+  }
+  return best.label;
+}
+
+function buildWeightOptions() {
+  const counts = new Map();
+  for (const font of state.fonts) {
+    font.weightLabel = extractWeightLabel(font);
+    counts.set(font.weightLabel, (counts.get(font.weightLabel) || 0) + 1);
+  }
+  state.weightOptions = [...counts.entries()]
+    .sort((a, b) => weightLabelOrder(a[0]) - weightLabelOrder(b[0]) || a[0].localeCompare(b[0], "en"))
+    .map(([label, count]) => ({ label, count }));
+  renderWeightFilterMenu();
+}
+
+function renderWeightFilterMenu() {
+  const container = $("#weightFilterList");
+  if (!container) return;
+  if (!state.weightOptions.length) {
+    container.innerHTML = `<span class="filter-empty">暂无字重标签</span>`;
+    return;
+  }
+  container.innerHTML = state.weightOptions.map(({ label, count }) => `
+    <label><span><input type="checkbox" data-weight-label="${escapeHtml(label)}"${state.weightFilters.has(label) ? " checked" : ""}> ${escapeHtml(label)}</span><small>${count}</small></label>
+  `).join("");
+  container.querySelectorAll("[data-weight-label]").forEach(input => {
+    input.addEventListener("change", () => {
+      input.checked ? state.weightFilters.add(input.dataset.weightLabel) : state.weightFilters.delete(input.dataset.weightLabel);
+      updateFilterControls();
+      applyFilter();
+    });
+  });
 }
 
 function pickInitialDisplayName(family = "", fullName = "") {
@@ -2577,7 +2710,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
   const filter = button.dataset.filter;
   if (filter === "all") {
     state.filters.clear(); state.languageFilters.clear(); state.weightFilters.clear(); state.favoriteCategoryView = "all";
-    document.querySelectorAll("[data-language], [data-weight], [data-capability]").forEach(input => input.checked = false);
+    document.querySelectorAll("[data-language], [data-weight-label], [data-capability]").forEach(input => input.checked = false);
     document.querySelector('[data-language="all"]').checked = true;
     updateFilterControls();
     return applyFilter();
@@ -2630,11 +2763,6 @@ document.querySelectorAll("[data-capability]").forEach(input => input.addEventLi
     detectVariableFonts();
   } else applyFilter();
 }));
-document.querySelectorAll("[data-weight]").forEach(input => input.addEventListener("change", () => {
-  input.checked ? state.weightFilters.add(input.dataset.weight) : state.weightFilters.delete(input.dataset.weight);
-  updateFilterControls();
-  applyFilter();
-}));
 document.querySelectorAll(".filter-menu").forEach(menu => {
   menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
   menu.addEventListener("mouseleave", () => {
@@ -2649,7 +2777,9 @@ function updateFilterControls() {
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
-  $("#weightBadge").textContent = state.weightFilters.size ? `${state.weightFilters.size} 项` : "全部";
+  $("#weightBadge").textContent = state.weightFilters.size
+    ? [...state.weightFilters].sort((a, b) => weightLabelOrder(a) - weightLabelOrder(b)).join(" · ")
+    : "全部";
 }
 function setView(view) {
   state.view = view;

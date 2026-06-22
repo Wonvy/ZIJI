@@ -10,23 +10,25 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#" aria-label="字观首页">
-        <span class="brand-mark">字</span>
-        <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
-        <span class="version-badge" title="当前版本">v1.0.24</span>
-      </a>
-      <div class="header-preview">
-        <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
-          <span class="preview-control-label">预览文字</span>
-          <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
-        </label>
-        <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
-        </button>
-      </div>
-      <div class="header-actions">
-        <span class="privacy"><i></i> 字体仅在本机处理</span>
-        <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+      <div class="topbar-row topbar-main">
+        <a class="brand" href="#" aria-label="字观首页">
+          <span class="brand-mark">字</span>
+          <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
+          <span class="version-badge" title="当前版本">v1.0.24</span>
+        </a>
+        <div class="header-preview">
+          <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
+            <span class="preview-control-label">预览文字</span>
+            <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
+          </label>
+          <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
+          </button>
+        </div>
+        <div class="header-actions">
+          <span class="privacy"><i></i> 字体仅在本机处理</span>
+          <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+        </div>
       </div>
     </header>
 
@@ -48,47 +50,47 @@
       <section id="workspace" class="workspace" hidden>
         <div class="library-body">
           <section class="card-area">
-            <div class="library-toolbar">
+            <div class="card-toolbar">
               <div class="toolbar-section toolbar-meta">
                 <span class="eyebrow">字体库</span>
                 <strong id="fontCount">0 款字体</strong>
                 <button id="reloadButton" class="text-button" type="button">刷新</button>
               </div>
 
-              <div class="toolbar-section toolbar-search-wrap search-control">
-                <label class="search-box toolbar-search">
-                  <span>⌕</span>
-                  <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                  <kbd>⌘ K</kbd>
-                </label>
-                <div id="searchSuggestions" class="search-suggestions" hidden>
-                  <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                  <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+              <div class="toolbar-section toolbar-center">
+                <div class="toolbar-search-wrap search-control">
+                  <label class="search-box toolbar-search">
+                    <span>⌕</span>
+                    <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                    <kbd>⌘ K</kbd>
+                  </label>
+                  <div id="searchSuggestions" class="search-suggestions" hidden>
+                    <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                    <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                  </div>
                 </div>
-              </div>
 
-              <div class="toolbar-section toolbar-filters filter-row" role="group" aria-label="字体筛选">
-                <button class="chip active" data-filter="all">全部</button>
-                <button class="chip" data-filter="favorite">收藏</button>
-                <span class="filter-divider"></span>
-                <details class="filter-menu" id="languageMenu">
-                  <summary>语言 <b id="languageBadge">全部</b></summary>
-                  <div class="filter-popover">
-                    <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
-                    <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
-                    <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
-                    <span class="popover-divider"></span>
-                    <label><input type="checkbox" data-capability="variable"> 可变字体</label>
-                  </div>
-                </details>
-                <details class="filter-menu" id="weightMenu">
-                  <summary>字重 <b id="weightBadge">全部</b></summary>
-                  <div class="filter-popover">
-                    <label><input type="checkbox" data-weight="light"> 细体 100–300</label>
-                    <label><input type="checkbox" data-weight="regular"> 常规 400–500</label>
-                    <label><input type="checkbox" data-weight="bold"> 粗体 600–900</label>
-                  </div>
-                </details>
+                <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
+                  <button class="chip active" data-filter="all">全部</button>
+                  <button class="chip" data-filter="favorite">收藏</button>
+                  <span class="filter-divider"></span>
+                  <details class="filter-menu" id="languageMenu">
+                    <summary>语言 <b id="languageBadge">全部</b></summary>
+                    <div class="filter-popover">
+                      <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
+                      <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
+                      <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                      <span class="popover-divider"></span>
+                      <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                    </div>
+                  </details>
+                  <details class="filter-menu" id="weightMenu">
+                    <summary>字重 <b id="weightBadge">全部</b></summary>
+                    <div class="filter-popover weight-filter-popover" id="weightFilterList">
+                      <span class="filter-empty">正在扫描字重…</span>
+                    </div>
+                  </details>
+                </div>
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
@@ -105,7 +107,6 @@
                   <option value="wide">首字由宽到瘦</option>
                 </select>
               </div>
-
             </div>
             <div id="scanProgress" class="scan-progress" hidden>
               <span id="scanText">正在识别可变字体</span>

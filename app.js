@@ -34,7 +34,7 @@ function loadFavoriteData() {
 }
 const cachedFavoriteData = loadFavoriteData();
 const state = {
-  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
+  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
   view: "grid", sort: "name", cardWidth: 245, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
@@ -287,6 +287,7 @@ async function loadFonts() {
       const key = `${font.postscriptName}|${font.style}`;
       if (seen.has(key)) return false; seen.add(key); return true;
     }).sort((a, b) => a.family.localeCompare(b.family, "zh-CN"));
+    buildWeightOptions();
     setLoadProgress(`索引建立完成，共 ${state.fonts.length} 款字体`, 100);
     await new Promise(resolve => setTimeout(resolve, 250));
     ui.workspace.hidden = false;
@@ -314,11 +315,7 @@ function applyFilter() {
     const languageMatch = state.languageFilters.size === 0 ||
       (state.languageFilters.has("chinese") && font.details?.supportsChinese) ||
       (state.languageFilters.has("latin") && font.details?.supportsLatin && !font.details?.supportsChinese);
-    const weight = font.details?.weight || font.weightClass;
-    const weightMatch = state.weightFilters.size === 0 ||
-      (state.weightFilters.has("light") && weight >= 100 && weight <= 300) ||
-      (state.weightFilters.has("regular") && weight >= 400 && weight <= 500) ||
-      (state.weightFilters.has("bold") && weight >= 600 && weight <= 900);
+    const weightMatch = state.weightFilters.size === 0 || state.weightFilters.has(font.weightLabel);
     const assignments = state.categoryAssignments.get(font.postscriptName) || new Set();
     const categoryIds = expandedFavoriteCategoryView();
     const categoryMatch = !state.filters.has("favorite") || state.favoriteCategoryView === "all" ||
@@ -351,6 +348,101 @@ function inferWeight(name = "") {
   if (/black|extrablack|ultrablack/.test(value)) return 900;
   if (/bold|粗体|粗/.test(value)) return 700;
   return 400;
+}
+
+const WEIGHT_CATALOG = [
+  { label: "Thin", value: 100, aliases: ["thin", "hairline", "extrathin", "ultrathin", "纤细", "极细"] },
+  { label: "ExtraLight", value: 200, aliases: ["extralight", "ultralight"] },
+  { label: "Light", value: 300, aliases: ["light", "细体", "细"] },
+  { label: "Regular", value: 400, aliases: ["regular", "normal", "book", "roman", "常规", "标准"] },
+  { label: "Medium", value: 500, aliases: ["medium", "中等", "中黑"] },
+  { label: "SemiBold", value: 600, aliases: ["semibold", "demibold", "半粗"] },
+  { label: "Bold", value: 700, aliases: ["bold", "粗体", "粗"] },
+  { label: "ExtraBold", value: 800, aliases: ["extrabold", "ultrabold", "heavy", "特粗"] },
+  { label: "Black", value: 900, aliases: ["black", "extrablack", "ultrablack"] }
+];
+
+function normalizeWeightToken(value = "") {
+  return value.toLowerCase().replace(/[\s._-]+/g, "");
+}
+
+function weightLabelOrder(label) {
+  return WEIGHT_CATALOG.find(item => item.label === label)?.value ?? 450;
+}
+
+function matchWeightLabel(text = "") {
+  if (!text || /^italic$/i.test(text.trim())) return null;
+  const spaced = text.replace(/([a-z])([A-Z])/g, "$1 $2");
+  const compact = normalizeWeightToken(spaced);
+  const matches = [];
+  for (const item of WEIGHT_CATALOG) {
+    const labelToken = normalizeWeightToken(item.label);
+    if (compact === labelToken || compact.includes(labelToken)) {
+      matches.push({ label: item.label, value: item.value, len: labelToken.length });
+    }
+    for (const alias of item.aliases) {
+      const token = normalizeWeightToken(alias);
+      if (!token) continue;
+      if (compact === token || compact.includes(token)) {
+        matches.push({ label: item.label, value: item.value, len: token.length });
+      }
+    }
+  }
+  if (!matches.length) return null;
+  matches.sort((a, b) => b.len - a.len || b.value - a.value);
+  return matches[0].label;
+}
+
+function extractWeightLabel(font) {
+  const styleLabel = matchWeightLabel(font.style || "");
+  if (styleLabel) return styleLabel;
+  for (const source of [font.fullName, font.postscriptName, font.family]) {
+    const label = matchWeightLabel(source || "");
+    if (label) return label;
+  }
+  return weightClassToLabel(font.weightClass);
+}
+
+function weightClassToLabel(weightClass) {
+  if (!Number.isFinite(weightClass)) return "Regular";
+  let best = WEIGHT_CATALOG.find(item => item.label === "Regular");
+  let bestDiff = Infinity;
+  for (const item of WEIGHT_CATALOG) {
+    const diff = Math.abs(item.value - weightClass);
+    if (diff < bestDiff) { best = item; bestDiff = diff; }
+  }
+  return best.label;
+}
+
+function buildWeightOptions() {
+  const counts = new Map();
+  for (const font of state.fonts) {
+    font.weightLabel = extractWeightLabel(font);
+    counts.set(font.weightLabel, (counts.get(font.weightLabel) || 0) + 1);
+  }
+  state.weightOptions = [...counts.entries()]
+    .sort((a, b) => weightLabelOrder(a[0]) - weightLabelOrder(b[0]) || a[0].localeCompare(b[0], "en"))
+    .map(([label, count]) => ({ label, count }));
+  renderWeightFilterMenu();
+}
+
+function renderWeightFilterMenu() {
+  const container = $("#weightFilterList");
+  if (!container) return;
+  if (!state.weightOptions.length) {
+    container.innerHTML = `<span class="filter-empty">暂无字重标签</span>`;
+    return;
+  }
+  container.innerHTML = state.weightOptions.map(({ label, count }) => `
+    <label><span><input type="checkbox" data-weight-label="${escapeHtml(label)}"${state.weightFilters.has(label) ? " checked" : ""}> ${escapeHtml(label)}</span><small>${count}</small></label>
+  `).join("");
+  container.querySelectorAll("[data-weight-label]").forEach(input => {
+    input.addEventListener("change", () => {
+      input.checked ? state.weightFilters.add(input.dataset.weightLabel) : state.weightFilters.delete(input.dataset.weightLabel);
+      updateFilterControls();
+      applyFilter();
+    });
+  });
 }
 
 function pickInitialDisplayName(family = "", fullName = "") {
@@ -1698,7 +1790,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
   const filter = button.dataset.filter;
   if (filter === "all") {
     state.filters.clear(); state.languageFilters.clear(); state.weightFilters.clear(); state.favoriteCategoryView = "all";
-    document.querySelectorAll("[data-language], [data-weight], [data-capability]").forEach(input => input.checked = false);
+    document.querySelectorAll("[data-language], [data-weight-label], [data-capability]").forEach(input => input.checked = false);
     document.querySelector('[data-language="all"]').checked = true;
     updateFilterControls();
     return applyFilter();
@@ -1751,11 +1843,6 @@ document.querySelectorAll("[data-capability]").forEach(input => input.addEventLi
     detectVariableFonts();
   } else applyFilter();
 }));
-document.querySelectorAll("[data-weight]").forEach(input => input.addEventListener("change", () => {
-  input.checked ? state.weightFilters.add(input.dataset.weight) : state.weightFilters.delete(input.dataset.weight);
-  updateFilterControls();
-  applyFilter();
-}));
 document.querySelectorAll(".filter-menu").forEach(menu => {
   menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
   menu.addEventListener("mouseleave", () => {
@@ -1770,7 +1857,9 @@ function updateFilterControls() {
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
-  $("#weightBadge").textContent = state.weightFilters.size ? `${state.weightFilters.size} 项` : "全部";
+  $("#weightBadge").textContent = state.weightFilters.size
+    ? [...state.weightFilters].sort((a, b) => weightLabelOrder(a) - weightLabelOrder(b)).join(" · ")
+    : "全部";
 }
 function setView(view) {
   state.view = view;
