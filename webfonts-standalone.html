@@ -435,6 +435,9 @@ kbd,
   position: relative;
   width: 420px;
   min-width: 420px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: visible;
   border-left: 1px solid var(--line);
   background: var(--panel);
@@ -442,7 +445,7 @@ kbd,
 }
 .detail-panel.resizing { transition: none; }
 .detail-panel.collapsed { width: 0; min-width: 0; }
-.detail-content { height: 100%; display: flex; flex-direction: column; gap: 8px; padding: 0 18px 18px; overflow: auto; opacity: 1; transition: opacity .15s ease; }
+.detail-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; padding: 0 18px 18px; overflow: hidden; opacity: 1; transition: opacity .15s ease; }
 .detail-panel.collapsed .detail-content { visibility: hidden; opacity: 0; }
 .detail-panel.empty-preview .detail-content { visibility: hidden; opacity: 0; }
 .detail-toggle {
@@ -467,20 +470,28 @@ kbd,
 .resize-handle:hover::after, .detail-panel.resizing .resize-handle::after { background: var(--accent); }
 .detail-panel.collapsed .resize-handle { display: none; }
 .detail-panel.collapsed .detail-toggle { transform: rotate(180deg); }
-.detail-panel .font-meta-row { position: sticky; z-index: 5; top: 0; order: 1; padding: 16px 0 6px; background: var(--panel); }
+.detail-panel .font-meta-row { flex: none; padding: 16px 0 10px; }
 .detail-toolbar { display: flex; justify-content: flex-end; padding: 22px 0 0; }
 .detail-preview-input, .detail-size { height: 54px; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); }
 .detail-size { width: 160px; }
 .detail-preview-input input { font-size: 16px; }
 .detail-size label { margin-bottom: 5px; }
 .detail-panel .font-meta-row h2 { max-width: 300px; font-size: 23px; overflow-wrap: anywhere; }
-.detail-panel .preview-stage { order: 2; height: 280px; min-height: 280px; margin: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
-.detail-panel .preview-text { font-size: 28px; }
-.detail-panel .preview-text { padding: 16px 0; white-space: pre-wrap; }
-.detail-actions { order: 3; display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
+.detail-tabs { flex: none; display: flex; gap: 0; margin: 0 -18px 12px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+.detail-tab { flex: 1; height: 36px; cursor: pointer; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--muted); background: transparent; font-size: 12px; letter-spacing: .04em; transition: color .15s ease, border-color .15s ease; }
+.detail-tab:hover { color: var(--ink); }
+.detail-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+.detail-tab-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.detail-tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+.detail-tab-panel.active { display: flex; }
+.detail-panel .preview-stage { flex: 1; min-height: 0; height: auto; margin: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
+.detail-panel .preview-text { max-width: 100%; padding: 24px 16px; font-size: 28px; white-space: pre-wrap; }
+.preview-controls { flex: none; max-height: 46%; padding-top: 12px; overflow-y: auto; border-top: 1px solid var(--line); }
+.preview-controls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.axis-status { min-width: 0; color: var(--muted); font-size: 10px; letter-spacing: .02em; }
+.detail-tab-panel[hidden] { display: none !important; }
+#infoTabPanel { overflow-y: auto; padding-top: 2px; }
 .detail-hint { color: var(--muted); font-size: 10px; }
-.font-info-panel { order: 5; padding: 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); }
-.font-info-panel .panel-title strong { font-size: 16px; }
 .font-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .font-info-grid div { min-width: 0; padding: 6px 8px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .font-info-grid dt { margin-bottom: 2px; color: var(--muted); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
@@ -540,17 +551,14 @@ kbd,
 .context-submenu:hover > .context-submenu-panel, .context-submenu:focus-within > .context-submenu-panel { display: block; }
 .context-empty { padding: 8px 9px; color: var(--muted); font-size: 12px; }
 .font-info-grid dd.copyable:hover::after, .font-info-grid dd.copyable:focus-visible::after { opacity: 1; }
-.detail-panel .bottom-panel { order: 4; padding: 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); }
 .collapsible-panel > summary { cursor: pointer; list-style: none; user-select: none; }
 .collapsible-panel > summary::-webkit-details-marker { display: none; }
 .collapse-icon { width: 26px; height: 26px; display: grid; place-items: center; flex: none; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: 15px; transform: rotate(-90deg); transition: transform .18s ease, color .18s ease, border-color .18s ease; }
 .collapsible-panel[open] .collapse-icon { transform: rotate(0); }
 .collapsible-panel > summary:hover .collapse-icon { color: var(--accent); border-color: var(--accent); }
-.detail-panel .collapsible-panel .panel-title strong { margin-top: 2px; font-size: 15px; }
-.detail-panel .collapse-icon { width: 22px; height: 22px; font-size: 13px; }
-.detail-panel .axis-controls, .detail-panel .standard-controls { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 12px; }
+.detail-panel .axis-controls, .detail-panel .standard-controls { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 12px; margin-top: 0; }
 .detail-panel .axis-controls:not(:empty) { padding-top: 10px; border-top: 1px solid var(--line); }
-.detail-panel .standard-controls { margin-top: 10px; margin-bottom: 10px; }
+.detail-panel .standard-controls { margin-bottom: 0; }
 .detail-panel .standard-controls label { min-width: 0; }
 .detail-panel .size-control { grid-column: 1 / -1; }
 .card-magnifier {
@@ -732,52 +740,54 @@ kbd,
                 </div>
               </div>
 
-              <div id="previewStage" class="preview-stage">
-                <div id="previewText" class="preview-text">天地玄黄 宇宙洪荒
+              <div class="detail-tabs" role="tablist" aria-label="详情面板">
+                <button id="previewTabButton" class="detail-tab active" type="button" role="tab" aria-selected="true" aria-controls="previewTabPanel">预览</button>
+                <button id="infoTabButton" class="detail-tab" type="button" role="tab" aria-selected="false" aria-controls="infoTabPanel">信息</button>
+              </div>
+
+              <div class="detail-tab-panels">
+                <div id="previewTabPanel" class="detail-tab-panel active" role="tabpanel" aria-labelledby="previewTabButton">
+                  <div id="previewStage" class="preview-stage">
+                    <div id="previewText" class="preview-text">天地玄黄 宇宙洪荒
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
 0123456789
 ，。！？；：“”「」</div>
-                <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
-                <div class="stage-hint">移动鼠标查看字形细节</div>
-              </div>
-
-              <div class="detail-actions">
-                <span class="detail-hint">卡片与预览区均可使用放大镜</span>
-                <button id="resetButton" class="text-button">恢复默认</button>
-              </div>
-
-              <details class="font-info-panel collapsible-panel" open>
-                <summary class="panel-title"><div><span class="eyebrow">字体内部信息</span><strong>OpenType 属性</strong></div><span class="collapse-icon">⌄</span></summary>
-                <dl class="font-info-grid">
-                  <div><dt>字体家族</dt><dd id="infoFamily" class="copyable" role="button" tabindex="0" title="点击复制字体名称">—</dd></div>
-                  <div><dt>PostScript</dt><dd id="infoPostscript" class="copyable" role="button" tabindex="0" title="点击复制 PostScript 名称">—</dd></div>
-                  <div><dt>轮廓格式</dt><dd id="infoFormat">—</dd></div>
-                  <div><dt>文件大小</dt><dd id="infoSize">—</dd></div>
-                  <div><dt>字形数量</dt><dd id="infoGlyphs">—</dd></div>
-                  <div><dt>Units per em</dt><dd id="infoUpm">—</dd></div>
-                  <div><dt>内部字重</dt><dd id="infoWeight">—</dd></div>
-                  <div><dt>内部宽度</dt><dd id="infoWidth">—</dd></div>
-                  <div><dt>字符支持</dt><dd id="infoLanguage">—</dd></div>
-                  <div><dt>首字宽高比</dt><dd id="infoAspect">—</dd></div>
-                  <div><dt>数据表</dt><dd id="infoTables">—</dd></div>
-                </dl>
-              </details>
-
-              <details class="bottom-panel collapsible-panel" open>
-                <summary class="panel-title">
-                  <div><span class="eyebrow">预览与字体参数</span><strong id="axisStatus">正在检测可变轴…</strong></div>
-                  <span class="collapse-icon">⌄</span>
-                </summary>
-                <div id="standardControls" class="standard-controls">
-                  <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
-                  <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
-                  <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
-                  <label><span>背景</span><input id="backgroundColor" type="color" value="#f3efe7" /></label>
-                  <label><span>文字</span><input id="textColor" type="color" value="#171714" /></label>
+                    <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
+                    <div class="stage-hint">移动鼠标查看字形细节</div>
+                  </div>
+                  <div class="preview-controls">
+                    <div class="preview-controls-head">
+                      <span id="axisStatus" class="axis-status">正在检测可变轴…</span>
+                      <button id="resetButton" class="text-button" type="button">恢复默认</button>
+                    </div>
+                    <div id="standardControls" class="standard-controls">
+                      <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
+                      <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
+                      <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
+                      <label><span>背景</span><input id="backgroundColor" type="color" value="#f3efe7" /></label>
+                      <label><span>文字</span><input id="textColor" type="color" value="#171714" /></label>
+                    </div>
+                    <div id="axisControls" class="axis-controls"></div>
+                  </div>
                 </div>
-                <div id="axisControls" class="axis-controls"></div>
-              </details>
+
+                <div id="infoTabPanel" class="detail-tab-panel" role="tabpanel" aria-labelledby="infoTabButton" hidden>
+                  <dl class="font-info-grid">
+                    <div><dt>字体家族</dt><dd id="infoFamily" class="copyable" role="button" tabindex="0" title="点击复制字体名称">—</dd></div>
+                    <div><dt>PostScript</dt><dd id="infoPostscript" class="copyable" role="button" tabindex="0" title="点击复制 PostScript 名称">—</dd></div>
+                    <div><dt>轮廓格式</dt><dd id="infoFormat">—</dd></div>
+                    <div><dt>文件大小</dt><dd id="infoSize">—</dd></div>
+                    <div><dt>字形数量</dt><dd id="infoGlyphs">—</dd></div>
+                    <div><dt>Units per em</dt><dd id="infoUpm">—</dd></div>
+                    <div><dt>内部字重</dt><dd id="infoWeight">—</dd></div>
+                    <div><dt>内部宽度</dt><dd id="infoWidth">—</dd></div>
+                    <div><dt>字符支持</dt><dd id="infoLanguage">—</dd></div>
+                    <div><dt>首字宽高比</dt><dd id="infoAspect">—</dd></div>
+                    <div><dt>数据表</dt><dd id="infoTables">—</dd></div>
+                  </dl>
+                </div>
+              </div>
             </div>
           </aside>
         </div>
@@ -914,6 +924,18 @@ async function copyValue(value, label) {
 
 function copyDetailValue(element, label) {
   return copyValue(element.textContent.trim(), label);
+}
+
+function setDetailTab(tab) {
+  const isPreview = tab === "preview";
+  $("#previewTabButton").classList.toggle("active", isPreview);
+  $("#infoTabButton").classList.toggle("active", !isPreview);
+  $("#previewTabButton").setAttribute("aria-selected", isPreview);
+  $("#infoTabButton").setAttribute("aria-selected", !isPreview);
+  $("#previewTabPanel").classList.toggle("active", isPreview);
+  $("#infoTabPanel").classList.toggle("active", !isPreview);
+  $("#previewTabPanel").hidden = !isPreview;
+  $("#infoTabPanel").hidden = isPreview;
 }
 
 function setLoadProgress(text, value = null) {
@@ -2389,6 +2411,8 @@ ui.list.addEventListener("wheel", event => {
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
 $("#themeButton").addEventListener("click", () => document.body.classList.toggle("dark"));
+$("#previewTabButton").addEventListener("click", () => setDetailTab("preview"));
+$("#infoTabButton").addEventListener("click", () => setDetailTab("info"));
 $("#detailToggle").addEventListener("click", () => {
   const panel = $("#detailPanel");
   if (!panel.classList.contains("collapsed")) panel.dataset.openWidth = `${panel.getBoundingClientRect().width}`;

@@ -125,6 +125,18 @@ function copyDetailValue(element, label) {
   return copyValue(element.textContent.trim(), label);
 }
 
+function setDetailTab(tab) {
+  const isPreview = tab === "preview";
+  $("#previewTabButton").classList.toggle("active", isPreview);
+  $("#infoTabButton").classList.toggle("active", !isPreview);
+  $("#previewTabButton").setAttribute("aria-selected", isPreview);
+  $("#infoTabButton").setAttribute("aria-selected", !isPreview);
+  $("#previewTabPanel").classList.toggle("active", isPreview);
+  $("#infoTabPanel").classList.toggle("active", !isPreview);
+  $("#previewTabPanel").hidden = !isPreview;
+  $("#infoTabPanel").hidden = isPreview;
+}
+
 function setLoadProgress(text, value = null) {
   ui.loadProgress.hidden = false;
   ui.progressText.textContent = text;
@@ -1598,6 +1610,8 @@ ui.list.addEventListener("wheel", event => {
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
 $("#themeButton").addEventListener("click", () => document.body.classList.toggle("dark"));
+$("#previewTabButton").addEventListener("click", () => setDetailTab("preview"));
+$("#infoTabButton").addEventListener("click", () => setDetailTab("info"));
 $("#detailToggle").addEventListener("click", () => {
   const panel = $("#detailPanel");
   if (!panel.classList.contains("collapsed")) panel.dataset.openWidth = `${panel.getBoundingClientRect().width}`;
