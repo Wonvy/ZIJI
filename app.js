@@ -73,8 +73,80 @@ const UI_SETTINGS_DEFAULTS = {
   cardAreaCollapsed: false,
   detailPanelWidth: null,
   favoriteCategoryView: "all",
-  collapseFamilyFonts: false
+  collapseFamilyFonts: false,
+  cardPreviewStyle: null
 };
+
+const CARD_PREVIEW_STYLE_DEFAULTS = {
+  fill: { color: "#171714", opacity: 100 },
+  layers: []
+};
+const PREVIEW_EFFECT_TYPES = {
+  dropShadow: {
+    label: "投影",
+    fields: [
+      { key: "color", type: "color", label: "颜色" },
+      { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
+      { key: "offsetX", type: "range", label: "X 偏移", min: -40, max: 40, step: 1 },
+      { key: "offsetY", type: "range", label: "Y 偏移", min: -40, max: 40, step: 1 },
+      { key: "blur", type: "range", label: "模糊", min: 0, max: 40, step: 1 }
+    ],
+    defaults: { enabled: true, color: "#000000", opacity: 35, offsetX: 2, offsetY: 3, blur: 4 }
+  },
+  outerStroke: {
+    label: "外轮廓",
+    fields: [
+      { key: "color", type: "color", label: "颜色" },
+      { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
+      { key: "width", type: "range", label: "粗细", min: 1, max: 16, step: 1 }
+    ],
+    defaults: { enabled: true, color: "#000000", opacity: 100, width: 2 }
+  },
+  innerStroke: {
+    label: "内轮廓",
+    fields: [
+      { key: "color", type: "color", label: "颜色" },
+      { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
+      { key: "width", type: "range", label: "粗细", min: 1, max: 10, step: 1 }
+    ],
+    defaults: { enabled: true, color: "#ffffff", opacity: 100, width: 1 }
+  }
+};
+let cardPreviewStyleLayerCounter = 0;
+
+function cloneCardPreviewStyle(style = CARD_PREVIEW_STYLE_DEFAULTS) {
+  return JSON.parse(JSON.stringify(style));
+}
+
+function nextPreviewStyleLayerId() {
+  cardPreviewStyleLayerCounter += 1;
+  return `preview-layer-${cardPreviewStyleLayerCounter}`;
+}
+
+function normalizeCardPreviewStyle(raw) {
+  const style = cloneCardPreviewStyle(CARD_PREVIEW_STYLE_DEFAULTS);
+  if (!raw || typeof raw !== "object") return style;
+  if (raw.fill && typeof raw.fill === "object") {
+    style.fill.color = typeof raw.fill.color === "string" ? raw.fill.color : style.fill.color;
+    style.fill.opacity = Number.isFinite(Number(raw.fill.opacity)) ? Number(raw.fill.opacity) : style.fill.opacity;
+  }
+  if (Array.isArray(raw.layers)) {
+    style.layers = raw.layers.map(layer => {
+      const type = PREVIEW_EFFECT_TYPES[layer?.type] ? layer.type : null;
+      if (!type) return null;
+      const defaults = PREVIEW_EFFECT_TYPES[type].defaults;
+      const normalized = { id: String(layer.id || nextPreviewStyleLayerId()), type, enabled: layer.enabled !== false };
+      PREVIEW_EFFECT_TYPES[type].fields.forEach(field => {
+        normalized[field.key] = field.type === "color"
+          ? (typeof layer[field.key] === "string" ? layer[field.key] : defaults[field.key])
+          : Number.isFinite(Number(layer[field.key])) ? Number(layer[field.key]) : defaults[field.key];
+      });
+      return normalized;
+    }).filter(Boolean);
+  }
+  return style;
+}
+
 function loadUiSettings() {
   try {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
@@ -113,7 +185,8 @@ function collectUiSettings() {
     cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
-    collapseFamilyFonts: state.collapseFamilyFonts
+    collapseFamilyFonts: state.collapseFamilyFonts,
+    cardPreviewStyle: state.cardPreviewStyle
   };
 }
 let persistUiSettingsTimer;
@@ -171,6 +244,7 @@ const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
+  cardPreviewStyle: normalizeCardPreviewStyle(uiSettings.cardPreviewStyle),
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -1139,6 +1213,346 @@ function outlinePreviewCharacters(text = cardPreviewText()) {
   return characters.slice(0, 24);
 }
 
+let cardPreviewStyleDraft = null;
+let cardPreviewStyleSelectedLayerId = null;
+let cardPreviewStylePreviewFontId = null;
+
+function createPreviewStyleLayer(type) {
+  const meta = PREVIEW_EFFECT_TYPES[type];
+  if (!meta) return null;
+  return { id: nextPreviewStyleLayerId(), type, ...meta.defaults, enabled: true };
+}
+
+function hexWithOpacity(hex, opacityPercent = 100) {
+  const normalized = String(hex || "#000000").trim();
+  const match = normalized.match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return normalized || "#000000";
+  const value = match[1];
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const alpha = Math.max(0, Math.min(100, Number(opacityPercent) || 0)) / 100;
+  if (alpha >= 0.999) return `#${value.toLowerCase()}`;
+  return `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
+}
+
+function resolvePreviewFillColor(style) {
+  return style?.fill?.color || CARD_PREVIEW_STYLE_DEFAULTS.fill.color;
+}
+
+function innerStrokeShadows(width, color) {
+  const shadows = [];
+  const radius = Math.max(1, Math.round(Number(width) || 1));
+  for (let step = 1; step <= radius; step++) {
+    for (let angle = 0; angle < 360; angle += 45) {
+      const rad = angle * Math.PI / 180;
+      shadows.push(`${(Math.cos(rad) * step).toFixed(1)}px ${(Math.sin(rad) * step).toFixed(1)}px 0 ${color}`);
+    }
+  }
+  return shadows;
+}
+
+function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const css = {
+    color: hexWithOpacity(resolvePreviewFillColor(normalized), normalized.fill.opacity),
+    webkitTextStroke: "",
+    textStroke: "",
+    paintOrder: "",
+    textShadow: "none"
+  };
+  const shadows = [];
+  let outerStroke = null;
+  for (const layer of normalized.layers) {
+    if (!layer.enabled) continue;
+    if (layer.type === "dropShadow") {
+      shadows.push(`${layer.offsetX}px ${layer.offsetY}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
+    } else if (layer.type === "outerStroke") {
+      outerStroke = layer;
+    } else if (layer.type === "innerStroke") {
+      shadows.unshift(...innerStrokeShadows(layer.width, hexWithOpacity(layer.color, layer.opacity)));
+    }
+  }
+  if (outerStroke) {
+    css.webkitTextStroke = `${outerStroke.width}px ${hexWithOpacity(outerStroke.color, outerStroke.opacity)}`;
+    css.textStroke = css.webkitTextStroke;
+    css.paintOrder = "stroke fill";
+  }
+  if (shadows.length) css.textShadow = shadows.join(", ");
+  return css;
+}
+
+function hasActiveCardPreviewStyle(style = state.cardPreviewStyle) {
+  const normalized = normalizeCardPreviewStyle(style);
+  if (normalized.fill.color !== CARD_PREVIEW_STYLE_DEFAULTS.fill.color || normalized.fill.opacity !== 100) return true;
+  return normalized.layers.some(layer => layer.enabled);
+}
+
+function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
+  if (!sample) return;
+  const css = cardPreviewStyleToCss(style);
+  sample.style.color = css.color;
+  sample.style.webkitTextStroke = css.webkitTextStroke;
+  sample.style.textStroke = css.textStroke;
+  sample.style.paintOrder = css.paintOrder;
+  sample.style.textShadow = css.textShadow;
+  sample.closest(".font-card")?.classList.toggle("has-preview-style", hasActiveCardPreviewStyle(style));
+}
+
+function applyCardPreviewStyleToAllCards() {
+  ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => applyCardPreviewStyleToSample(sample));
+  renderCardPreviewStyleModalPreview();
+}
+
+function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle }) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const fillColor = hexWithOpacity(resolvePreviewFillColor(normalized), normalized.fill.opacity);
+  const enabledLayers = normalized.layers.filter(layer => layer.enabled);
+  const dropShadows = enabledLayers.filter(layer => layer.type === "dropShadow");
+  const outerStrokes = enabledLayers.filter(layer => layer.type === "outerStroke").sort((a, b) => b.width - a.width);
+  const innerStrokes = enabledLayers.filter(layer => layer.type === "innerStroke");
+  let defs = "";
+  let filterAttr = "";
+  if (dropShadows.length) {
+    defs += `<filter id="preview-shadow" x="-50%" y="-50%" width="200%" height="200%">`;
+    dropShadows.forEach(layer => {
+      defs += `<feDropShadow dx="${formatOutlineNumber(layer.offsetX)}" dy="${formatOutlineNumber(layer.offsetY)}" stdDeviation="${formatOutlineNumber(layer.blur / 2)}" flood-color="${escapeXml(layer.color)}" flood-opacity="${formatOutlineNumber(layer.opacity / 100)}"/>`;
+    });
+    defs += `</filter>`;
+    filterAttr = ` filter="url(#preview-shadow)"`;
+  }
+  let body = "";
+  outerStrokes.forEach(layer => {
+    body += `<path fill="none" stroke="${escapeXml(hexWithOpacity(layer.color, layer.opacity))}" stroke-width="${formatOutlineNumber(layer.width * 2)}" d="${pathData}"/>`;
+  });
+  body += `<path fill="${escapeXml(fillColor)}" d="${pathData}"/>`;
+  innerStrokes.forEach((layer, index) => {
+    const clipId = `preview-clip-${index}`;
+    defs += `<clipPath id="${clipId}"><path d="${pathData}"/></clipPath>`;
+    body += `<path clip-path="url(#${clipId})" fill="none" stroke="${escapeXml(hexWithOpacity(layer.color, layer.opacity))}" stroke-width="${formatOutlineNumber(layer.width * 2)}" d="${pathData}"/>`;
+  });
+  const defsBlock = defs ? `<defs>${defs}</defs>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n${defsBlock}\n  <g${filterAttr}>${body}</g>\n</svg>`;
+}
+
+function getCardPreviewStyleModalFont() {
+  const font = state.fonts.find(item => item.id === cardPreviewStylePreviewFontId);
+  if (font) return font;
+  return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
+}
+
+function renderCardPreviewStyleFontOptions() {
+  const select = $("#cardPreviewStyleFont");
+  if (!select) return;
+  const current = getCardPreviewStyleModalFont();
+  cardPreviewStylePreviewFontId = current?.id ?? null;
+  const options = [];
+  const seen = new Set();
+  [state.selected, state.previewed, ...state.filtered.slice(0, 120)].forEach(font => {
+    if (!font || seen.has(font.id)) return;
+    seen.add(font.id);
+    options.push(font);
+  });
+  if (!options.length && state.fonts[0]) options.push(state.fonts[0]);
+  select.innerHTML = options.map(font => `<option value="${font.id}"${font.id === cardPreviewStylePreviewFontId ? " selected" : ""}>${escapeHtml(font.displayName || font.family)} · ${escapeHtml(font.style || "Regular")}</option>`).join("");
+}
+
+function renderCardPreviewStyleModalPreview() {
+  const sample = $("#cardPreviewStyleSample");
+  const stage = $("#cardPreviewStyleStage");
+  if (!sample || !stage) return;
+  const font = getCardPreviewStyleModalFont();
+  const text = cardPreviewText();
+  sample.textContent = text || "字体有光";
+  if (font) {
+    registerFont(font);
+    sample.style.fontFamily = cssName(font);
+    ensureFontLoaded(font, text).then(() => {
+      if (getCardPreviewStyleModalFont()?.id !== font.id) return;
+      sample.style.fontFamily = cssName(font);
+    });
+  } else {
+    sample.style.fontFamily = "";
+  }
+  const css = cardPreviewStyleToCss(cardPreviewStyleDraft || state.cardPreviewStyle);
+  sample.style.color = css.color;
+  sample.style.webkitTextStroke = css.webkitTextStroke;
+  sample.style.textStroke = css.textStroke;
+  sample.style.paintOrder = css.paintOrder;
+  sample.style.textShadow = css.textShadow;
+}
+
+function renderCardPreviewStyleLayerList() {
+  const list = $("#cardPreviewStyleLayerList");
+  if (!list || !cardPreviewStyleDraft) return;
+  if (!cardPreviewStyleDraft.layers.length) {
+    list.innerHTML = `<li class="preview-style-layer-empty">点击右侧 + 添加投影、外轮廓或内轮廓</li>`;
+    return;
+  }
+  list.innerHTML = cardPreviewStyleDraft.layers.map(layer => {
+    const label = PREVIEW_EFFECT_TYPES[layer.type]?.label || layer.type;
+    const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
+    return `<li class="preview-style-layer-item${active}" data-layer-id="${escapeHtml(layer.id)}"><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="layer-name">${escapeHtml(label)}</span><button type="button" class="layer-remove" aria-label="删除${escapeHtml(label)}">×</button></li>`;
+  }).join("");
+}
+
+function renderCardPreviewStyleParams() {
+  const panel = $("#cardPreviewStyleParams");
+  if (!panel || !cardPreviewStyleDraft) return;
+  const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
+  if (!layer) {
+    panel.innerHTML = `<div class="preview-style-params-empty">选择左侧效果以编辑参数</div>`;
+    return;
+  }
+  const meta = PREVIEW_EFFECT_TYPES[layer.type];
+  panel.innerHTML = `<div class="preview-style-params-grid">${meta.fields.map(field => {
+    const value = layer[field.key];
+    if (field.type === "color") {
+      return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><input type="color" data-layer-field="${field.key}" value="${escapeHtml(value)}" /></label>`;
+    }
+    return `<label class="preview-style-field preview-style-range"><span>${escapeHtml(field.label)} <output data-layer-output="${field.key}">${escapeHtml(String(value))}</output></span><input type="range" data-layer-field="${field.key}" min="${field.min}" max="${field.max}" step="${field.step}" value="${value}" /></label>`;
+  }).join("")}</div>`;
+}
+
+function syncCardPreviewStyleFillControls() {
+  if (!cardPreviewStyleDraft) return;
+  $("#cardPreviewStyleFillColor").value = resolvePreviewFillColor(cardPreviewStyleDraft);
+  $("#cardPreviewStyleFillOpacity").value = String(cardPreviewStyleDraft.fill.opacity);
+  $("#cardPreviewStyleFillOpacityOut").textContent = String(cardPreviewStyleDraft.fill.opacity);
+}
+
+function renderCardPreviewStyleModal() {
+  if (!cardPreviewStyleDraft) return;
+  renderCardPreviewStyleFontOptions();
+  syncCardPreviewStyleFillControls();
+  renderCardPreviewStyleLayerList();
+  renderCardPreviewStyleParams();
+  renderCardPreviewStyleModalPreview();
+}
+
+function openCardPreviewStyleModal() {
+  if (!state.fonts.length) return toast("请先加载字体");
+  cardPreviewStyleDraft = cloneCardPreviewStyle(state.cardPreviewStyle);
+  cardPreviewStyleSelectedLayerId = cardPreviewStyleDraft.layers[0]?.id || null;
+  cardPreviewStylePreviewFontId = state.selected?.id || state.previewed?.id || state.filtered[0]?.id || state.fonts[0]?.id || null;
+  cardPreviewStyleDraft.layers.forEach(layer => {
+    if (layer.id && /^preview-layer-\d+$/.test(layer.id)) {
+      const suffix = Number(layer.id.split("-").pop());
+      if (suffix > cardPreviewStyleLayerCounter) cardPreviewStyleLayerCounter = suffix;
+    }
+  });
+  renderCardPreviewStyleModal();
+  $("#cardPreviewStyleModal").hidden = false;
+  $("#cardPreviewStyleAddMenu").hidden = true;
+}
+
+function closeCardPreviewStyleModal(apply = false) {
+  if (apply && cardPreviewStyleDraft) {
+    state.cardPreviewStyle = cloneCardPreviewStyle(cardPreviewStyleDraft);
+    applyCardPreviewStyleToAllCards();
+    persistUiSettings();
+    toast("已应用卡片预览样式");
+  }
+  cardPreviewStyleDraft = null;
+  cardPreviewStyleSelectedLayerId = null;
+  $("#cardPreviewStyleModal").hidden = true;
+  $("#cardPreviewStyleAddMenu").hidden = true;
+}
+
+function wireCardPreviewStyleModal() {
+  const modal = $("#cardPreviewStyleModal");
+  if (!modal) return;
+  $("#cardPreviewStyleButton")?.addEventListener("click", openCardPreviewStyleModal);
+  $("#cardPreviewStyleClose")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
+  $("#cardPreviewStyleCancel")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
+  $("#cardPreviewStyleConfirm")?.addEventListener("click", () => closeCardPreviewStyleModal(true));
+  modal.addEventListener("click", event => {
+    if (event.target === modal) closeCardPreviewStyleModal(false);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !modal.hidden) closeCardPreviewStyleModal(false);
+  });
+  $("#cardPreviewStyleFont")?.addEventListener("change", event => {
+    cardPreviewStylePreviewFontId = Number(event.target.value);
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleFillColor")?.addEventListener("input", event => {
+    if (!cardPreviewStyleDraft) return;
+    cardPreviewStyleDraft.fill.color = event.target.value;
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleFillOpacity")?.addEventListener("input", event => {
+    if (!cardPreviewStyleDraft) return;
+    cardPreviewStyleDraft.fill.opacity = Number(event.target.value);
+    $("#cardPreviewStyleFillOpacityOut").textContent = String(cardPreviewStyleDraft.fill.opacity);
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleAdd")?.addEventListener("click", event => {
+    event.stopPropagation();
+    const menu = $("#cardPreviewStyleAddMenu");
+    menu.hidden = !menu.hidden;
+  });
+  $("#cardPreviewStyleAddMenu")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-effect-type]");
+    if (!button || !cardPreviewStyleDraft) return;
+    const layer = createPreviewStyleLayer(button.dataset.effectType);
+    if (!layer) return;
+    cardPreviewStyleDraft.layers.push(layer);
+    cardPreviewStyleSelectedLayerId = layer.id;
+    $("#cardPreviewStyleAddMenu").hidden = true;
+    renderCardPreviewStyleModal();
+  });
+  document.addEventListener("pointerdown", event => {
+    const menu = $("#cardPreviewStyleAddMenu");
+    const addButton = $("#cardPreviewStyleAdd");
+    if (!menu || menu.hidden) return;
+    if (menu.contains(event.target) || addButton?.contains(event.target)) return;
+    menu.hidden = true;
+  });
+  $("#cardPreviewStyleLayerList")?.addEventListener("click", event => {
+    if (!cardPreviewStyleDraft) return;
+    const removeButton = event.target.closest(".layer-remove");
+    if (removeButton) {
+      event.stopPropagation();
+      const item = removeButton.closest("[data-layer-id]");
+      const layerId = item?.dataset.layerId;
+      cardPreviewStyleDraft.layers = cardPreviewStyleDraft.layers.filter(layer => layer.id !== layerId);
+      if (cardPreviewStyleSelectedLayerId === layerId) {
+        cardPreviewStyleSelectedLayerId = cardPreviewStyleDraft.layers[0]?.id || null;
+      }
+      renderCardPreviewStyleModal();
+      return;
+    }
+    const item = event.target.closest("[data-layer-id]");
+    if (!item) return;
+    cardPreviewStyleSelectedLayerId = item.dataset.layerId;
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleParams();
+  });
+  $("#cardPreviewStyleLayerList")?.addEventListener("change", event => {
+    if (!cardPreviewStyleDraft || !event.target.matches('input[type="checkbox"]')) return;
+    const item = event.target.closest("[data-layer-id]");
+    const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === item?.dataset.layerId);
+    if (!layer) return;
+    layer.enabled = event.target.checked;
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("input", event => {
+    if (!cardPreviewStyleDraft) return;
+    const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
+    const field = event.target.dataset.layerField;
+    if (!layer || !field) return;
+    layer[field] = event.target.type === "range" ? Number(event.target.value) : event.target.value;
+    const output = panelOutput(event.target);
+    if (output) output.textContent = String(layer[field]);
+    renderCardPreviewStyleModalPreview();
+  });
+}
+
+function panelOutput(input) {
+  return input?.closest(".preview-style-field")?.querySelector(`[data-layer-output="${input.dataset.layerField}"]`);
+}
+
 async function copySvgValue(svg) {
   if (!svg) throw new Error("SVG 内容为空");
   try {
@@ -1473,7 +1887,7 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   const normalizedCommands = translateSvgPathCommands(svgCommands, -originX, -originY);
   const pathData = pathCommandsToSvgData(normalizedCommands);
   const label = escapeXml(font.displayName || font.family || "font");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="#000" d="${pathData}"/>\n</svg>`;
+  return buildStyledOutlineSvgMarkup({ pathData, width, height, label, style: state.cardPreviewStyle });
 }
 
 async function copyFontSvg(font) {
@@ -1539,6 +1953,7 @@ function createFontCard(font) {
   card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
   card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
   card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
+  applyCardPreviewStyleToSample(card.querySelector(".sample"));
   if (readyForRender) {
     registerFont(font);
     card.querySelector(".sample").style.fontFamily = cssName(font);
@@ -1803,6 +2218,7 @@ function loadCardFont(card) {
   if (font.previewState === "ready") {
     card.classList.remove("font-pending", "font-loading", "font-failed");
     card.classList.add("font-ready");
+    applyCardPreviewStyleToSample(sample);
     requestAnimationFrame(() => fitCardSample(sample));
     return;
   }
@@ -1811,7 +2227,10 @@ function loadCardFont(card) {
     if (!card.isConnected) return;
     card.classList.remove("font-pending", "font-loading", "font-ready", "font-failed");
     card.classList.add(success ? "font-ready" : "font-failed");
-    if (success) fitCardSample(sample);
+    if (success) {
+      applyCardPreviewStyleToSample(sample);
+      fitCardSample(sample);
+    }
   };
   ensureFontLoaded(font, sample.textContent).then(finish);
 }
@@ -1915,6 +2334,7 @@ function applyCardSampleSize({ fit = false } = {}) {
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
     sample.style.fontSize = `${state.cardSampleSize}px`;
+    applyCardPreviewStyleToSample(sample);
   });
   if (fit) scheduleCardSampleFit();
 }
@@ -2541,6 +2961,7 @@ function updatePreview() {
     }
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
+  if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
 }
 
@@ -3374,4 +3795,5 @@ updateVisualSettings();
 updatePreview();
 syncDetailPreviewStage();
 updateCardSampleSizeControl();
+wireCardPreviewStyleModal();
 if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
