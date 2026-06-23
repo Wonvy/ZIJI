@@ -101,6 +101,23 @@
                       <span class="filter-empty">正在扫描字重…</span>
                     </div>
                   </details>
+                  <details class="filter-menu" id="sortMenu">
+                    <summary>排序 <b id="sortBadge">名称</b></summary>
+                    <div class="filter-popover sort-filter-popover">
+                      <span class="filter-group-label">常规</span>
+                      <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
+                      <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
+                      <span class="popover-divider"></span>
+                      <span class="filter-group-label">语言</span>
+                      <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
+                      <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
+                      <span class="popover-divider"></span>
+                      <span class="filter-group-label">字形比例</span>
+                      <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
+                      <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
+                      <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
+                    </div>
+                  </details>
                 </div>
               </div>
 
@@ -109,29 +126,13 @@
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
-                <select id="sortSelect" class="sort-select" aria-label="字体排序">
-                  <optgroup label="常规">
-                    <option value="name">名称排序</option>
-                    <option value="favorite">收藏优先</option>
-                  </optgroup>
-                  <optgroup label="语言">
-                    <option value="chinese-first">中文优先</option>
-                    <option value="latin-first">英文优先</option>
-                  </optgroup>
-                  <optgroup label="字形比例">
-                    <option value="square">首字接近正方形</option>
-                    <option value="narrow">首字由瘦到宽</option>
-                    <option value="wide">首字由宽到瘦</option>
-                  </optgroup>
-                </select>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
-                    <button type="button" class="view-option-item" id="focusViewMenuItem">无干扰视图</button>
-                    <span class="popover-divider"></span>
-                    <label><input type="checkbox" id="collapseFamilyFonts"> 折叠家族字体</label>
+                    <label class="check-option"><input type="checkbox" id="focusViewToggle">无干扰视图</label>
+                    <label class="check-option"><input type="checkbox" id="collapseFamilyFonts">折叠家族字体</label>
                   </div>
                 </details>
               </div>
@@ -182,8 +183,8 @@
             <div class="detail-content">
               <div class="font-meta-row">
                 <div>
-                  <span id="selectedStyle" class="eyebrow">REGULAR</span>
                   <h2 id="selectedName">请选择字体</h2>
+                  <span id="selectedStyle" class="eyebrow">REGULAR</span>
                 </div>
                 <div class="meta-actions">
                   <button id="categoryAssignmentButton" class="icon-button" title="设置收藏分类" aria-label="设置收藏分类">≡</button>
@@ -202,18 +203,25 @@
                     <div id="previewText" class="preview-text" contenteditable="false" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="双击编辑预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
                     <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
+                    <div class="stage-color-controls">
+                      <label class="stage-color-swatch" title="背景颜色">
+                        <input id="backgroundColor" type="color" value="#f3efe7" aria-label="背景颜色" />
+                      </label>
+                      <label class="stage-color-swatch stage-color-text" title="文字颜色">
+                        <span class="stage-color-mark" aria-hidden="true">A</span>
+                        <input id="textColor" type="color" value="#171714" aria-label="文字颜色" />
+                      </label>
+                    </div>
                   </div>
                   <div class="preview-controls">
                     <div class="preview-controls-head">
                       <span id="axisStatus" class="axis-status">正在检测可变轴…</span>
                       <button id="resetButton" class="text-button" type="button">恢复默认</button>
                     </div>
-                    <div id="standardControls" class="standard-controls">
+                    <div id="standardControls" class="standard-controls standard-controls-compact">
                       <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
                       <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
                       <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
-                      <label><span>背景</span><input id="backgroundColor" type="color" value="#f3efe7" /></label>
-                      <label><span>文字</span><input id="textColor" type="color" value="#171714" /></label>
                     </div>
                     <div id="axisControls" class="axis-controls"></div>
                   </div>

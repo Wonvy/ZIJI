@@ -40,6 +40,18 @@ function loadFavoriteData() {
 const cachedFavoriteData = loadFavoriteData();
 const UI_SETTINGS_KEY = "webfonts-ui-settings";
 const UI_SETTINGS_VERSION = 1;
+const SORT_LABELS = {
+  name: "名称",
+  favorite: "收藏",
+  "chinese-first": "中文",
+  "latin-first": "英文",
+  square: "方形",
+  narrow: "瘦→宽",
+  wide: "宽→瘦"
+};
+function sortLabel(sort) {
+  return SORT_LABELS[sort] || "名称";
+}
 const UI_SETTINGS_DEFAULTS = {
   theme: "light",
   view: "grid",
@@ -134,7 +146,6 @@ function applyStoredUiSettings(settings) {
   ui.bg.value = settings.previewBackground;
   ui.color.value = settings.previewTextColor;
   $("#cardDensity").value = settings.cardWidth;
-  $("#sortSelect").value = settings.sort;
   syncMagnifierControl();
   const detailPanel = $("#detailPanel");
   const cardArea = $(".card-area");
@@ -158,7 +169,7 @@ const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
@@ -290,6 +301,7 @@ function updateDetailMagnifier(event) {
   const lensLeft = Math.min(rect.width - lens / 2, Math.max(lens / 2, x)) - lens / 2;
   const lensTop = Math.min(rect.height - lens / 2, Math.max(lens / 2, y)) - lens / 2;
   applyDetailMagnifierStyles();
+  ui.magnifier.style.backgroundColor = resolveMagnifierBackground(ui.stage.style.backgroundColor || ui.bg.value, "--stage");
   showMagnifier(ui.magnifier);
   ui.magnifier.style.left = `${lensLeft}px`;
   ui.magnifier.style.top = `${lensTop}px`;
@@ -326,6 +338,13 @@ function hideMagnifier(element) {
     element.hidden = true;
     element.style.display = "none";
   }, 190);
+}
+
+function resolveMagnifierBackground(color, fallbackVar = "--paper") {
+  if (color && color !== "transparent" && color !== "rgba(0, 0, 0, 0)") return color;
+  const fallback = getComputedStyle(document.body).getPropertyValue(fallbackVar).trim();
+  if (fallback) return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(fallbackVar).trim() || "#fbf9f4";
 }
 
 async function copyValue(value, label) {
@@ -456,12 +475,30 @@ function syncToolbarPreview(font) {
     ui.previewInput.style.fontFamily = "";
     ui.previewInput.style.fontVariationSettings = "";
     $("#previewInputWrap")?.classList.remove("is-previewing");
+    syncDetailMetaFonts(null);
     return;
   }
   registerFont(font);
   ui.previewInput.style.fontFamily = cssName(font);
   ui.previewInput.style.fontVariationSettings = toolbarVariationSettings();
   $("#previewInputWrap")?.classList.add("is-previewing");
+  syncDetailMetaFonts(font);
+}
+
+function syncDetailMetaFonts(font) {
+  if (!font) {
+    ui.selectedName.style.fontFamily = "";
+    ui.selectedStyle.style.fontFamily = "";
+    ui.selectedName.style.fontVariationSettings = "";
+    ui.selectedStyle.style.fontVariationSettings = "";
+    return;
+  }
+  const family = cssName(font);
+  const variation = toolbarVariationSettings();
+  [ui.selectedName, ui.selectedStyle].forEach(el => {
+    el.style.fontFamily = family;
+    el.style.fontVariationSettings = variation;
+  });
 }
 
 function registerFont(font) {
@@ -619,6 +656,40 @@ function stepFamilyFont(font, direction) {
   return true;
 }
 
+const CARD_WHEEL_NO_PAGE = ".card-family-switch, .card-family-menu, .card-family-option, strong, .star, .card-actions, .card-copy, .card-copy-svg, small";
+
+function isCardWheelPageZone(target, card) {
+  if (!card?.contains(target)) return false;
+  if (target.closest(CARD_WHEEL_NO_PAGE)) return false;
+  if (target.closest(".sample")) return true;
+  return target === card;
+}
+
+function turnFontListPage(direction) {
+  const now = performance.now();
+  if (now - (ui.list.lastPageTurn || 0) < 180) return;
+  ui.list.lastPageTurn = now;
+  goToPage(state.page + direction);
+}
+
+function handleFontListWheel(event) {
+  if (event.ctrlKey) return;
+  const card = event.target.closest(".font-card");
+  if (card) {
+    const font = state.fonts.find(item => item.id === Number(card.dataset.id));
+    if (event.target.closest("small") && card.querySelector(".card-family-switch") && font) {
+      event.preventDefault();
+      event.stopPropagation();
+      stepFamilyFont(font, event.deltaY > 0 ? 1 : -1);
+      return;
+    }
+    if (event.target.closest(CARD_WHEEL_NO_PAGE)) return;
+    if (!isCardWheelPageZone(event.target, card)) return;
+  }
+  event.preventDefault();
+  turnFontListPage(event.deltaY > 0 ? 1 : -1);
+}
+
 function pickFamilyRepresentative(members) {
   if (state.selected && members.some(item => item.id === state.selected.id)) return state.selected;
   const regular = members.find(item => item.weightLabel === "Regular");
@@ -679,8 +750,8 @@ function setupFilterMenus() {
     const popover = menu.querySelector(".filter-popover");
     const summary = menu.querySelector("summary");
     if (!popover || !summary) return;
-    const align = menu.id === "weightMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
-    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "viewOptionsMenu" ? 168 : 145;
+    const align = menu.id === "weightMenu" || menu.id === "sortMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
+    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "sortMenu" || menu.id === "viewOptionsMenu" ? 168 : 145;
     const closeMenu = () => {
       menu.removeAttribute("open");
       resetFloatingPopover(popover, menu);
@@ -732,6 +803,65 @@ function syncCollapsedRepresentative(font) {
   state.filtered.sort(compareFilteredFonts);
   renderFontList();
   ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
+}
+
+function beginFilterWork() {
+  state.filterVersion++;
+  state.preloadVersion++;
+  clearTimeout(beginFilterWork.debounceTimer);
+  beginFilterWork.debounceTimer = null;
+  clearTimeout(updatePreview.shapeTimer);
+  updatePreview.shapeTimer = null;
+  return state.filterVersion;
+}
+
+function getFilterScanNeeds() {
+  if (!state.fonts.length) return { variable: false, capabilities: false, shapes: false };
+  return {
+    variable: state.filters.has("variable") && state.fonts.some(font => font.variable === null),
+    capabilities: (
+      (state.languageFilters.size > 0 || ["chinese-first", "latin-first"].includes(state.sort)) &&
+      state.fonts.some(font => !font.details)
+    ),
+    shapes: ["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)
+  };
+}
+
+function showPendingFilterScan() {
+  state.filtered = [];
+  state.page = 0;
+  renderFontList();
+  ui.empty.hidden = true;
+}
+
+async function runFilterScanChain(token) {
+  const needs = getFilterScanNeeds();
+  if (needs.variable) {
+    ui.scanProgress.hidden = false;
+    if (!await detectVariableFonts(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  if (getFilterScanNeeds().capabilities) {
+    if (!await scanFontCapabilities(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  if (getFilterScanNeeds().shapes) {
+    if (!await scanFontShapes(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  ui.scanProgress.hidden = true;
+  applyFilter();
+}
+
+function refreshFilters() {
+  const token = beginFilterWork();
+  const needs = getFilterScanNeeds();
+  if (needs.variable || needs.capabilities || needs.shapes) {
+    showPendingFilterScan();
+    runFilterScanChain(token);
+    return;
+  }
+  applyFilter();
 }
 
 function applyFilter() {
@@ -867,7 +997,7 @@ function renderWeightFilterMenu() {
     input.addEventListener("change", () => {
       input.checked ? state.weightFilters.add(input.dataset.weightLabel) : state.weightFilters.delete(input.dataset.weightLabel);
       updateFilterControls();
-      applyFilter();
+      refreshFilters();
       persistUiSettings();
     });
   });
@@ -1244,11 +1374,6 @@ function createFontCard(font) {
       if (stayInFamilyMenu(event)) return;
       closeFamilyMenu();
     });
-    familySwitch.addEventListener("wheel", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      stepFamilyFont(font, event.deltaY > 0 ? 1 : -1);
-    }, { passive: false });
   }
   card.querySelectorAll(".card-family-option").forEach(button => {
     button.addEventListener("mouseenter", () => {
@@ -1655,26 +1780,29 @@ function restorePinnedPreview() {
   else clearPreview();
 }
 
-async function detectVariableFonts() {
-  if (state.scanningVariables) return;
-  if (state.scanningCapabilities || state.scanningShapes) { setTimeout(detectVariableFonts, 120); return; }
+async function detectVariableFonts(token = state.filterVersion) {
   state.scanningVariables = true;
   let completed = state.fonts.filter(item => item.variable !== null).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const updateScanProgress = () => {
+    if (token !== state.filterVersion) return;
     const percent = total ? completed / total * 100 : 100;
     ui.scanBar.style.width = `${percent}%`;
     ui.scanText.textContent = `正在识别可变字体 ${completed} / ${total}`;
   };
   updateScanProgress();
-  const workers = Array.from({length: 1}, async () => {
+  const workers = Array.from({ length: 1 }, async () => {
     while (true) {
+      if (token !== state.filterVersion) break;
       const font = state.fonts.find(item => item.variable === null && !item.detecting);
       if (!font) break;
       font.detecting = true;
-      try { font.variable = (await getVariationAxes(font)).length > 0; }
-      catch { font.variable = false; }
+      try {
+        if (token !== state.filterVersion) break;
+        font.variable = (await getVariationAxes(font)).length > 0;
+      } catch { font.variable = false; }
+      finally { font.detecting = false; }
       completed++;
       if (completed % 3 === 0 || completed === total) {
         updateScanProgress();
@@ -1683,25 +1811,29 @@ async function detectVariableFonts() {
     }
   });
   await Promise.all(workers);
+  state.scanningVariables = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
   ui.scanText.textContent = "可变字体识别完成";
-  state.scanningVariables = false;
-  if (state.filters.has("variable")) applyFilter();
+  return true;
 }
 
-async function scanFontCapabilities() {
-  if (state.scanningCapabilities) return;
-  if (state.scanningVariables || state.scanningShapes) { setTimeout(scanFontCapabilities, 120); return; }
+async function scanFontCapabilities(token = state.filterVersion) {
   state.scanningCapabilities = true;
   let completed = state.fonts.filter(font => font.details).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const update = () => {
+    if (token !== state.filterVersion) return;
     ui.scanBar.style.width = `${total ? completed / total * 100 : 100}%`;
     ui.scanText.textContent = `正在读取字符与字重信息 ${completed} / ${total}`;
   };
   update();
   for (const font of state.fonts) {
+    if (token !== state.filterVersion) break;
     if (font.details) continue;
     try { await getFontDetails(font); }
     catch { font.details = { supportsChinese: false, supportsLatin: false, weight: font.weightClass }; }
@@ -1712,23 +1844,27 @@ async function scanFontCapabilities() {
     }
   }
   state.scanningCapabilities = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
-  applyFilter();
+  return true;
 }
 
-async function scanFontShapes() {
-  if (state.scanningShapes) return;
-  if (state.scanningVariables || state.scanningCapabilities) { setTimeout(scanFontShapes, 150); return; }
+async function scanFontShapes(token = state.filterVersion) {
   state.scanningShapes = true;
   let completed = state.fonts.filter(font => font.aspectRatio !== undefined).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const update = () => {
+    if (token !== state.filterVersion) return;
     ui.scanBar.style.width = `${total ? completed / total * 100 : 100}%`;
     ui.scanText.textContent = `正在测量首字宽高比 ${completed} / ${total}`;
   };
   update();
   for (const font of state.fonts) {
+    if (token !== state.filterVersion) break;
     if (font.aspectRatio !== undefined) continue;
     try { await getFontAspect(font); }
     catch { font.aspectRatio = null; }
@@ -1739,8 +1875,12 @@ async function scanFontShapes() {
     }
   }
   state.scanningShapes = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
-  applyFilter();
+  return true;
 }
 
 function getVariationAxes(font) {
@@ -2153,7 +2293,11 @@ function updateVariation() {
   const value = toolbarVariationSettings();
   ui.previewText.style.fontVariationSettings = value;
   ui.magnifiedText.style.fontVariationSettings = value;
-  if (state.previewed) ui.previewInput.style.fontVariationSettings = value;
+  if (state.previewed) {
+    ui.previewInput.style.fontVariationSettings = value;
+    ui.selectedName.style.fontVariationSettings = value;
+    ui.selectedStyle.style.fontVariationSettings = value;
+  }
 }
 
 function updatePreview() {
@@ -2164,7 +2308,7 @@ function updatePreview() {
     state.fonts.forEach(font => { delete font.aspectRatio; delete font.aspectPromise; });
     if (["square", "narrow", "wide"].includes(state.sort)) {
       clearTimeout(updatePreview.shapeTimer);
-      updatePreview.shapeTimer = setTimeout(scanFontShapes, 260);
+      updatePreview.shapeTimer = setTimeout(refreshFilters, 260);
     }
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
@@ -2194,8 +2338,19 @@ function updateVisualSettings() {
     el.style.color = ui.color.value;
   });
   ui.stage.style.backgroundColor = ui.bg.value;
-  ui.magnifier.style.backgroundColor = ui.bg.value;
+  ui.magnifier.style.backgroundColor = resolveMagnifierBackground(ui.bg.value, "--stage");
+  const mark = $(".stage-color-mark");
+  if (mark) mark.style.color = colorSwatchMarkColor(ui.color.value);
   persistUiSettings();
+}
+
+function colorSwatchMarkColor(hex) {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return "#fff";
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#181816" : "#fbf9f4";
 }
 
 function adjustRangeInput(input, direction) {
@@ -2710,22 +2865,19 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
     document.querySelector('[data-language="all"]').checked = true;
     updateFilterControls();
     persistUiSettings();
-    return applyFilter();
+    return refreshFilters();
   }
   state.filters.has(filter) ? state.filters.delete(filter) : state.filters.add(filter);
   updateFilterControls();
-  if (filter === "variable" && state.filters.has("variable") && state.fonts.some(font => font.variable === null)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    detectVariableFonts();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
-$("#focusViewMenuItem")?.addEventListener("click", () => setView("focus"));
+$("#focusViewToggle")?.addEventListener("change", event => {
+  setView(event.target.checked ? "focus" : "grid");
+});
 $("#cardDensity").addEventListener("input", event => {
   state.cardWidth = Number(event.target.value);
   if (["grid", "focus"].includes(state.view)) {
@@ -2734,43 +2886,33 @@ $("#cardDensity").addEventListener("input", event => {
   }
   persistUiSettings();
 });
-$("#sortSelect").addEventListener("change", event => {
-  state.sort = event.target.value;
-  if (["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)) scanFontShapes();
-  else if (["chinese-first", "latin-first"].includes(state.sort) && state.fonts.some(font => !font.details)) scanFontCapabilities();
-  else applyFilter();
+document.querySelectorAll("[data-sort]").forEach(input => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  state.sort = input.dataset.sort;
+  updateFilterControls();
+  refreshFilters();
   persistUiSettings();
-});
+}));
 document.querySelectorAll("[data-language]").forEach(input => input.addEventListener("change", () => {
   if (!input.checked) return;
   state.languageFilters.clear();
   if (input.dataset.language !== "all") state.languageFilters.add(input.dataset.language);
   updateFilterControls();
-  if (state.languageFilters.size && state.fonts.some(font => !font.details)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    scanFontCapabilities();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 document.querySelectorAll("[data-capability]").forEach(input => input.addEventListener("change", () => {
   const capability = input.dataset.capability;
   input.checked ? state.filters.add(capability) : state.filters.delete(capability);
   updateFilterControls();
-  if (capability === "variable" && input.checked && state.fonts.some(font => font.variable === null)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    detectVariableFonts();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 setupFilterMenus();
 $("#collapseFamilyFonts")?.addEventListener("change", event => {
   state.collapseFamilyFonts = event.target.checked;
   updateFilterControls();
-  applyFilter();
+  refreshFilters();
   persistUiSettings();
 });
 function updateFilterControls() {
@@ -2779,21 +2921,25 @@ function updateFilterControls() {
   document.querySelectorAll("[data-capability]").forEach(input => input.checked = state.filters.has(input.dataset.capability));
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
   const collapseFamilyFonts = $("#collapseFamilyFonts");
+  const focusViewToggle = $("#focusViewToggle");
   if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
-  $("#focusViewMenuItem")?.classList.toggle("active", state.view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
   $("#weightBadge").textContent = state.weightFilters.size
     ? [...state.weightFilters].sort((a, b) => weightLabelOrder(a) - weightLabelOrder(b)).join(" · ")
     : "全部";
+  $("#sortBadge").textContent = sortLabel(state.sort);
+  document.querySelectorAll("[data-sort]").forEach(input => { input.checked = input.dataset.sort === state.sort; });
 }
 function setView(view) {
   state.view = view;
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
-  $("#focusViewMenuItem")?.classList.toggle("active", view === "focus");
+  const focusViewToggle = $("#focusViewToggle");
+  if (focusViewToggle) focusViewToggle.checked = view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
   updateCardSampleSizeControl();
@@ -2835,15 +2981,7 @@ document.addEventListener("keydown", event => {
   event.preventDefault();
   actions[event.key]();
 });
-ui.list.addEventListener("wheel", event => {
-  if (event.ctrlKey) return;
-  if (event.target.closest(".card-family-switch")) return;
-  event.preventDefault();
-  const now = performance.now();
-  if (now - (ui.list.lastPageTurn || 0) < 180) return;
-  ui.list.lastPageTurn = now;
-  goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
-}, { passive: false });
+ui.list.addEventListener("wheel", handleFontListWheel, { passive: false });
 ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
@@ -2949,7 +3087,7 @@ ui.list.addEventListener("pointermove", event => {
   showMagnifier(ui.cardMagnifier);
   ui.cardMagnifier.style.left = `${left}px`;
   ui.cardMagnifier.style.top = `${top}px`;
-  ui.cardMagnifier.style.backgroundColor = cardStyle.backgroundColor;
+  ui.cardMagnifier.style.backgroundColor = resolveMagnifierBackground(cardStyle.backgroundColor, "--panel");
   const enlarged = ui.cardMagnifiedText;
   enlarged.textContent = sample.textContent;
   enlarged.style.left = `${lens / 2 - (event.clientX - sampleRect.left) * zoom}px`;

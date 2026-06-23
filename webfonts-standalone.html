@@ -271,14 +271,14 @@ body.workspace-active .header-preview { display: flex; }
   margin-top: 32px;
   padding: 0 36px;
   cursor: pointer;
-  color: white;
+  color: var(--panel);
   border: 0;
   border-radius: 4px;
   background: var(--ink);
   font-size: 15px;
   letter-spacing: .08em;
 }
-.primary-button:hover { background: var(--accent); }
+.primary-button:hover { color: white; background: var(--accent); }
 .primary-button:disabled { cursor: wait; opacity: .76; }
 .load-progress { width: min(360px, 100%); margin-top: 20px; }
 .progress-track { height: 3px; overflow: hidden; border-radius: 5px; background: var(--line); }
@@ -343,9 +343,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 body.dark { --paper: #181816; --panel: #201f1c; --ink: #f4efe6; --muted: #aaa49a; --line: #3b3934; --stage: #2b2924; }
 body.dark .stage-hint { color: rgba(255,255,255,.42); }
 body.dark .magnifier { border-color: rgba(40,39,35,.9); }
+body.dark .card-magnifier { border-color: rgba(40,39,35,.92); }
 body.dark .chip.active,
-body.dark .view-button.active,
-body.dark .view-option-item.active { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+body.dark .view-button.active { color: var(--paper); background: var(--ink); border-color: var(--ink); }
 body.dark .filter-menu-icon.is-active summary,
 body.dark .filter-menu-icon[open] summary { color: var(--accent); background: var(--panel); }
 body.dark .filter-menu-icon.is-active summary svg,
@@ -362,7 +362,6 @@ button, input, select, textarea, summary, kbd, output { font-family: "Microsoft 
 .welcome h1,
 .sidebar-heading strong,
 .panel-title strong,
-.font-meta-row h2,
 .toolbar-meta strong,
 .view-button:nth-child(3) { font-family: "Microsoft YaHei", "微软雅黑", sans-serif !important; }
 
@@ -382,11 +381,11 @@ kbd,
 .toolbar-meta .eyebrow,
 .toolbar-filters .chip,
 .toolbar-view .density-control,
-.toolbar-view .sort-select,
 .card-preview-input span,
 .filter-menu summary,
 .filter-menu summary b,
 .filter-popover label,
+.filter-popover .filter-group-label,
 .single-view .card-actions,
 .detail-hint,
 .font-info-grid dt,
@@ -490,7 +489,6 @@ kbd,
 .toolbar-view .view-button:nth-child(3) { font-size: 13px; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .density-control input { width: 120px; }
-.toolbar-view .sort-select { height: 28px; max-width: 128px; padding: 0 24px 0 7px; font-size: 10px; }
 .filter-divider { width: 1px; height: 16px; margin: 0 1px; background: var(--line); }
 .filter-menu { position: relative; height: 26px; z-index: 1; }
 .filter-menu[open] { z-index: 40; }
@@ -535,23 +533,45 @@ kbd,
 .data-button:hover { color: var(--accent); border-color: var(--accent); background: var(--panel); }
 .filter-popover label { display: block; padding: 7px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; white-space: nowrap; }
 .filter-popover label:hover { background: var(--paper); }
-.view-options-popover { min-width: 168px; }
-.view-option-item {
-  display: block;
-  width: 100%;
+.view-options-popover { min-width: 168px; padding: 6px; }
+.view-options-popover .check-option {
+  display: flex;
+  align-items: center;
   padding: 7px 8px;
   cursor: pointer;
-  border: 0;
   border-radius: 3px;
-  color: var(--ink);
-  background: transparent;
   font-size: 11px;
-  text-align: left;
   white-space: nowrap;
 }
-.view-option-item:hover { background: var(--paper); }
-.view-option-item.active { color: var(--panel); background: var(--ink); }
+.view-options-popover .check-option:hover { background: var(--paper); }
+.view-options-popover .check-option input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 8px 0 0;
+  padding: 0;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+.view-options-popover .check-option input[type="checkbox"]::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+.view-options-popover .check-option input[type="checkbox"]:checked::before {
+  content: "✓";
+}
 .filter-popover input { margin: 0 7px 0 0; accent-color: var(--accent); }
+.view-options-popover .check-option input[type="checkbox"] { margin: 0 8px 0 0; accent-color: transparent; }
 .popover-divider { display: block; height: 1px; margin: 5px 4px; background: var(--line); }
 .category-filter-popover { min-width: 190px; }
 .category-filter-popover label { display: flex; align-items: center; gap: 3px; padding: 6px; font-size: 12px; }
@@ -565,9 +585,14 @@ kbd,
 .view-button.active { z-index: 1; color: var(--panel); border-color: var(--ink); background: var(--ink); }
 .density-control { display: flex; align-items: center; gap: 4px; margin-left: 2px; color: var(--muted); font-size: 9px; }
 .density-control input { width: 120px; }
-.sort-select { height: 28px; padding: 0 24px 0 7px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: var(--ink); background: var(--paper); font-size: 10px; }
-.sort-select optgroup { color: var(--muted); font-size: 10px; font-weight: 600; font-style: normal; }
-.sort-select option { color: var(--ink); font-weight: 400; }
+.filter-popover .filter-group-label {
+  display: block;
+  padding: 4px 8px 2px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .06em;
+}
+.sort-filter-popover { min-width: 168px; }
 .card-area .scan-progress { margin: 6px 0 4px; }
 .font-list.card-grid {
   min-height: 0;
@@ -710,7 +735,8 @@ kbd,
 .font-card.font-loading .sample { opacity: .48; }
 .font-card.font-ready .sample { opacity: 1; transition: opacity .2s ease, color .2s ease; }
 .font-card.font-failed .sample { opacity: .2; }
-.card-grid .font-card small { position: absolute; left: 18px; bottom: 14px; }
+.card-grid .font-card small { position: absolute; left: 18px; bottom: 14px; cursor: default; }
+.card-grid .font-card:has(.card-family-switch) small { cursor: ns-resize; }
 .card-grid .font-card .star { right: 17px; top: 15px; }
 .font-card .star { position: absolute; z-index: 3; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; font-size: 16px; }
 .font-card .star:hover { color: var(--accent); transform: scale(1.08); }
@@ -927,26 +953,92 @@ kbd,
 .detail-panel.collapsed .resize-handle { display: none; }
 .detail-panel.collapsed .detail-toggle { transform: translateY(-50%) rotate(180deg); }
 .card-area.collapsed .card-area-toggle { transform: translateY(-50%) rotate(180deg); }
-.detail-panel .font-meta-row { flex: none; padding: 16px 0 10px; }
+.detail-panel .font-meta-row { flex: none; padding: 12px 0 8px; }
 .detail-toolbar { display: flex; justify-content: flex-end; padding: 22px 0 0; }
 .detail-preview-input, .detail-size { height: 54px; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); }
 .detail-size { width: 160px; }
 .detail-preview-input input { font-size: 16px; }
 .detail-size label { margin-bottom: 5px; }
-.detail-panel .font-meta-row h2 { max-width: 300px; font-size: 23px; overflow-wrap: anywhere; }
-.detail-tabs { flex: none; display: flex; gap: 0; margin: 0 -18px 12px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+.detail-panel .font-meta-row h2 {
+  max-width: 300px;
+  margin: 0 0 4px;
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.detail-panel .font-meta-row .eyebrow { display: block; font-size: 10px; }
+.detail-tabs { flex: none; display: flex; gap: 0; margin: 0 -18px 8px; padding: 0 18px; border-bottom: 1px solid var(--line); }
 .detail-tab { flex: 1; height: 36px; cursor: pointer; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--muted); background: transparent; font-size: 12px; letter-spacing: .04em; transition: color .15s ease, border-color .15s ease; }
 .detail-tab:hover { color: var(--ink); }
 .detail-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
 .detail-tab-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .detail-tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
 .detail-tab-panel.active { display: flex; }
-.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; cursor: crosshair; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
+.detail-panel .preview-stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  overflow: hidden;
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.025);
+}
+.stage-color-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.stage-color-swatch {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.stage-color-swatch input[type="color"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.stage-color-swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.stage-color-swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 3px; }
+.stage-color-swatch input[type="color"]::-moz-color-swatch { border: 0; border-radius: 3px; }
+.stage-color-text .stage-color-mark {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+.detail-panel .stage-hint {
+  right: auto;
+  left: 10px;
+  bottom: 12px;
+}
 .detail-panel .preview-text {
   max-width: 100%;
   min-width: 0;
   width: 100%;
-  padding: 24px 0;
+  padding: 24px 56px 40px 12px;
   font-size: 28px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -959,9 +1051,16 @@ kbd,
 .detail-panel .preview-text:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
 .detail-panel .preview-stage.is-editing .stage-hint { opacity: 0; }
 .detail-panel .preview-text:empty::before { content: attr(data-placeholder); color: var(--muted); }
-.preview-controls { flex: none; max-height: 46%; min-width: 0; padding-top: 12px; overflow-x: hidden; overflow-y: auto; border-top: 1px solid var(--line); }
-#previewTabPanel { overflow-x: hidden; }
-.preview-controls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.preview-controls {
+  flex: none;
+  min-width: 0;
+  padding: 8px 0 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+#previewTabPanel { flex: 1; min-height: 0; overflow-x: hidden; }
+.preview-controls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .axis-status { min-width: 0; color: var(--muted); font-size: 10px; letter-spacing: .02em; }
 .detail-tab-panel[hidden] { display: none !important; }
 #infoTabPanel { overflow-y: auto; padding-top: 2px; }
@@ -1053,11 +1152,38 @@ kbd,
 .collapse-icon { width: 26px; height: 26px; display: grid; place-items: center; flex: none; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: 15px; transform: rotate(-90deg); transition: transform .18s ease, color .18s ease, border-color .18s ease; }
 .collapsible-panel[open] .collapse-icon { transform: rotate(0); }
 .collapsible-panel > summary:hover .collapse-icon { color: var(--accent); border-color: var(--accent); }
-.detail-panel .axis-controls, .detail-panel .standard-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 0; min-width: 0; }
-.detail-panel .axis-controls:not(:empty) { padding-top: 10px; border-top: 1px solid var(--line); }
+.detail-panel .axis-controls, .detail-panel .standard-controls { margin-top: 0; min-width: 0; }
+.detail-panel .standard-controls.standard-controls-compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.detail-panel .axis-controls:not(:empty) { padding-top: 8px; border-top: 1px solid var(--line); }
 .detail-panel .standard-controls { margin-bottom: 0; }
-.detail-panel .standard-controls label { min-width: 0; }
-.detail-panel .size-control { grid-column: 1 / -1; }
+.detail-panel .standard-controls label,
+.detail-panel .axis-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.detail-panel .standard-controls.standard-controls-compact label > span,
+.detail-panel .axis-control > span {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0;
+  min-width: 4.6em;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.detail-panel .standard-controls label > input[type="range"],
+.detail-panel .axis-control > input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
 .card-magnifier {
   position: fixed;
   z-index: 30;
@@ -1189,6 +1315,23 @@ kbd,
                       <span class="filter-empty">正在扫描字重…</span>
                     </div>
                   </details>
+                  <details class="filter-menu" id="sortMenu">
+                    <summary>排序 <b id="sortBadge">名称</b></summary>
+                    <div class="filter-popover sort-filter-popover">
+                      <span class="filter-group-label">常规</span>
+                      <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
+                      <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
+                      <span class="popover-divider"></span>
+                      <span class="filter-group-label">语言</span>
+                      <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
+                      <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
+                      <span class="popover-divider"></span>
+                      <span class="filter-group-label">字形比例</span>
+                      <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
+                      <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
+                      <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
+                    </div>
+                  </details>
                 </div>
               </div>
 
@@ -1197,29 +1340,13 @@ kbd,
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
-                <select id="sortSelect" class="sort-select" aria-label="字体排序">
-                  <optgroup label="常规">
-                    <option value="name">名称排序</option>
-                    <option value="favorite">收藏优先</option>
-                  </optgroup>
-                  <optgroup label="语言">
-                    <option value="chinese-first">中文优先</option>
-                    <option value="latin-first">英文优先</option>
-                  </optgroup>
-                  <optgroup label="字形比例">
-                    <option value="square">首字接近正方形</option>
-                    <option value="narrow">首字由瘦到宽</option>
-                    <option value="wide">首字由宽到瘦</option>
-                  </optgroup>
-                </select>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
-                    <button type="button" class="view-option-item" id="focusViewMenuItem">无干扰视图</button>
-                    <span class="popover-divider"></span>
-                    <label><input type="checkbox" id="collapseFamilyFonts"> 折叠家族字体</label>
+                    <label class="check-option"><input type="checkbox" id="focusViewToggle">无干扰视图</label>
+                    <label class="check-option"><input type="checkbox" id="collapseFamilyFonts">折叠家族字体</label>
                   </div>
                 </details>
               </div>
@@ -1270,8 +1397,8 @@ kbd,
             <div class="detail-content">
               <div class="font-meta-row">
                 <div>
-                  <span id="selectedStyle" class="eyebrow">REGULAR</span>
                   <h2 id="selectedName">请选择字体</h2>
+                  <span id="selectedStyle" class="eyebrow">REGULAR</span>
                 </div>
                 <div class="meta-actions">
                   <button id="categoryAssignmentButton" class="icon-button" title="设置收藏分类" aria-label="设置收藏分类">≡</button>
@@ -1290,18 +1417,25 @@ kbd,
                     <div id="previewText" class="preview-text" contenteditable="false" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="双击编辑预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
                     <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
+                    <div class="stage-color-controls">
+                      <label class="stage-color-swatch" title="背景颜色">
+                        <input id="backgroundColor" type="color" value="#f3efe7" aria-label="背景颜色" />
+                      </label>
+                      <label class="stage-color-swatch stage-color-text" title="文字颜色">
+                        <span class="stage-color-mark" aria-hidden="true">A</span>
+                        <input id="textColor" type="color" value="#171714" aria-label="文字颜色" />
+                      </label>
+                    </div>
                   </div>
                   <div class="preview-controls">
                     <div class="preview-controls-head">
                       <span id="axisStatus" class="axis-status">正在检测可变轴…</span>
                       <button id="resetButton" class="text-button" type="button">恢复默认</button>
                     </div>
-                    <div id="standardControls" class="standard-controls">
+                    <div id="standardControls" class="standard-controls standard-controls-compact">
                       <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
                       <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
                       <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
-                      <label><span>背景</span><input id="backgroundColor" type="color" value="#f3efe7" /></label>
-                      <label><span>文字</span><input id="textColor" type="color" value="#171714" /></label>
                     </div>
                     <div id="axisControls" class="axis-controls"></div>
                   </div>
@@ -1398,6 +1532,18 @@ function loadFavoriteData() {
 const cachedFavoriteData = loadFavoriteData();
 const UI_SETTINGS_KEY = "webfonts-ui-settings";
 const UI_SETTINGS_VERSION = 1;
+const SORT_LABELS = {
+  name: "名称",
+  favorite: "收藏",
+  "chinese-first": "中文",
+  "latin-first": "英文",
+  square: "方形",
+  narrow: "瘦→宽",
+  wide: "宽→瘦"
+};
+function sortLabel(sort) {
+  return SORT_LABELS[sort] || "名称";
+}
 const UI_SETTINGS_DEFAULTS = {
   theme: "light",
   view: "grid",
@@ -1492,7 +1638,6 @@ function applyStoredUiSettings(settings) {
   ui.bg.value = settings.previewBackground;
   ui.color.value = settings.previewTextColor;
   $("#cardDensity").value = settings.cardWidth;
-  $("#sortSelect").value = settings.sort;
   syncMagnifierControl();
   const detailPanel = $("#detailPanel");
   const cardArea = $(".card-area");
@@ -1516,7 +1661,7 @@ const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
@@ -1648,6 +1793,7 @@ function updateDetailMagnifier(event) {
   const lensLeft = Math.min(rect.width - lens / 2, Math.max(lens / 2, x)) - lens / 2;
   const lensTop = Math.min(rect.height - lens / 2, Math.max(lens / 2, y)) - lens / 2;
   applyDetailMagnifierStyles();
+  ui.magnifier.style.backgroundColor = resolveMagnifierBackground(ui.stage.style.backgroundColor || ui.bg.value, "--stage");
   showMagnifier(ui.magnifier);
   ui.magnifier.style.left = `${lensLeft}px`;
   ui.magnifier.style.top = `${lensTop}px`;
@@ -1684,6 +1830,13 @@ function hideMagnifier(element) {
     element.hidden = true;
     element.style.display = "none";
   }, 190);
+}
+
+function resolveMagnifierBackground(color, fallbackVar = "--paper") {
+  if (color && color !== "transparent" && color !== "rgba(0, 0, 0, 0)") return color;
+  const fallback = getComputedStyle(document.body).getPropertyValue(fallbackVar).trim();
+  if (fallback) return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(fallbackVar).trim() || "#fbf9f4";
 }
 
 async function copyValue(value, label) {
@@ -1814,12 +1967,30 @@ function syncToolbarPreview(font) {
     ui.previewInput.style.fontFamily = "";
     ui.previewInput.style.fontVariationSettings = "";
     $("#previewInputWrap")?.classList.remove("is-previewing");
+    syncDetailMetaFonts(null);
     return;
   }
   registerFont(font);
   ui.previewInput.style.fontFamily = cssName(font);
   ui.previewInput.style.fontVariationSettings = toolbarVariationSettings();
   $("#previewInputWrap")?.classList.add("is-previewing");
+  syncDetailMetaFonts(font);
+}
+
+function syncDetailMetaFonts(font) {
+  if (!font) {
+    ui.selectedName.style.fontFamily = "";
+    ui.selectedStyle.style.fontFamily = "";
+    ui.selectedName.style.fontVariationSettings = "";
+    ui.selectedStyle.style.fontVariationSettings = "";
+    return;
+  }
+  const family = cssName(font);
+  const variation = toolbarVariationSettings();
+  [ui.selectedName, ui.selectedStyle].forEach(el => {
+    el.style.fontFamily = family;
+    el.style.fontVariationSettings = variation;
+  });
 }
 
 function registerFont(font) {
@@ -1977,6 +2148,40 @@ function stepFamilyFont(font, direction) {
   return true;
 }
 
+const CARD_WHEEL_NO_PAGE = ".card-family-switch, .card-family-menu, .card-family-option, strong, .star, .card-actions, .card-copy, .card-copy-svg, small";
+
+function isCardWheelPageZone(target, card) {
+  if (!card?.contains(target)) return false;
+  if (target.closest(CARD_WHEEL_NO_PAGE)) return false;
+  if (target.closest(".sample")) return true;
+  return target === card;
+}
+
+function turnFontListPage(direction) {
+  const now = performance.now();
+  if (now - (ui.list.lastPageTurn || 0) < 180) return;
+  ui.list.lastPageTurn = now;
+  goToPage(state.page + direction);
+}
+
+function handleFontListWheel(event) {
+  if (event.ctrlKey) return;
+  const card = event.target.closest(".font-card");
+  if (card) {
+    const font = state.fonts.find(item => item.id === Number(card.dataset.id));
+    if (event.target.closest("small") && card.querySelector(".card-family-switch") && font) {
+      event.preventDefault();
+      event.stopPropagation();
+      stepFamilyFont(font, event.deltaY > 0 ? 1 : -1);
+      return;
+    }
+    if (event.target.closest(CARD_WHEEL_NO_PAGE)) return;
+    if (!isCardWheelPageZone(event.target, card)) return;
+  }
+  event.preventDefault();
+  turnFontListPage(event.deltaY > 0 ? 1 : -1);
+}
+
 function pickFamilyRepresentative(members) {
   if (state.selected && members.some(item => item.id === state.selected.id)) return state.selected;
   const regular = members.find(item => item.weightLabel === "Regular");
@@ -2037,8 +2242,8 @@ function setupFilterMenus() {
     const popover = menu.querySelector(".filter-popover");
     const summary = menu.querySelector("summary");
     if (!popover || !summary) return;
-    const align = menu.id === "weightMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
-    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "viewOptionsMenu" ? 168 : 145;
+    const align = menu.id === "weightMenu" || menu.id === "sortMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
+    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "sortMenu" || menu.id === "viewOptionsMenu" ? 168 : 145;
     const closeMenu = () => {
       menu.removeAttribute("open");
       resetFloatingPopover(popover, menu);
@@ -2090,6 +2295,65 @@ function syncCollapsedRepresentative(font) {
   state.filtered.sort(compareFilteredFonts);
   renderFontList();
   ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
+}
+
+function beginFilterWork() {
+  state.filterVersion++;
+  state.preloadVersion++;
+  clearTimeout(beginFilterWork.debounceTimer);
+  beginFilterWork.debounceTimer = null;
+  clearTimeout(updatePreview.shapeTimer);
+  updatePreview.shapeTimer = null;
+  return state.filterVersion;
+}
+
+function getFilterScanNeeds() {
+  if (!state.fonts.length) return { variable: false, capabilities: false, shapes: false };
+  return {
+    variable: state.filters.has("variable") && state.fonts.some(font => font.variable === null),
+    capabilities: (
+      (state.languageFilters.size > 0 || ["chinese-first", "latin-first"].includes(state.sort)) &&
+      state.fonts.some(font => !font.details)
+    ),
+    shapes: ["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)
+  };
+}
+
+function showPendingFilterScan() {
+  state.filtered = [];
+  state.page = 0;
+  renderFontList();
+  ui.empty.hidden = true;
+}
+
+async function runFilterScanChain(token) {
+  const needs = getFilterScanNeeds();
+  if (needs.variable) {
+    ui.scanProgress.hidden = false;
+    if (!await detectVariableFonts(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  if (getFilterScanNeeds().capabilities) {
+    if (!await scanFontCapabilities(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  if (getFilterScanNeeds().shapes) {
+    if (!await scanFontShapes(token)) return;
+  }
+  if (token !== state.filterVersion) return;
+  ui.scanProgress.hidden = true;
+  applyFilter();
+}
+
+function refreshFilters() {
+  const token = beginFilterWork();
+  const needs = getFilterScanNeeds();
+  if (needs.variable || needs.capabilities || needs.shapes) {
+    showPendingFilterScan();
+    runFilterScanChain(token);
+    return;
+  }
+  applyFilter();
 }
 
 function applyFilter() {
@@ -2225,7 +2489,7 @@ function renderWeightFilterMenu() {
     input.addEventListener("change", () => {
       input.checked ? state.weightFilters.add(input.dataset.weightLabel) : state.weightFilters.delete(input.dataset.weightLabel);
       updateFilterControls();
-      applyFilter();
+      refreshFilters();
       persistUiSettings();
     });
   });
@@ -2602,11 +2866,6 @@ function createFontCard(font) {
       if (stayInFamilyMenu(event)) return;
       closeFamilyMenu();
     });
-    familySwitch.addEventListener("wheel", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      stepFamilyFont(font, event.deltaY > 0 ? 1 : -1);
-    }, { passive: false });
   }
   card.querySelectorAll(".card-family-option").forEach(button => {
     button.addEventListener("mouseenter", () => {
@@ -3013,26 +3272,29 @@ function restorePinnedPreview() {
   else clearPreview();
 }
 
-async function detectVariableFonts() {
-  if (state.scanningVariables) return;
-  if (state.scanningCapabilities || state.scanningShapes) { setTimeout(detectVariableFonts, 120); return; }
+async function detectVariableFonts(token = state.filterVersion) {
   state.scanningVariables = true;
   let completed = state.fonts.filter(item => item.variable !== null).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const updateScanProgress = () => {
+    if (token !== state.filterVersion) return;
     const percent = total ? completed / total * 100 : 100;
     ui.scanBar.style.width = `${percent}%`;
     ui.scanText.textContent = `正在识别可变字体 ${completed} / ${total}`;
   };
   updateScanProgress();
-  const workers = Array.from({length: 1}, async () => {
+  const workers = Array.from({ length: 1 }, async () => {
     while (true) {
+      if (token !== state.filterVersion) break;
       const font = state.fonts.find(item => item.variable === null && !item.detecting);
       if (!font) break;
       font.detecting = true;
-      try { font.variable = (await getVariationAxes(font)).length > 0; }
-      catch { font.variable = false; }
+      try {
+        if (token !== state.filterVersion) break;
+        font.variable = (await getVariationAxes(font)).length > 0;
+      } catch { font.variable = false; }
+      finally { font.detecting = false; }
       completed++;
       if (completed % 3 === 0 || completed === total) {
         updateScanProgress();
@@ -3041,25 +3303,29 @@ async function detectVariableFonts() {
     }
   });
   await Promise.all(workers);
+  state.scanningVariables = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
   ui.scanText.textContent = "可变字体识别完成";
-  state.scanningVariables = false;
-  if (state.filters.has("variable")) applyFilter();
+  return true;
 }
 
-async function scanFontCapabilities() {
-  if (state.scanningCapabilities) return;
-  if (state.scanningVariables || state.scanningShapes) { setTimeout(scanFontCapabilities, 120); return; }
+async function scanFontCapabilities(token = state.filterVersion) {
   state.scanningCapabilities = true;
   let completed = state.fonts.filter(font => font.details).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const update = () => {
+    if (token !== state.filterVersion) return;
     ui.scanBar.style.width = `${total ? completed / total * 100 : 100}%`;
     ui.scanText.textContent = `正在读取字符与字重信息 ${completed} / ${total}`;
   };
   update();
   for (const font of state.fonts) {
+    if (token !== state.filterVersion) break;
     if (font.details) continue;
     try { await getFontDetails(font); }
     catch { font.details = { supportsChinese: false, supportsLatin: false, weight: font.weightClass }; }
@@ -3070,23 +3336,27 @@ async function scanFontCapabilities() {
     }
   }
   state.scanningCapabilities = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
-  applyFilter();
+  return true;
 }
 
-async function scanFontShapes() {
-  if (state.scanningShapes) return;
-  if (state.scanningVariables || state.scanningCapabilities) { setTimeout(scanFontShapes, 150); return; }
+async function scanFontShapes(token = state.filterVersion) {
   state.scanningShapes = true;
   let completed = state.fonts.filter(font => font.aspectRatio !== undefined).length;
   const total = state.fonts.length;
   ui.scanProgress.hidden = total === 0 || completed >= total;
   const update = () => {
+    if (token !== state.filterVersion) return;
     ui.scanBar.style.width = `${total ? completed / total * 100 : 100}%`;
     ui.scanText.textContent = `正在测量首字宽高比 ${completed} / ${total}`;
   };
   update();
   for (const font of state.fonts) {
+    if (token !== state.filterVersion) break;
     if (font.aspectRatio !== undefined) continue;
     try { await getFontAspect(font); }
     catch { font.aspectRatio = null; }
@@ -3097,8 +3367,12 @@ async function scanFontShapes() {
     }
   }
   state.scanningShapes = false;
+  if (token !== state.filterVersion) {
+    ui.scanProgress.hidden = true;
+    return false;
+  }
   ui.scanProgress.hidden = true;
-  applyFilter();
+  return true;
 }
 
 function getVariationAxes(font) {
@@ -3511,7 +3785,11 @@ function updateVariation() {
   const value = toolbarVariationSettings();
   ui.previewText.style.fontVariationSettings = value;
   ui.magnifiedText.style.fontVariationSettings = value;
-  if (state.previewed) ui.previewInput.style.fontVariationSettings = value;
+  if (state.previewed) {
+    ui.previewInput.style.fontVariationSettings = value;
+    ui.selectedName.style.fontVariationSettings = value;
+    ui.selectedStyle.style.fontVariationSettings = value;
+  }
 }
 
 function updatePreview() {
@@ -3522,7 +3800,7 @@ function updatePreview() {
     state.fonts.forEach(font => { delete font.aspectRatio; delete font.aspectPromise; });
     if (["square", "narrow", "wide"].includes(state.sort)) {
       clearTimeout(updatePreview.shapeTimer);
-      updatePreview.shapeTimer = setTimeout(scanFontShapes, 260);
+      updatePreview.shapeTimer = setTimeout(refreshFilters, 260);
     }
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
@@ -3552,8 +3830,19 @@ function updateVisualSettings() {
     el.style.color = ui.color.value;
   });
   ui.stage.style.backgroundColor = ui.bg.value;
-  ui.magnifier.style.backgroundColor = ui.bg.value;
+  ui.magnifier.style.backgroundColor = resolveMagnifierBackground(ui.bg.value, "--stage");
+  const mark = $(".stage-color-mark");
+  if (mark) mark.style.color = colorSwatchMarkColor(ui.color.value);
   persistUiSettings();
+}
+
+function colorSwatchMarkColor(hex) {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return "#fff";
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#181816" : "#fbf9f4";
 }
 
 function adjustRangeInput(input, direction) {
@@ -4068,22 +4357,19 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
     document.querySelector('[data-language="all"]').checked = true;
     updateFilterControls();
     persistUiSettings();
-    return applyFilter();
+    return refreshFilters();
   }
   state.filters.has(filter) ? state.filters.delete(filter) : state.filters.add(filter);
   updateFilterControls();
-  if (filter === "variable" && state.filters.has("variable") && state.fonts.some(font => font.variable === null)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    detectVariableFonts();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
-$("#focusViewMenuItem")?.addEventListener("click", () => setView("focus"));
+$("#focusViewToggle")?.addEventListener("change", event => {
+  setView(event.target.checked ? "focus" : "grid");
+});
 $("#cardDensity").addEventListener("input", event => {
   state.cardWidth = Number(event.target.value);
   if (["grid", "focus"].includes(state.view)) {
@@ -4092,43 +4378,33 @@ $("#cardDensity").addEventListener("input", event => {
   }
   persistUiSettings();
 });
-$("#sortSelect").addEventListener("change", event => {
-  state.sort = event.target.value;
-  if (["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)) scanFontShapes();
-  else if (["chinese-first", "latin-first"].includes(state.sort) && state.fonts.some(font => !font.details)) scanFontCapabilities();
-  else applyFilter();
+document.querySelectorAll("[data-sort]").forEach(input => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  state.sort = input.dataset.sort;
+  updateFilterControls();
+  refreshFilters();
   persistUiSettings();
-});
+}));
 document.querySelectorAll("[data-language]").forEach(input => input.addEventListener("change", () => {
   if (!input.checked) return;
   state.languageFilters.clear();
   if (input.dataset.language !== "all") state.languageFilters.add(input.dataset.language);
   updateFilterControls();
-  if (state.languageFilters.size && state.fonts.some(font => !font.details)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    scanFontCapabilities();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 document.querySelectorAll("[data-capability]").forEach(input => input.addEventListener("change", () => {
   const capability = input.dataset.capability;
   input.checked ? state.filters.add(capability) : state.filters.delete(capability);
   updateFilterControls();
-  if (capability === "variable" && input.checked && state.fonts.some(font => font.variable === null)) {
-    state.filtered = [];
-    renderFontList();
-    ui.empty.hidden = true;
-    detectVariableFonts();
-  } else applyFilter();
+  refreshFilters();
   persistUiSettings();
 }));
 setupFilterMenus();
 $("#collapseFamilyFonts")?.addEventListener("change", event => {
   state.collapseFamilyFonts = event.target.checked;
   updateFilterControls();
-  applyFilter();
+  refreshFilters();
   persistUiSettings();
 });
 function updateFilterControls() {
@@ -4137,21 +4413,25 @@ function updateFilterControls() {
   document.querySelectorAll("[data-capability]").forEach(input => input.checked = state.filters.has(input.dataset.capability));
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
   const collapseFamilyFonts = $("#collapseFamilyFonts");
+  const focusViewToggle = $("#focusViewToggle");
   if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
-  $("#focusViewMenuItem")?.classList.toggle("active", state.view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
   $("#weightBadge").textContent = state.weightFilters.size
     ? [...state.weightFilters].sort((a, b) => weightLabelOrder(a) - weightLabelOrder(b)).join(" · ")
     : "全部";
+  $("#sortBadge").textContent = sortLabel(state.sort);
+  document.querySelectorAll("[data-sort]").forEach(input => { input.checked = input.dataset.sort === state.sort; });
 }
 function setView(view) {
   state.view = view;
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
-  $("#focusViewMenuItem")?.classList.toggle("active", view === "focus");
+  const focusViewToggle = $("#focusViewToggle");
+  if (focusViewToggle) focusViewToggle.checked = view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
   updateCardSampleSizeControl();
@@ -4193,15 +4473,7 @@ document.addEventListener("keydown", event => {
   event.preventDefault();
   actions[event.key]();
 });
-ui.list.addEventListener("wheel", event => {
-  if (event.ctrlKey) return;
-  if (event.target.closest(".card-family-switch")) return;
-  event.preventDefault();
-  const now = performance.now();
-  if (now - (ui.list.lastPageTurn || 0) < 180) return;
-  ui.list.lastPageTurn = now;
-  goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
-}, { passive: false });
+ui.list.addEventListener("wheel", handleFontListWheel, { passive: false });
 ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
@@ -4307,7 +4579,7 @@ ui.list.addEventListener("pointermove", event => {
   showMagnifier(ui.cardMagnifier);
   ui.cardMagnifier.style.left = `${left}px`;
   ui.cardMagnifier.style.top = `${top}px`;
-  ui.cardMagnifier.style.backgroundColor = cardStyle.backgroundColor;
+  ui.cardMagnifier.style.backgroundColor = resolveMagnifierBackground(cardStyle.backgroundColor, "--panel");
   const enlarged = ui.cardMagnifiedText;
   enlarged.textContent = sample.textContent;
   enlarged.style.left = `${lens / 2 - (event.clientX - sampleRect.left) * zoom}px`;
