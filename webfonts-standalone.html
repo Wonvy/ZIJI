@@ -376,7 +376,7 @@ kbd,
 .filter-menu summary,
 .filter-menu summary b,
 .filter-popover label,
-.single-view .card-copy,
+.single-view .card-actions,
 .detail-hint,
 .font-info-grid dt,
 .font-info-grid dd { font-size: 12px !important; }
@@ -615,13 +615,17 @@ kbd,
   min-width: 0;
   min-height: 178px;
   padding: 18px;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 3px;
   background: var(--paper);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
   content-visibility: auto;
   contain-intrinsic-size: 245px 178px;
+}
+.card-grid .font-card:has(.card-family-switch.is-open) {
+  content-visibility: visible;
+  z-index: 8;
 }
 .density-control:has(input:disabled) { opacity: .38; }
 .card-grid .font-card:hover { transform: translateY(-2px); box-shadow: 0 9px 25px rgba(30,25,18,.08); }
@@ -630,7 +634,8 @@ kbd,
 .card-grid .font-card::after { content: ""; position: absolute; z-index: 2; inset: 0; pointer-events: none; border: 1px solid transparent; border-radius: 3px; transition: border-color .15s ease, border-width .15s ease; }
 .card-grid .font-card:hover::after { border-color: var(--muted); }
 .card-grid .font-card.active::after { border-width: 2px; border-color: var(--accent); }
-.card-grid .font-card strong { padding-right: 22px; font-size: 13px; }
+.card-grid .font-card strong,
+.card-grid .font-card .card-family-switch { padding-right: 22px; font-size: 13px; }
 .card-grid .font-card .sample {
   display: flex;
   align-items: center;
@@ -653,13 +658,114 @@ kbd,
 .card-grid .font-card .star { right: 17px; top: 15px; }
 .font-card .star { position: absolute; z-index: 3; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; font-size: 16px; }
 .font-card .star:hover { color: var(--accent); transform: scale(1.08); }
-.card-copy { position: absolute; z-index: 3; right: 10px; bottom: 10px; width: 28px; height: 28px; display: grid; place-items: center; cursor: copy; opacity: 0; pointer-events: none; border: 0; border-radius: 50%; color: var(--ink); background: var(--panel); box-shadow: 0 3px 10px rgba(0,0,0,.09); transition: opacity .15s ease, transform .15s ease; }
-.font-card:hover .card-copy, .card-copy:focus-visible { opacity: 1; pointer-events: auto; }
-.card-copy:hover { color: white; border-color: var(--accent); background: var(--accent); transform: scale(1.06); }
-.single-view .card-copy { right: 5px; bottom: 5px; width: 24px; height: 24px; font-size: 11px; }
+.card-copy { width: 28px; height: 28px; display: grid; place-items: center; cursor: copy; border: 0; border-radius: 50%; color: var(--ink); background: var(--panel); box-shadow: 0 3px 10px rgba(0,0,0,.09); transition: opacity .15s ease, transform .15s ease; }
+.card-actions {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.font-card:hover .card-actions,
+.font-card:focus-within .card-actions,
+.card-actions:focus-within { opacity: 1; pointer-events: auto; }
+.card-copy-svg {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: copy;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: 0 3px 10px rgba(0,0,0,.09);
+  transition: transform .15s ease, color .15s ease, background .15s ease;
+}
+.card-copy-svg svg { width: 15px; height: 15px; display: block; }
+.card-copy:hover,
+.card-copy-svg:hover { color: white; background: var(--accent); transform: scale(1.06); }
+.single-view .card-actions { right: 5px; bottom: 5px; gap: 4px; }
+.single-view .card-copy,
+.single-view .card-copy-svg { width: 24px; height: 24px; font-size: 11px; }
+.single-view .card-copy-svg svg { width: 13px; height: 13px; }
+.card-family-switch {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.card-family-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: inherit;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-family-caret {
+  flex: none;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+  transition: transform .15s ease, color .15s ease;
+}
+.card-family-switch:hover .card-family-caret,
+.card-family-switch:focus-within .card-family-caret,
+.card-family-switch.is-open .card-family-caret { color: var(--accent); transform: translateY(1px); }
+.card-family-menu {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 148px;
+  max-width: 220px;
+  padding: 6px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transition: opacity .12s ease, visibility .12s ease;
+}
+.card-family-switch:hover .card-family-menu,
+.card-family-switch:focus-within .card-family-menu,
+.card-family-switch.is-open .card-family-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.card-family-option {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 3px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+}
+.card-family-option:hover { background: var(--paper); }
+.card-family-option.is-hover { background: var(--paper); }
+.card-family-option.active { color: var(--accent); font-weight: 600; }
 .font-list.list-view { display: flex; flex-direction: column; gap: 8px; }
 .list-view .font-card { min-height: 94px; display: grid; grid-template-columns: minmax(150px, 240px) 1fr 120px; align-items: center; padding: 14px 48px 14px 18px; }
-.list-view .font-card strong { font-size: 14px; }
+.list-view .font-card strong,
+.list-view .font-card .card-family-switch { font-size: 14px; }
 .list-view .font-card .sample { height: auto; margin: 0; font-size: 28px; white-space: nowrap; }
 .list-view .font-card small { position: static; text-align: right; }
 .font-list.single-view {
@@ -700,22 +806,28 @@ kbd,
   white-space: nowrap;
 }
 .font-card > strong,
+.font-card > .card-family-switch,
 .font-card > small,
 .font-card > .star { opacity: .28; transition: opacity .16s ease; }
 .font-card:hover > strong,
+.font-card:hover > .card-family-switch,
 .font-card:hover > small,
 .font-card:hover > .star { opacity: 1; }
 .focus-view .font-card > strong,
+.focus-view .font-card > .card-family-switch,
 .focus-view .font-card > small,
 .focus-view .font-card > .star { opacity: 0; pointer-events: none; }
 .card-grid.focus-view .font-card,
 .card-grid.focus-view .font-card.active { background: transparent; }
 .card-grid.focus-view .font-card:hover { box-shadow: none; }
-.focus-view .font-card > strong { position: absolute; top: 16px; left: 18px; right: 42px; }
+.focus-view .font-card > strong,
+.focus-view .font-card > .card-family-switch { position: absolute; top: 16px; left: 18px; right: 42px; }
 .focus-view .font-card .sample { width: 100%; height: 140px; margin: 0; justify-content: center; text-align: center; }
 .focus-view .font-card:hover > strong,
+.focus-view .font-card:hover > .card-family-switch,
 .focus-view .font-card:hover > small,
 .focus-view .font-card:hover > .star { opacity: 1; pointer-events: auto; }
+.font-card:has(.card-family-switch.is-open) { z-index: 8; }
 .detail-panel {
   position: relative;
   width: 420px;
@@ -1339,6 +1451,7 @@ document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  familyIndex: new Map(), pendingSelectionId: null,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -1521,7 +1634,7 @@ async function copyValue(value, label) {
     document.execCommand("copy");
     input.remove();
   }
-  toast(`已复制${label}：${value}`);
+  toast(`已复制${label}：${value.replace(/\s+/g, " ").trim().slice(0, 40)}${value.replace(/\s+/g, " ").trim().length > 40 ? "…" : ""}`);
 }
 
 function copyDetailValue(element, label) {
@@ -1727,6 +1840,77 @@ function fontLanguageRank(font, { prefer = "chinese" } = {}) {
   return 3;
 }
 
+function compareFilteredFonts(a, b) {
+  if (state.sort === "favorite") {
+    const favoriteDifference = Number(state.favorites.has(b.postscriptName)) - Number(state.favorites.has(a.postscriptName));
+    if (favoriteDifference) return favoriteDifference;
+  }
+  if (state.sort === "chinese-first") {
+    const rankDifference = fontLanguageRank(a, { prefer: "chinese" }) - fontLanguageRank(b, { prefer: "chinese" });
+    if (rankDifference) return rankDifference;
+    return compareFontName(a, b);
+  }
+  if (state.sort === "latin-first") {
+    const rankDifference = fontLanguageRank(a, { prefer: "latin" }) - fontLanguageRank(b, { prefer: "latin" });
+    if (rankDifference) return rankDifference;
+    return compareFontName(a, b);
+  }
+  if (state.sort === "square") return Math.abs((a.aspectRatio ?? 99) - 1) - Math.abs((b.aspectRatio ?? 99) - 1);
+  if (state.sort === "narrow") return (a.aspectRatio ?? 99) - (b.aspectRatio ?? 99);
+  if (state.sort === "wide") return (b.aspectRatio ?? -1) - (a.aspectRatio ?? -1);
+  return compareFontName(a, b);
+}
+
+function fontFamilyKey(font) {
+  return font.family || font.displayName || "未命名字体";
+}
+
+function compareFamilyMembers(a, b) {
+  const weightDifference = weightLabelOrder(a.weightLabel) - weightLabelOrder(b.weightLabel);
+  if (weightDifference) return weightDifference;
+  return (a.style || "").localeCompare(b.style || "", "en");
+}
+
+function rebuildFamilyIndex() {
+  state.familyIndex = new Map();
+  for (const font of state.fonts) {
+    const key = fontFamilyKey(font);
+    if (!state.familyIndex.has(key)) state.familyIndex.set(key, []);
+    state.familyIndex.get(key).push(font);
+  }
+  for (const members of state.familyIndex.values()) members.sort(compareFamilyMembers);
+}
+
+function getFamilyMembers(font) {
+  return state.familyIndex.get(fontFamilyKey(font)) || [font];
+}
+
+function navigateToFont(font) {
+  const index = state.filtered.indexOf(font);
+  if (index < 0) {
+    selectFont(font);
+    return;
+  }
+  const page = Math.floor(index / state.pageSize);
+  state.pendingSelectionId = font.id;
+  if (page !== state.page) goToPage(page);
+  else {
+    state.pendingSelectionId = null;
+    selectFont(font);
+  }
+}
+
+function stepFamilyFont(font, direction) {
+  const members = getFamilyMembers(font);
+  if (members.length <= 1) return false;
+  let index = members.findIndex(item => item.id === font.id);
+  if (index < 0) index = 0;
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= members.length) return false;
+  navigateToFont(members[nextIndex]);
+  return true;
+}
+
 function applyFilter() {
   const query = ui.search.value.trim().toLowerCase().replace(/\s/g, "");
   state.filtered = state.fonts.filter(font => {
@@ -1743,26 +1927,7 @@ function applyFilter() {
       (state.favoriteCategoryView === "uncategorized" ? assignments.size === 0 : [...categoryIds].some(id => assignments.has(id)));
     return filterMatch && searchMatch && languageMatch && weightMatch && categoryMatch;
   });
-  state.filtered.sort((a, b) => {
-    if (state.sort === "favorite") {
-      const favoriteDifference = Number(state.favorites.has(b.postscriptName)) - Number(state.favorites.has(a.postscriptName));
-      if (favoriteDifference) return favoriteDifference;
-    }
-    if (state.sort === "chinese-first") {
-      const rankDifference = fontLanguageRank(a, { prefer: "chinese" }) - fontLanguageRank(b, { prefer: "chinese" });
-      if (rankDifference) return rankDifference;
-      return compareFontName(a, b);
-    }
-    if (state.sort === "latin-first") {
-      const rankDifference = fontLanguageRank(a, { prefer: "latin" }) - fontLanguageRank(b, { prefer: "latin" });
-      if (rankDifference) return rankDifference;
-      return compareFontName(a, b);
-    }
-    if (state.sort === "square") return Math.abs((a.aspectRatio ?? 99) - 1) - Math.abs((b.aspectRatio ?? 99) - 1);
-    if (state.sort === "narrow") return (a.aspectRatio ?? 99) - (b.aspectRatio ?? 99);
-    if (state.sort === "wide") return (b.aspectRatio ?? -1) - (a.aspectRatio ?? -1);
-    return compareFontName(a, b);
-  });
+  state.filtered.sort(compareFilteredFonts);
   state.page = 0;
   renderFavoriteSidebar();
   renderFontList();
@@ -1855,6 +2020,7 @@ function buildWeightOptions() {
     .sort((a, b) => weightLabelOrder(a[0]) - weightLabelOrder(b[0]) || a[0].localeCompare(b[0], "en"))
     .map(([label, count]) => ({ label, count }));
   renderWeightFilterMenu();
+  rebuildFamilyIndex();
 }
 
 function renderWeightFilterMenu() {
@@ -1889,6 +2055,388 @@ function pickInitialDisplayName(family = "", fullName = "") {
   return family || fullName || "未命名字体";
 }
 
+const CARD_SVG_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path fill="currentColor" d="M7 8h10v2H7zm0 3h10v2H7zm0 3h7v2H7z"/></svg>`;
+
+function escapeXml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatOutlineNumber(value) {
+  return Math.round(value * 10) / 10;
+}
+
+function cmapGetGlyphIndex(cmap, codepoint) {
+  if (!cmap || cmap.byteLength < 4) return 0;
+  const count = cmap.getUint16(2);
+  const offsets = [];
+  for (let i = 0; i < count; i++) {
+    const record = 4 + i * 8;
+    if (record + 8 > cmap.byteLength) break;
+    const offset = cmap.getUint32(record + 4);
+    if (offset < cmap.byteLength && !offsets.includes(offset)) offsets.push(offset);
+  }
+  offsets.sort((a, b) => {
+    const formatA = a + 2 <= cmap.byteLength ? cmap.getUint16(a) : 0;
+    const formatB = b + 2 <= cmap.byteLength ? cmap.getUint16(b) : 0;
+    return (formatB === 12 ? 2 : formatB === 4 ? 1 : formatB === 0 ? 0 : -1) - (formatA === 12 ? 2 : formatA === 4 ? 1 : formatA === 0 ? 0 : -1);
+  });
+  for (const offset of offsets) {
+    if (offset + 2 > cmap.byteLength) continue;
+    const format = cmap.getUint16(offset);
+    if (format === 0 && codepoint >= 0 && codepoint <= 255) return cmap.getUint8(offset + 6 + codepoint);
+    if (format === 12 && offset + 16 <= cmap.byteLength) {
+      const groups = cmap.getUint32(offset + 12);
+      let low = 0, high = groups - 1;
+      while (low <= high) {
+        const middle = (low + high) >> 1;
+        const p = offset + 16 + middle * 12;
+        if (p + 12 > cmap.byteLength) break;
+        const start = cmap.getUint32(p);
+        const end = cmap.getUint32(p + 4);
+        const startGlyphId = cmap.getUint32(p + 8);
+        if (codepoint < start) high = middle - 1;
+        else if (codepoint > end) low = middle + 1;
+        else return startGlyphId + (codepoint - start);
+      }
+    }
+    if (format === 4 && codepoint <= 0xFFFF && offset + 14 <= cmap.byteLength) {
+      const segCount = cmap.getUint16(offset + 6) / 2;
+      const endCodes = offset + 14;
+      const startCodes = endCodes + segCount * 2 + 2;
+      const idDeltas = startCodes + segCount * 2;
+      const idRangeOffsets = idDeltas + segCount * 2;
+      for (let i = 0; i < segCount; i++) {
+        const end = cmap.getUint16(endCodes + i * 2);
+        const start = cmap.getUint16(startCodes + i * 2);
+        if (codepoint < start || codepoint > end) continue;
+        const idDelta = cmap.getInt16(idDeltas + i * 2);
+        const idRangeOffset = cmap.getUint16(idRangeOffsets + i * 2);
+        if (idRangeOffset === 0) return (codepoint + idDelta) & 0xFFFF;
+        const glyphOffset = idRangeOffsets + i * 2 + idRangeOffset + (codepoint - start) * 2;
+        if (glyphOffset + 2 > cmap.byteLength) return 0;
+        return cmap.getUint16(glyphOffset);
+      }
+    }
+  }
+  return 0;
+}
+
+function getLocaOffset(loca, glyphIndex, indexToLocFormat) {
+  if (!loca) return null;
+  if (indexToLocFormat === 0) {
+    const pos = glyphIndex * 2;
+    if (pos + 4 > loca.byteLength) return null;
+    return loca.getUint16(pos) * 2;
+  }
+  const pos = glyphIndex * 4;
+  if (pos + 8 > loca.byteLength) return null;
+  return loca.getUint32(pos);
+}
+
+function getGlyphMetrics(hmtx, glyphIndex, numOfLongHorMetrics) {
+  if (!hmtx || numOfLongHorMetrics <= 0) return { advance: 0, lsb: 0 };
+  if (glyphIndex < numOfLongHorMetrics) {
+    const pos = glyphIndex * 4;
+    if (pos + 4 > hmtx.byteLength) return { advance: 0, lsb: 0 };
+    return { advance: hmtx.getUint16(pos), lsb: hmtx.getInt16(pos + 2) };
+  }
+  const lastPos = (numOfLongHorMetrics - 1) * 4;
+  const lsbPos = numOfLongHorMetrics * 4 + (glyphIndex - numOfLongHorMetrics) * 2;
+  if (lastPos + 2 > hmtx.byteLength || lsbPos + 2 > hmtx.byteLength) return { advance: 0, lsb: 0 };
+  return { advance: hmtx.getUint16(lastPos), lsb: hmtx.getInt16(lsbPos) };
+}
+
+function readGlyphFlags(view, start, numPoints) {
+  const flags = new Array(numPoints);
+  let index = 0, pos = start;
+  while (index < numPoints && pos < view.byteLength) {
+    const flag = view.getUint8(pos++);
+    flags[index++] = flag;
+    if (flag & 0x8) {
+      const repeat = view.getUint8(pos++);
+      for (let i = 0; i < repeat && index < numPoints; i++) flags[index++] = flag;
+    }
+  }
+  return { flags, pos };
+}
+
+function readGlyphCoords(view, flags, startPos, numPoints, shortFlag, sameFlag) {
+  const values = new Array(numPoints);
+  let pos = startPos, value = 0;
+  for (let i = 0; i < numPoints; i++) {
+    const flag = flags[i];
+    if (flag & shortFlag) value += (flag & sameFlag) ? view.getUint8(pos++) : -view.getUint8(pos++);
+    else if (!(flag & sameFlag)) value += view.getInt16(pos), pos += 2;
+    values[i] = value;
+  }
+  return { values, pos };
+}
+
+function contoursToPathCommands(endPts, xs, ys) {
+  const commands = [];
+  let start = 0;
+  for (const end of endPts) {
+    if (end < start) continue;
+    commands.push(`M${formatOutlineNumber(xs[start])} ${formatOutlineNumber(-ys[start])}`);
+    for (let i = start + 1; i <= end; i++) {
+      commands.push(`L${formatOutlineNumber(xs[i])} ${formatOutlineNumber(-ys[i])}`);
+    }
+    commands.push("Z");
+    start = end + 1;
+  }
+  return commands;
+}
+
+function parseSimpleGlyph(view, offset, numContours) {
+  const endPts = [];
+  for (let i = 0; i < numContours; i++) endPts.push(view.getUint16(offset + 2 + i * 2));
+  const instructionLength = view.getUint16(offset + 2 + numContours * 2);
+  let pos = offset + 2 + numContours * 2 + 2 + instructionLength;
+  const numPoints = endPts.length ? endPts[endPts.length - 1] + 1 : 0;
+  if (!numPoints) return [];
+  const flagRead = readGlyphFlags(view, pos, numPoints);
+  const xRead = readGlyphCoords(view, flagRead.flags, flagRead.pos, numPoints, 0x02, 0x10);
+  const yRead = readGlyphCoords(view, flagRead.flags, xRead.pos, numPoints, 0x04, 0x20);
+  return contoursToPathCommands(endPts, xRead.values, yRead.values);
+}
+
+function transformGlyphCommands(commands, matrix, offsetX, offsetY) {
+  return commands.map(command => {
+    if (command === "Z") return command;
+    const parts = command.slice(1).trim().split(/\s+/);
+    let x = Number(parts[0]), y = Number(parts[1]);
+    const nx = matrix.a * x + matrix.b * y + offsetX;
+    const ny = matrix.c * x + matrix.d * y + offsetY;
+    return `${command[0]}${formatOutlineNumber(nx)} ${formatOutlineNumber(-ny)}`;
+  });
+}
+
+function parseCompositeGlyph(view, offset, getGlyphCommands, depth = 0) {
+  if (depth > 8) return [];
+  let pos = offset + 10;
+  const commands = [];
+  let more = true;
+  while (more && pos + 4 <= view.byteLength) {
+    const flags = view.getUint16(pos);
+    const glyphIndex = view.getUint16(pos + 2);
+    pos += 4;
+    let arg1, arg2;
+    if (flags & 0x0001) {
+      arg1 = view.getInt16(pos); arg2 = view.getInt16(pos + 2); pos += 4;
+    } else {
+      arg1 = view.getInt8(pos); arg2 = view.getInt8(pos + 1); pos += 2;
+    }
+    let matrix = { a: 1, b: 0, c: 0, d: 1 };
+    let offsetX = arg1, offsetY = arg2;
+    if (flags & 0x0008) {
+      const scale = view.getInt16(pos) / 16384; pos += 2;
+      matrix = { a: scale, b: 0, c: 0, d: scale };
+    } else if (flags & 0x0040) {
+      matrix.a = view.getInt16(pos) / 16384; matrix.b = view.getInt16(pos + 2) / 16384;
+      matrix.c = view.getInt16(pos + 4) / 16384; matrix.d = view.getInt16(pos + 6) / 16384;
+      pos += 8;
+    } else if (flags & 0x0080) {
+      matrix.a = view.getInt16(pos) / 16384; matrix.b = view.getInt16(pos + 2) / 16384;
+      matrix.c = view.getInt16(pos + 4) / 16384; matrix.d = view.getInt16(pos + 6) / 16384;
+      offsetX = view.getInt16(pos + 8); offsetY = view.getInt16(pos + 10); pos += 12;
+    }
+    if (flags & 0x0002) { offsetX = arg1; offsetY = arg2; }
+    const child = getGlyphCommands(glyphIndex, depth + 1);
+    commands.push(...transformGlyphCommands(child, matrix, offsetX, offsetY));
+    more = Boolean(flags & 0x0020);
+  }
+  return commands;
+}
+
+function getGlyphPathCommands(glyf, loca, glyphIndex, indexToLocFormat, getGlyphCommands, depth = 0) {
+  const start = getLocaOffset(loca, glyphIndex, indexToLocFormat);
+  const end = getLocaOffset(loca, glyphIndex + 1, indexToLocFormat);
+  if (start == null || end == null || start === end || start + 10 > glyf.byteLength) return [];
+  const numberOfContours = glyf.getInt16(start);
+  if (numberOfContours > 0) return parseSimpleGlyph(glyf, start, numberOfContours);
+  if (numberOfContours < 0) return parseCompositeGlyph(glyf, start, getGlyphCommands, depth);
+  return [];
+}
+
+function commandsBoundingBox(commands) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const command of commands) {
+    if (command === "Z") continue;
+    const parts = command.slice(1).trim().split(/\s+/);
+    const x = Number(parts[0]), y = Number(parts[1]);
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  return { minX, minY, maxX, maxY };
+}
+
+function translateCommands(commands, dx, dy) {
+  return commands.map(command => {
+    if (command === "Z") return command;
+    const parts = command.slice(1).trim().split(/\s+/);
+    return `${command[0]}${formatOutlineNumber(Number(parts[0]) + dx)} ${formatOutlineNumber(Number(parts[1]) + dy)}`;
+  });
+}
+
+async function buildFontOutlineSvg(font, text = cardPreviewText()) {
+  const ctx = await getFontContext(font);
+  if (ctx.unsupported) throw new Error("暂不支持 WOFF/WOFF2/TTC 轮廓导出");
+  if (!ctx.tables.includes("glyf") || !ctx.tables.includes("loca") || !ctx.tables.includes("cmap")) {
+    throw new Error("该字体不含 TrueType 轮廓数据");
+  }
+  const [head, maxp, hhea, cmap, loca, glyf, hmtx] = await Promise.all([
+    ctx.readTable("head"), ctx.readTable("maxp"), ctx.readTable("hhea"), ctx.readTable("cmap"),
+    ctx.readTable("loca"), ctx.readTable("glyf"), ctx.readTable("hmtx")
+  ]);
+  if (!head || !maxp || !cmap || !loca || !glyf) throw new Error("字体表读取失败");
+  const upm = head.byteLength >= 20 ? head.getUint16(18) : 1000;
+  const indexToLocFormat = head.byteLength >= 52 ? head.getInt16(50) : 0;
+  const numGlyphs = maxp.byteLength >= 6 ? maxp.getUint16(4) : 0;
+  const numOfLongHorMetrics = hhea?.byteLength >= 36 ? hhea.getUint16(34) : 0;
+  const getGlyphCommands = (glyphIndex, depth = 0) => getGlyphPathCommands(glyf, loca, glyphIndex, indexToLocFormat, getGlyphCommands, depth);
+  const characters = [...String(text || "Aa").trim()].slice(0, 24);
+  if (!characters.length) characters.push("A");
+  const allCommands = [];
+  let cursorX = 0;
+  for (const char of characters) {
+    const glyphIndex = cmapGetGlyphIndex(cmap, char.codePointAt(0));
+    if (glyphIndex <= 0 || glyphIndex >= numGlyphs) {
+      cursorX += Math.round(upm * 0.5);
+      continue;
+    }
+    const metrics = getGlyphMetrics(hmtx, glyphIndex, numOfLongHorMetrics);
+    const commands = getGlyphCommands(glyphIndex);
+    if (commands.length) allCommands.push(...translateCommands(commands, cursorX - metrics.lsb, 0));
+    cursorX += metrics.advance || Math.round(upm * 0.5);
+  }
+  if (!allCommands.length) throw new Error("未能解析预览文字轮廓");
+  const bbox = commandsBoundingBox(allCommands);
+  const padding = Math.round(upm * 0.08);
+  const minX = bbox.minX - padding;
+  const minY = bbox.minY - padding;
+  const width = Math.max(1, bbox.maxX - bbox.minX + padding * 2);
+  const height = Math.max(1, bbox.maxY - bbox.minY + padding * 2);
+  const pathData = allCommands.join(" ");
+  const label = escapeXml(font.displayName || font.family || "font");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${formatOutlineNumber(minX)} ${formatOutlineNumber(minY)} ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="currentColor" d="${pathData}"/>\n</svg>`;
+}
+
+async function copyFontSvg(font) {
+  try {
+    toast("正在生成 SVG 轮廓…");
+    const svg = await buildFontOutlineSvg(font);
+    await copyValue(svg, "SVG 轮廓");
+  } catch (error) {
+    toast(error.message || "无法导出 SVG 轮廓");
+  }
+}
+
+function renderCardTitle(font, displayName) {
+  const members = getFamilyMembers(font);
+  if (state.view === "single" || members.length <= 1) {
+    return `<strong>${escapeHtml(displayName)}</strong>`;
+  }
+  const options = members.map(member => {
+    const label = member.style || member.weightLabel || "Regular";
+    const active = member.id === font.id ? " active" : "";
+    return `<button type="button" class="card-family-option${active}" data-font-id="${member.id}" role="menuitem">${escapeHtml(label)}</button>`;
+  }).join("");
+  return `<div class="card-family-switch"><span class="card-family-name">${escapeHtml(displayName)}</span><span class="card-family-caret" aria-hidden="true">▾</span><div class="card-family-menu" role="menu">${options}</div></div>`;
+}
+
+function createFontCard(font) {
+  const readyForRender = font.previewState === "ready";
+  const card = document.createElement("div");
+  card.draggable = true;
+  card.className = `font-card${state.selected === font ? " active" : ""}${readyForRender ? " font-ready" : " font-pending"}${font.previewState === "loading" ? " font-loading" : ""}${font.previewState === "failed" ? " font-failed" : ""}`;
+  card.dataset.id = font.id;
+  const ratioText = Number.isFinite(font.aspectRatio) ? ` · ${font.aspectRatio.toFixed(2)}:1` : "";
+  const displayName = font.displayName || font.family;
+  card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
+  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
+  if (readyForRender) {
+    registerFont(font);
+    card.querySelector(".sample").style.fontFamily = cssName(font);
+    card.dataset.fontLoaded = "true";
+    requestAnimationFrame(() => fitCardSample(card.querySelector(".sample")));
+  }
+  card.querySelector(".card-copy").addEventListener("click", event => {
+    event.stopPropagation();
+    copyValue(font.displayName || font.family, "字体名称");
+  });
+  card.querySelector(".card-copy-svg").addEventListener("click", event => {
+    event.stopPropagation();
+    copyFontSvg(font);
+  });
+  card.querySelector(".star").addEventListener("click", event => {
+    event.stopPropagation();
+    toggleFavoriteFor(font);
+  });
+  card.querySelector(".card-family-menu")?.addEventListener("click", event => event.stopPropagation());
+  const familySwitch = card.querySelector(".card-family-switch");
+  if (familySwitch) {
+    const menu = familySwitch.querySelector(".card-family-menu");
+    let closeTimer;
+    const openFamilyMenu = () => {
+      clearTimeout(closeTimer);
+      familySwitch.classList.add("is-open");
+    };
+    const restoreFamilyPreview = () => {
+      if (state.selected) previewFont(state.selected, false);
+      else previewFont(font, true, { immediate: true });
+      state.hovered = font;
+    };
+    const closeFamilyMenu = () => {
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => {
+        familySwitch.classList.remove("is-open");
+        menu?.querySelectorAll(".card-family-option.is-hover").forEach(button => button.classList.remove("is-hover"));
+        restoreFamilyPreview();
+      }, 120);
+    };
+    familySwitch.addEventListener("mouseenter", openFamilyMenu);
+    familySwitch.addEventListener("mouseleave", closeFamilyMenu);
+    familySwitch.addEventListener("focusin", openFamilyMenu);
+    familySwitch.addEventListener("focusout", event => {
+      if (!familySwitch.contains(event.relatedTarget)) closeFamilyMenu();
+    });
+    familySwitch.addEventListener("wheel", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      stepFamilyFont(font, event.deltaY > 0 ? 1 : -1);
+    }, { passive: false });
+  }
+  card.querySelectorAll(".card-family-option").forEach(button => {
+    button.addEventListener("mouseenter", () => {
+      const target = state.fonts.find(item => item.id === Number(button.dataset.fontId));
+      if (!target) return;
+      button.closest(".card-family-menu")?.querySelectorAll(".card-family-option.is-hover")
+        .forEach(item => item.classList.remove("is-hover"));
+      button.classList.add("is-hover");
+      state.hovered = target;
+      previewFont(target, true, { immediate: true });
+    });
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const target = state.fonts.find(item => item.id === Number(button.dataset.fontId));
+      if (!target) return;
+      navigateToFont(target);
+      familySwitch?.classList.remove("is-open");
+      familySwitch?.querySelector(".card-family-menu")
+        ?.querySelectorAll(".card-family-option.is-hover")
+        .forEach(item => item.classList.remove("is-hover"));
+    });
+  });
+  card.addEventListener("click", () => selectFont(font));
+  return card;
+}
+
 function renderFontList({ deferFonts = false } = {}) {
   const renderToken = ++state.renderVersion;
   fontObserver?.disconnect();
@@ -1899,34 +2447,7 @@ function renderFontList({ deferFonts = false } = {}) {
   const start = state.page * state.pageSize;
   const pageFonts = state.filtered.slice(start, start + state.pageSize);
   const fragment = document.createDocumentFragment();
-  for (const font of pageFonts) {
-    const readyForRender = font.previewState === "ready";
-    const card = document.createElement("div");
-    card.draggable = true;
-    card.className = `font-card${state.selected === font ? " active" : ""}${readyForRender ? " font-ready" : " font-pending"}${font.previewState === "loading" ? " font-loading" : ""}${font.previewState === "failed" ? " font-failed" : ""}`;
-    card.dataset.id = font.id;
-    const ratioText = Number.isFinite(font.aspectRatio) ? ` · ${font.aspectRatio.toFixed(2)}:1` : "";
-    const displayName = font.displayName || font.family;
-    card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
-    card.innerHTML = `<strong>${escapeHtml(displayName)}</strong><span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button>`;
-    card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
-    if (readyForRender) {
-      registerFont(font);
-      card.querySelector(".sample").style.fontFamily = cssName(font);
-      card.dataset.fontLoaded = "true";
-      requestAnimationFrame(() => fitCardSample(card.querySelector(".sample")));
-    }
-    card.querySelector(".card-copy").addEventListener("click", event => {
-      event.stopPropagation();
-      copyValue(font.displayName || font.family, "字体名称");
-    });
-    card.querySelector(".star").addEventListener("click", event => {
-      event.stopPropagation();
-      toggleFavoriteFor(font);
-    });
-    card.addEventListener("click", () => selectFont(font));
-    fragment.appendChild(card);
-  }
+  for (const font of pageFonts) fragment.appendChild(createFontCard(font));
   ui.list.replaceChildren(fragment);
   ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
@@ -1945,6 +2466,12 @@ function renderFontList({ deferFonts = false } = {}) {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
     preloadAdjacentPages();
+    if (state.pendingSelectionId != null) {
+      const pendingId = state.pendingSelectionId;
+      state.pendingSelectionId = null;
+      const pendingFont = state.fonts.find(item => item.id === pendingId);
+      if (pendingFont) selectFont(pendingFont);
+    }
   };
   if (deferFonts) requestAnimationFrame(() => requestAnimationFrame(hydratePage));
   else hydratePage();
@@ -2225,7 +2752,7 @@ function selectFont(font) {
   previewFont(font, false);
 }
 
-function previewFont(font, temporary = true) {
+function previewFont(font, temporary = true, { immediate = false } = {}) {
   state.previewed = font;
   $("#detailPanel").classList.remove("empty-preview");
   const selectionVersion = ++state.selectionVersion;
@@ -2246,6 +2773,7 @@ function previewFont(font, temporary = true) {
   if (font.axes) renderAxes(font.axes);
   if (font.details) renderFontDetails(font, font.details);
   else renderFontDetails(font);
+  const delay = temporary && !immediate ? 220 : 0;
   previewFont.timer = setTimeout(async () => {
     const tasks = [
       getVariationAxes(font),
@@ -2260,7 +2788,7 @@ function previewFont(font, temporary = true) {
     renderAxes(axes);
     renderFontDetails(font, detailsResult.status === "fulfilled" ? detailsResult.value : false);
     updateFontStatus(font);
-  }, temporary ? 220 : 0);
+  }, delay);
 }
 
 function clearPreview() {
@@ -3463,12 +3991,18 @@ document.addEventListener("keydown", event => {
 });
 ui.list.addEventListener("wheel", event => {
   if (event.ctrlKey) return;
+  if (event.target.closest(".card-family-switch")) return;
   event.preventDefault();
   const now = performance.now();
   if (now - (ui.list.lastPageTurn || 0) < 180) return;
   ui.list.lastPageTurn = now;
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
+ui.list.addEventListener("scroll", () => {
+  document.querySelectorAll(".card-family-switch.is-open").forEach(familySwitch => {
+    familySwitch.classList.remove("is-open");
+  });
+}, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
   persistUiSettings();
@@ -3535,11 +4069,22 @@ ui.list.addEventListener("pointermove", event => {
   const sample = card.querySelector(".sample");
   const font = state.fonts.find(item => item.id === Number(card.dataset.id));
   if (!sample || !font) return;
+  if (event.target.closest(".card-family-option")) return;
+  if (event.target.closest(".card-family-switch")) {
+    if (state.hovered !== font) {
+      state.hovered = font;
+      previewFont(font, true);
+    }
+    hideMagnifier(ui.cardMagnifier);
+    return;
+  }
   if (state.hovered !== font) {
     state.hovered = font;
     previewFont(font, true);
   }
-  if (!state.magnifier) {
+  const skipMagnifier = Boolean(event.target.closest(".card-family-switch, .card-actions, .star")) ||
+    card.querySelector(".card-family-switch.is-open");
+  if (!state.magnifier || skipMagnifier) {
     hideMagnifier(ui.cardMagnifier);
     return;
   }
