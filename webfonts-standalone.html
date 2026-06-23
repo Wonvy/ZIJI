@@ -161,8 +161,12 @@ body.workspace-active .header-preview { display: flex; }
   white-space: nowrap;
 }
 .toolbar-filters .chip { padding: 4px 8px; font-size: 10px; }
+.toolbar-filters .toolbar-search-wrap { flex: 0 0 188px; width: 188px; }
 .toolbar-filters .filter-divider { height: 16px; margin: 0 1px; }
 .toolbar-view { flex: none; justify-self: end; grid-column: 3; margin-left: auto; }
+.toolbar-view .filter-menu { position: relative; z-index: 1; }
+.toolbar-view .filter-menu[open] { z-index: 40; }
+.toolbar-view .filter-menu-icon { margin-left: 2px; }
 .weight-filter-popover {
   left: auto;
   right: 0;
@@ -300,7 +304,7 @@ body.workspace-active .header-preview { display: flex; }
 kbd { color: var(--muted); font-size: 10px; }
 .filter-row { display: flex; gap: 6px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .chip { padding: 6px 10px; border-radius: 30px; color: var(--muted); font-size: 11px; }
-.chip.active { color: white; background: var(--ink); }
+.chip.active { color: var(--panel); background: var(--ink); }
 .font-list { min-height: 0; overflow-y: auto; }
 .font-card { position: relative; padding: 15px 38px 14px 9px; cursor: pointer; border-bottom: 1px solid var(--line); }
 .font-card:hover, .font-card.active { background: var(--paper); }
@@ -339,6 +343,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 body.dark { --paper: #181816; --panel: #201f1c; --ink: #f4efe6; --muted: #aaa49a; --line: #3b3934; --stage: #2b2924; }
 body.dark .stage-hint { color: rgba(255,255,255,.42); }
 body.dark .magnifier { border-color: rgba(40,39,35,.9); }
+body.dark .chip.active,
+body.dark .view-button.active,
+body.dark .view-option-item.active { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+body.dark .filter-menu-icon.is-active summary,
+body.dark .filter-menu-icon[open] summary { color: var(--accent); background: var(--panel); }
+body.dark .filter-menu-icon.is-active summary svg,
+body.dark .filter-menu-icon[open] summary svg { stroke: var(--accent); }
 
 @media (max-width: 1100px) {
   .detail-panel { width: 350px; }
@@ -419,7 +430,7 @@ kbd,
 .card-area.collapsed .card-area-toggle { pointer-events: auto; visibility: visible; }
 .card-toolbar {
   position: relative;
-  z-index: 12;
+  z-index: 30;
   flex: none;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -477,7 +488,6 @@ kbd,
 .toolbar-filters .filter-popover { top: calc(100% + 4px); z-index: 50; }
 .toolbar-view .view-button { width: 28px; height: 28px; font-size: 14px; }
 .toolbar-view .view-button:nth-child(3) { font-size: 13px; }
-.toolbar-view .view-button:nth-child(4) { font-size: 13px; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .density-control input { width: 120px; }
 .toolbar-view .sort-select { height: 28px; max-width: 128px; padding: 0 24px 0 7px; font-size: 10px; }
@@ -488,12 +498,59 @@ kbd,
 .filter-menu summary::-webkit-details-marker { display: none; }
 .filter-menu summary::after { content: "⌄"; margin-left: 2px; color: var(--muted); }
 .filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
+.filter-menu-icon summary {
+  width: 26px;
+  padding: 0;
+  justify-content: center;
+  color: var(--muted);
+}
+.filter-menu-icon summary::after { display: none; }
+.filter-menu-icon summary svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+.filter-menu-icon.is-active summary,
+.filter-menu-icon[open] summary { color: var(--accent); border-color: var(--accent); background: var(--paper); }
+.filter-menu-icon.is-active summary svg,
+.filter-menu-icon[open] summary svg { stroke: var(--accent); }
 .filter-menu[open] summary { border-color: var(--ink); }
+.filter-menu-icon[open] summary { border-color: var(--accent); }
 .filter-popover { position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; min-width: 145px; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); box-shadow: var(--shadow); }
+.filter-popover.is-floating,
+.card-family-menu.is-floating {
+  position: fixed;
+  z-index: 220;
+  top: auto;
+  left: auto;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 .data-button { height: 28px; padding: 0 8px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: transparent; font-size: 12px; }
 .data-button:hover { color: var(--accent); border-color: var(--accent); background: var(--panel); }
 .filter-popover label { display: block; padding: 7px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; white-space: nowrap; }
 .filter-popover label:hover { background: var(--paper); }
+.view-options-popover { min-width: 168px; }
+.view-option-item {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 3px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+}
+.view-option-item:hover { background: var(--paper); }
+.view-option-item.active { color: var(--panel); background: var(--ink); }
 .filter-popover input { margin: 0 7px 0 0; accent-color: var(--accent); }
 .popover-divider { display: block; height: 1px; margin: 5px 4px; background: var(--line); }
 .category-filter-popover { min-width: 190px; }
@@ -504,9 +561,8 @@ kbd,
 .view-button { width: 28px; height: 28px; cursor: pointer; border: 1px solid var(--line); color: var(--muted); background: var(--paper); font-size: 14px; }
 .view-button:first-child { border-radius: 4px 0 0 4px; }
 .view-button:nth-child(2) { margin-left: -7px; border-radius: 0; }
-.view-button:nth-child(3) { margin-left: -7px; border-radius: 0; font-family: Georgia, "Songti SC", serif; font-size: 15px; }
-.view-button:nth-child(4) { margin-left: -7px; border-radius: 0 4px 4px 0; font-size: 15px; }
-.view-button.active { z-index: 1; color: white; border-color: var(--ink); background: var(--ink); }
+.view-button:nth-child(3) { margin-left: -7px; border-radius: 0 4px 4px 0; font-family: Georgia, "Songti SC", serif; font-size: 15px; }
+.view-button.active { z-index: 1; color: var(--panel); border-color: var(--ink); background: var(--ink); }
 .density-control { display: flex; align-items: center; gap: 4px; margin-left: 2px; color: var(--muted); font-size: 9px; }
 .density-control input { width: 120px; }
 .sort-select { height: 28px; padding: 0 24px 0 7px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: var(--ink); background: var(--paper); font-size: 10px; }
@@ -524,7 +580,7 @@ kbd,
   padding: 28px 36px 36px;
   overflow: hidden;
 }
-.font-view-shell { min-width: 0; min-height: 0; flex: 1; display: flex; overflow: hidden; }
+.font-view-shell { position: relative; z-index: 1; min-width: 0; min-height: 0; flex: 1; display: flex; overflow: hidden; }
 .font-page-area { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; }
 .favorite-sidebar { width: 210px; min-width: 210px; display: flex; flex-direction: column; overflow: hidden; padding: 8px 10px 8px 0; border-right: 1px solid var(--line); }
 .favorite-sidebar[hidden] { display: none; }
@@ -1028,7 +1084,7 @@ kbd,
   .card-toolbar { grid-template-columns: 1fr; gap: 6px; }
   .toolbar-meta { grid-column: 1; border-right: 0; padding-right: 0; }
   .toolbar-center { grid-column: 1; width: 100%; justify-content: flex-start; }
-  .toolbar-search-wrap { flex: 0 0 180px; width: 180px; }
+  .toolbar-filters .toolbar-search-wrap { flex: 0 0 160px; width: 160px; }
   .toolbar-view { grid-column: 1; justify-self: stretch; flex-wrap: wrap; }
   .header-preview { width: min(360px, calc(100vw - 240px)); }
   .privacy { display: none; }
@@ -1102,22 +1158,21 @@ kbd,
               </div>
 
               <div class="toolbar-section toolbar-center">
-                <div class="toolbar-search-wrap search-control">
-                  <label class="search-box toolbar-search">
-                    <span>⌕</span>
-                    <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                    <kbd>⌘ K</kbd>
-                  </label>
-                  <div id="searchSuggestions" class="search-suggestions" hidden>
-                    <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                    <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
-                  </div>
-                </div>
-
                 <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
                   <button class="chip active" data-filter="all">全部</button>
                   <button class="chip" data-filter="favorite">收藏</button>
                   <span class="filter-divider"></span>
+                  <div class="toolbar-search-wrap search-control">
+                    <label class="search-box toolbar-search">
+                      <span>⌕</span>
+                      <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                      <kbd>⌘ K</kbd>
+                    </label>
+                    <div id="searchSuggestions" class="search-suggestions" hidden>
+                      <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                      <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                    </div>
+                  </div>
                   <details class="filter-menu" id="languageMenu">
                     <summary>语言 <b id="languageBadge">全部</b></summary>
                     <div class="filter-popover">
@@ -1141,7 +1196,6 @@ kbd,
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
-                <button id="focusViewButton" class="view-button" title="无干扰视图" aria-label="无干扰视图">净</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
                 <select id="sortSelect" class="sort-select" aria-label="字体排序">
                   <optgroup label="常规">
@@ -1158,6 +1212,16 @@ kbd,
                     <option value="wide">首字由宽到瘦</option>
                   </optgroup>
                 </select>
+                <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
+                  <summary aria-label="视图选项" title="视图选项">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
+                  </summary>
+                  <div class="filter-popover view-options-popover">
+                    <button type="button" class="view-option-item" id="focusViewMenuItem">无干扰视图</button>
+                    <span class="popover-divider"></span>
+                    <label><input type="checkbox" id="collapseFamilyFonts"> 折叠家族字体</label>
+                  </div>
+                </details>
               </div>
             </div>
             <div id="scanProgress" class="scan-progress" hidden>
@@ -1354,7 +1418,8 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelCollapsed: false,
   cardAreaCollapsed: false,
   detailPanelWidth: null,
-  favoriteCategoryView: "all"
+  favoriteCategoryView: "all",
+  collapseFamilyFonts: false
 };
 function loadUiSettings() {
   try {
@@ -1393,7 +1458,8 @@ function collectUiSettings() {
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
     cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
-    favoriteCategoryView: state.favoriteCategoryView
+    favoriteCategoryView: state.favoriteCategoryView,
+    collapseFamilyFonts: state.collapseFamilyFonts
   };
 }
 let persistUiSettingsTimer;
@@ -1451,7 +1517,7 @@ document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
-  familyIndex: new Map(), pendingSelectionId: null,
+  familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -1911,6 +1977,121 @@ function stepFamilyFont(font, direction) {
   return true;
 }
 
+function pickFamilyRepresentative(members) {
+  if (state.selected && members.some(item => item.id === state.selected.id)) return state.selected;
+  const regular = members.find(item => item.weightLabel === "Regular");
+  if (regular) return regular;
+  return [...members].sort(compareFamilyMembers)[0];
+}
+
+function mountFloatingPopover(popover, anchor, { align = "left", minWidth = 145, gap = 4 } = {}) {
+  if (!popover || !anchor) return;
+  document.body.appendChild(popover);
+  popover.classList.add("is-floating");
+  const rect = anchor.getBoundingClientRect();
+  popover.style.position = "fixed";
+  popover.style.zIndex = "220";
+  popover.style.top = `${rect.bottom + gap}px`;
+  if (align === "right") {
+    popover.style.left = "auto";
+    popover.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+  } else {
+    popover.style.left = `${Math.max(8, rect.left)}px`;
+    popover.style.right = "auto";
+  }
+  popover.style.minWidth = `${Math.max(rect.width, minWidth)}px`;
+}
+
+function resetFloatingPopover(popover, host) {
+  if (!popover) return;
+  popover.classList.remove("is-floating");
+  popover.style.position = "";
+  popover.style.left = "";
+  popover.style.top = "";
+  popover.style.right = "";
+  popover.style.minWidth = "";
+  popover.style.zIndex = "";
+  if (popover.parentElement === document.body) {
+    if (host?.isConnected) host.appendChild(popover);
+    else popover.remove();
+  }
+}
+
+function isWithinFloatingMenu(target, menu, popover) {
+  return Boolean(target && (menu?.contains(target) || popover?.contains(target)));
+}
+
+function closeAllFamilyMenus() {
+  document.querySelectorAll(".card-family-switch.is-open").forEach(familySwitch => {
+    familySwitch.classList.remove("is-open");
+    const menu = familySwitch._familyMenu;
+    if (menu) resetFloatingPopover(menu, familySwitch);
+  });
+  document.querySelectorAll("body > .card-family-menu.is-floating").forEach(menu => {
+    resetFloatingPopover(menu, menu._floatHost);
+  });
+}
+
+function setupFilterMenus() {
+  document.querySelectorAll(".filter-menu").forEach(menu => {
+    const popover = menu.querySelector(".filter-popover");
+    const summary = menu.querySelector("summary");
+    if (!popover || !summary) return;
+    const align = menu.id === "weightMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
+    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "viewOptionsMenu" ? 168 : 145;
+    const closeMenu = () => {
+      menu.removeAttribute("open");
+      resetFloatingPopover(popover, menu);
+    };
+    const syncPopover = () => {
+      if (menu.open) {
+        document.querySelectorAll(".filter-menu[open]").forEach(other => {
+          if (other === menu) return;
+          other.removeAttribute("open");
+          resetFloatingPopover(other.querySelector(".filter-popover"), other);
+        });
+        mountFloatingPopover(popover, summary, { align, minWidth });
+      } else resetFloatingPopover(popover, menu);
+    };
+    const scheduleClose = event => {
+      if (isWithinFloatingMenu(event?.relatedTarget, menu, popover)) return;
+      clearTimeout(menu.closeTimer);
+      menu.closeTimer = setTimeout(closeMenu, 320);
+    };
+    menu.addEventListener("toggle", syncPopover);
+    menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    menu.addEventListener("mouseleave", scheduleClose);
+    popover.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    popover.addEventListener("mouseleave", scheduleClose);
+    window.addEventListener("resize", () => {
+      if (menu.open) mountFloatingPopover(popover, summary, { align, minWidth });
+    });
+  });
+}
+
+function collapseFilteredByFamily(fonts) {
+  const groups = new Map();
+  for (const font of fonts) {
+    const key = fontFamilyKey(font);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(font);
+  }
+  const representatives = [...groups.values()].map(pickFamilyRepresentative);
+  representatives.sort(compareFilteredFonts);
+  return representatives;
+}
+
+function syncCollapsedRepresentative(font) {
+  if (!state.collapseFamilyFonts || !font) return;
+  const key = fontFamilyKey(font);
+  const index = state.filtered.findIndex(item => fontFamilyKey(item) === key);
+  if (index < 0 || state.filtered[index].id === font.id) return;
+  state.filtered[index] = font;
+  state.filtered.sort(compareFilteredFonts);
+  renderFontList();
+  ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
+}
+
 function applyFilter() {
   const query = ui.search.value.trim().toLowerCase().replace(/\s/g, "");
   state.filtered = state.fonts.filter(font => {
@@ -1928,6 +2109,7 @@ function applyFilter() {
     return filterMatch && searchMatch && languageMatch && weightMatch && categoryMatch;
   });
   state.filtered.sort(compareFilteredFonts);
+  if (state.collapseFamilyFonts) state.filtered = collapseFilteredByFamily(state.filtered);
   state.page = 0;
   renderFavoriteSidebar();
   renderFontList();
@@ -2382,10 +2564,13 @@ function createFontCard(font) {
   const familySwitch = card.querySelector(".card-family-switch");
   if (familySwitch) {
     const menu = familySwitch.querySelector(".card-family-menu");
+    familySwitch._familyMenu = menu;
+    menu._floatHost = familySwitch;
     let closeTimer;
     const openFamilyMenu = () => {
       clearTimeout(closeTimer);
       familySwitch.classList.add("is-open");
+      mountFloatingPopover(menu, familySwitch, { minWidth: 148, gap: 2 });
     };
     const restoreFamilyPreview = () => {
       if (state.selected) previewFont(state.selected, false);
@@ -2396,15 +2581,26 @@ function createFontCard(font) {
       clearTimeout(closeTimer);
       closeTimer = setTimeout(() => {
         familySwitch.classList.remove("is-open");
+        resetFloatingPopover(menu, familySwitch);
         menu?.querySelectorAll(".card-family-option.is-hover").forEach(button => button.classList.remove("is-hover"));
         restoreFamilyPreview();
       }, 120);
     };
+    const stayInFamilyMenu = event => isWithinFloatingMenu(event?.relatedTarget, familySwitch, menu);
     familySwitch.addEventListener("mouseenter", openFamilyMenu);
-    familySwitch.addEventListener("mouseleave", closeFamilyMenu);
+    menu.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+    familySwitch.addEventListener("mouseleave", event => {
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
+    });
+    menu.addEventListener("mouseleave", event => {
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
+    });
     familySwitch.addEventListener("focusin", openFamilyMenu);
     familySwitch.addEventListener("focusout", event => {
-      if (!familySwitch.contains(event.relatedTarget)) closeFamilyMenu();
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
     });
     familySwitch.addEventListener("wheel", event => {
       event.preventDefault();
@@ -2428,7 +2624,8 @@ function createFontCard(font) {
       if (!target) return;
       navigateToFont(target);
       familySwitch?.classList.remove("is-open");
-      familySwitch?.querySelector(".card-family-menu")
+      resetFloatingPopover(familySwitch?._familyMenu, familySwitch);
+      familySwitch?._familyMenu
         ?.querySelectorAll(".card-family-option.is-hover")
         .forEach(item => item.classList.remove("is-hover"));
     });
@@ -2438,6 +2635,7 @@ function createFontCard(font) {
 }
 
 function renderFontList({ deferFonts = false } = {}) {
+  closeAllFamilyMenus();
   const renderToken = ++state.renderVersion;
   fontObserver?.disconnect();
   state.prefetchCards.clear();
@@ -2750,6 +2948,7 @@ function selectFont(font) {
   ui.list.querySelector(".font-card.active")?.classList.remove("active");
   ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
   previewFont(font, false);
+  syncCollapsedRepresentative(font);
 }
 
 function previewFont(font, temporary = true, { immediate = false } = {}) {
@@ -3884,7 +4083,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
-$("#focusViewButton").addEventListener("click", () => setView("focus"));
+$("#focusViewMenuItem")?.addEventListener("click", () => setView("focus"));
 $("#cardDensity").addEventListener("input", event => {
   state.cardWidth = Number(event.target.value);
   if (["grid", "focus"].includes(state.view)) {
@@ -3925,18 +4124,22 @@ document.querySelectorAll("[data-capability]").forEach(input => input.addEventLi
   } else applyFilter();
   persistUiSettings();
 }));
-document.querySelectorAll(".filter-menu").forEach(menu => {
-  menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
-  menu.addEventListener("mouseleave", () => {
-    clearTimeout(menu.closeTimer);
-    menu.closeTimer = setTimeout(() => menu.removeAttribute("open"), 320);
-  });
+setupFilterMenus();
+$("#collapseFamilyFonts")?.addEventListener("change", event => {
+  state.collapseFamilyFonts = event.target.checked;
+  updateFilterControls();
+  applyFilter();
+  persistUiSettings();
 });
 function updateFilterControls() {
   document.querySelector('[data-filter="all"]').classList.toggle("active", state.filters.size === 0 && state.languageFilters.size === 0 && state.weightFilters.size === 0);
   document.querySelectorAll('[data-filter]:not([data-filter="all"])').forEach(button => button.classList.toggle("active", state.filters.has(button.dataset.filter)));
   document.querySelectorAll("[data-capability]").forEach(input => input.checked = state.filters.has(input.dataset.capability));
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
+  const collapseFamilyFonts = $("#collapseFamilyFonts");
+  if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
+  $("#focusViewMenuItem")?.classList.toggle("active", state.view === "focus");
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
   $("#weightBadge").textContent = state.weightFilters.size
@@ -3948,7 +4151,8 @@ function setView(view) {
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
-  $("#focusViewButton").classList.toggle("active", view === "focus");
+  $("#focusViewMenuItem")?.classList.toggle("active", view === "focus");
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
   updateCardSampleSizeControl();
   renderFontList();
@@ -3998,11 +4202,7 @@ ui.list.addEventListener("wheel", event => {
   ui.list.lastPageTurn = now;
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
-ui.list.addEventListener("scroll", () => {
-  document.querySelectorAll(".card-family-switch.is-open").forEach(familySwitch => {
-    familySwitch.classList.remove("is-open");
-  });
-}, { passive: true });
+ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
   persistUiSettings();

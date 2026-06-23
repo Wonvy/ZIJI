@@ -60,7 +60,8 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelCollapsed: false,
   cardAreaCollapsed: false,
   detailPanelWidth: null,
-  favoriteCategoryView: "all"
+  favoriteCategoryView: "all",
+  collapseFamilyFonts: false
 };
 function loadUiSettings() {
   try {
@@ -99,7 +100,8 @@ function collectUiSettings() {
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
     cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
-    favoriteCategoryView: state.favoriteCategoryView
+    favoriteCategoryView: state.favoriteCategoryView,
+    collapseFamilyFonts: state.collapseFamilyFonts
   };
 }
 let persistUiSettingsTimer;
@@ -157,7 +159,7 @@ document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
-  familyIndex: new Map(), pendingSelectionId: null,
+  familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -617,6 +619,121 @@ function stepFamilyFont(font, direction) {
   return true;
 }
 
+function pickFamilyRepresentative(members) {
+  if (state.selected && members.some(item => item.id === state.selected.id)) return state.selected;
+  const regular = members.find(item => item.weightLabel === "Regular");
+  if (regular) return regular;
+  return [...members].sort(compareFamilyMembers)[0];
+}
+
+function mountFloatingPopover(popover, anchor, { align = "left", minWidth = 145, gap = 4 } = {}) {
+  if (!popover || !anchor) return;
+  document.body.appendChild(popover);
+  popover.classList.add("is-floating");
+  const rect = anchor.getBoundingClientRect();
+  popover.style.position = "fixed";
+  popover.style.zIndex = "220";
+  popover.style.top = `${rect.bottom + gap}px`;
+  if (align === "right") {
+    popover.style.left = "auto";
+    popover.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+  } else {
+    popover.style.left = `${Math.max(8, rect.left)}px`;
+    popover.style.right = "auto";
+  }
+  popover.style.minWidth = `${Math.max(rect.width, minWidth)}px`;
+}
+
+function resetFloatingPopover(popover, host) {
+  if (!popover) return;
+  popover.classList.remove("is-floating");
+  popover.style.position = "";
+  popover.style.left = "";
+  popover.style.top = "";
+  popover.style.right = "";
+  popover.style.minWidth = "";
+  popover.style.zIndex = "";
+  if (popover.parentElement === document.body) {
+    if (host?.isConnected) host.appendChild(popover);
+    else popover.remove();
+  }
+}
+
+function isWithinFloatingMenu(target, menu, popover) {
+  return Boolean(target && (menu?.contains(target) || popover?.contains(target)));
+}
+
+function closeAllFamilyMenus() {
+  document.querySelectorAll(".card-family-switch.is-open").forEach(familySwitch => {
+    familySwitch.classList.remove("is-open");
+    const menu = familySwitch._familyMenu;
+    if (menu) resetFloatingPopover(menu, familySwitch);
+  });
+  document.querySelectorAll("body > .card-family-menu.is-floating").forEach(menu => {
+    resetFloatingPopover(menu, menu._floatHost);
+  });
+}
+
+function setupFilterMenus() {
+  document.querySelectorAll(".filter-menu").forEach(menu => {
+    const popover = menu.querySelector(".filter-popover");
+    const summary = menu.querySelector("summary");
+    if (!popover || !summary) return;
+    const align = menu.id === "weightMenu" || menu.id === "viewOptionsMenu" ? "right" : "left";
+    const minWidth = menu.id === "weightMenu" ? 240 : menu.id === "viewOptionsMenu" ? 168 : 145;
+    const closeMenu = () => {
+      menu.removeAttribute("open");
+      resetFloatingPopover(popover, menu);
+    };
+    const syncPopover = () => {
+      if (menu.open) {
+        document.querySelectorAll(".filter-menu[open]").forEach(other => {
+          if (other === menu) return;
+          other.removeAttribute("open");
+          resetFloatingPopover(other.querySelector(".filter-popover"), other);
+        });
+        mountFloatingPopover(popover, summary, { align, minWidth });
+      } else resetFloatingPopover(popover, menu);
+    };
+    const scheduleClose = event => {
+      if (isWithinFloatingMenu(event?.relatedTarget, menu, popover)) return;
+      clearTimeout(menu.closeTimer);
+      menu.closeTimer = setTimeout(closeMenu, 320);
+    };
+    menu.addEventListener("toggle", syncPopover);
+    menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    menu.addEventListener("mouseleave", scheduleClose);
+    popover.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    popover.addEventListener("mouseleave", scheduleClose);
+    window.addEventListener("resize", () => {
+      if (menu.open) mountFloatingPopover(popover, summary, { align, minWidth });
+    });
+  });
+}
+
+function collapseFilteredByFamily(fonts) {
+  const groups = new Map();
+  for (const font of fonts) {
+    const key = fontFamilyKey(font);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(font);
+  }
+  const representatives = [...groups.values()].map(pickFamilyRepresentative);
+  representatives.sort(compareFilteredFonts);
+  return representatives;
+}
+
+function syncCollapsedRepresentative(font) {
+  if (!state.collapseFamilyFonts || !font) return;
+  const key = fontFamilyKey(font);
+  const index = state.filtered.findIndex(item => fontFamilyKey(item) === key);
+  if (index < 0 || state.filtered[index].id === font.id) return;
+  state.filtered[index] = font;
+  state.filtered.sort(compareFilteredFonts);
+  renderFontList();
+  ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
+}
+
 function applyFilter() {
   const query = ui.search.value.trim().toLowerCase().replace(/\s/g, "");
   state.filtered = state.fonts.filter(font => {
@@ -634,6 +751,7 @@ function applyFilter() {
     return filterMatch && searchMatch && languageMatch && weightMatch && categoryMatch;
   });
   state.filtered.sort(compareFilteredFonts);
+  if (state.collapseFamilyFonts) state.filtered = collapseFilteredByFamily(state.filtered);
   state.page = 0;
   renderFavoriteSidebar();
   renderFontList();
@@ -1088,10 +1206,13 @@ function createFontCard(font) {
   const familySwitch = card.querySelector(".card-family-switch");
   if (familySwitch) {
     const menu = familySwitch.querySelector(".card-family-menu");
+    familySwitch._familyMenu = menu;
+    menu._floatHost = familySwitch;
     let closeTimer;
     const openFamilyMenu = () => {
       clearTimeout(closeTimer);
       familySwitch.classList.add("is-open");
+      mountFloatingPopover(menu, familySwitch, { minWidth: 148, gap: 2 });
     };
     const restoreFamilyPreview = () => {
       if (state.selected) previewFont(state.selected, false);
@@ -1102,15 +1223,26 @@ function createFontCard(font) {
       clearTimeout(closeTimer);
       closeTimer = setTimeout(() => {
         familySwitch.classList.remove("is-open");
+        resetFloatingPopover(menu, familySwitch);
         menu?.querySelectorAll(".card-family-option.is-hover").forEach(button => button.classList.remove("is-hover"));
         restoreFamilyPreview();
       }, 120);
     };
+    const stayInFamilyMenu = event => isWithinFloatingMenu(event?.relatedTarget, familySwitch, menu);
     familySwitch.addEventListener("mouseenter", openFamilyMenu);
-    familySwitch.addEventListener("mouseleave", closeFamilyMenu);
+    menu.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+    familySwitch.addEventListener("mouseleave", event => {
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
+    });
+    menu.addEventListener("mouseleave", event => {
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
+    });
     familySwitch.addEventListener("focusin", openFamilyMenu);
     familySwitch.addEventListener("focusout", event => {
-      if (!familySwitch.contains(event.relatedTarget)) closeFamilyMenu();
+      if (stayInFamilyMenu(event)) return;
+      closeFamilyMenu();
     });
     familySwitch.addEventListener("wheel", event => {
       event.preventDefault();
@@ -1134,7 +1266,8 @@ function createFontCard(font) {
       if (!target) return;
       navigateToFont(target);
       familySwitch?.classList.remove("is-open");
-      familySwitch?.querySelector(".card-family-menu")
+      resetFloatingPopover(familySwitch?._familyMenu, familySwitch);
+      familySwitch?._familyMenu
         ?.querySelectorAll(".card-family-option.is-hover")
         .forEach(item => item.classList.remove("is-hover"));
     });
@@ -1144,6 +1277,7 @@ function createFontCard(font) {
 }
 
 function renderFontList({ deferFonts = false } = {}) {
+  closeAllFamilyMenus();
   const renderToken = ++state.renderVersion;
   fontObserver?.disconnect();
   state.prefetchCards.clear();
@@ -1456,6 +1590,7 @@ function selectFont(font) {
   ui.list.querySelector(".font-card.active")?.classList.remove("active");
   ui.list.querySelector(`[data-id="${font.id}"]`)?.classList.add("active");
   previewFont(font, false);
+  syncCollapsedRepresentative(font);
 }
 
 function previewFont(font, temporary = true, { immediate = false } = {}) {
@@ -2590,7 +2725,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
-$("#focusViewButton").addEventListener("click", () => setView("focus"));
+$("#focusViewMenuItem")?.addEventListener("click", () => setView("focus"));
 $("#cardDensity").addEventListener("input", event => {
   state.cardWidth = Number(event.target.value);
   if (["grid", "focus"].includes(state.view)) {
@@ -2631,18 +2766,22 @@ document.querySelectorAll("[data-capability]").forEach(input => input.addEventLi
   } else applyFilter();
   persistUiSettings();
 }));
-document.querySelectorAll(".filter-menu").forEach(menu => {
-  menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
-  menu.addEventListener("mouseleave", () => {
-    clearTimeout(menu.closeTimer);
-    menu.closeTimer = setTimeout(() => menu.removeAttribute("open"), 320);
-  });
+setupFilterMenus();
+$("#collapseFamilyFonts")?.addEventListener("change", event => {
+  state.collapseFamilyFonts = event.target.checked;
+  updateFilterControls();
+  applyFilter();
+  persistUiSettings();
 });
 function updateFilterControls() {
   document.querySelector('[data-filter="all"]').classList.toggle("active", state.filters.size === 0 && state.languageFilters.size === 0 && state.weightFilters.size === 0);
   document.querySelectorAll('[data-filter]:not([data-filter="all"])').forEach(button => button.classList.toggle("active", state.filters.has(button.dataset.filter)));
   document.querySelectorAll("[data-capability]").forEach(input => input.checked = state.filters.has(input.dataset.capability));
   document.querySelectorAll("[data-language]").forEach(input => input.checked = input.dataset.language === (state.languageFilters.values().next().value || "all"));
+  const collapseFamilyFonts = $("#collapseFamilyFonts");
+  if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
+  $("#focusViewMenuItem")?.classList.toggle("active", state.view === "focus");
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
   $("#weightBadge").textContent = state.weightFilters.size
@@ -2654,7 +2793,8 @@ function setView(view) {
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
-  $("#focusViewButton").classList.toggle("active", view === "focus");
+  $("#focusViewMenuItem")?.classList.toggle("active", view === "focus");
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
   updateCardSampleSizeControl();
   renderFontList();
@@ -2704,11 +2844,7 @@ ui.list.addEventListener("wheel", event => {
   ui.list.lastPageTurn = now;
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
-ui.list.addEventListener("scroll", () => {
-  document.querySelectorAll(".card-family-switch.is-open").forEach(familySwitch => {
-    familySwitch.classList.remove("is-open");
-  });
-}, { passive: true });
+ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
   persistUiSettings();

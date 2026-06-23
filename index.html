@@ -70,22 +70,21 @@
               </div>
 
               <div class="toolbar-section toolbar-center">
-                <div class="toolbar-search-wrap search-control">
-                  <label class="search-box toolbar-search">
-                    <span>⌕</span>
-                    <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                    <kbd>⌘ K</kbd>
-                  </label>
-                  <div id="searchSuggestions" class="search-suggestions" hidden>
-                    <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                    <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
-                  </div>
-                </div>
-
                 <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
                   <button class="chip active" data-filter="all">全部</button>
                   <button class="chip" data-filter="favorite">收藏</button>
                   <span class="filter-divider"></span>
+                  <div class="toolbar-search-wrap search-control">
+                    <label class="search-box toolbar-search">
+                      <span>⌕</span>
+                      <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                      <kbd>⌘ K</kbd>
+                    </label>
+                    <div id="searchSuggestions" class="search-suggestions" hidden>
+                      <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                      <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                    </div>
+                  </div>
                   <details class="filter-menu" id="languageMenu">
                     <summary>语言 <b id="languageBadge">全部</b></summary>
                     <div class="filter-popover">
@@ -109,7 +108,6 @@
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
-                <button id="focusViewButton" class="view-button" title="无干扰视图" aria-label="无干扰视图">净</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
                 <select id="sortSelect" class="sort-select" aria-label="字体排序">
                   <optgroup label="常规">
@@ -126,6 +124,16 @@
                     <option value="wide">首字由宽到瘦</option>
                   </optgroup>
                 </select>
+                <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
+                  <summary aria-label="视图选项" title="视图选项">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
+                  </summary>
+                  <div class="filter-popover view-options-popover">
+                    <button type="button" class="view-option-item" id="focusViewMenuItem">无干扰视图</button>
+                    <span class="popover-divider"></span>
+                    <label><input type="checkbox" id="collapseFamilyFonts"> 折叠家族字体</label>
+                  </div>
+                </details>
               </div>
             </div>
             <div id="scanProgress" class="scan-progress" hidden>
