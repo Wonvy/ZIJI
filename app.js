@@ -1991,38 +1991,57 @@ function setPreviewSampleText(sample, text) {
   sample.textContent = text;
 }
 
-function syncPreviewStyleTextStackTypography(root) {
-  if (!root?.classList.contains("preview-style-text-stack")) return;
-  const layers = root.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
+function resolvePreviewStyleStackRoot(element) {
+  if (!element) return null;
+  if (element.classList.contains("preview-style-text-stack")) return element;
+  return element.querySelector(":scope > .preview-style-text-stack");
+}
+
+function flattenPreviewStyleStackHost(element, text) {
+  const inner = resolvePreviewStyleStackRoot(element);
+  const resolvedText = text ?? (inner && inner !== element ? getPreviewStyleStackText(inner) : element.textContent);
+  element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+  element.textContent = resolvedText;
+  return { root: element, layers: [element], host: element };
+}
+
+function syncPreviewStyleTextStackTypography(stackRoot, host = stackRoot) {
+  if (!stackRoot?.classList.contains("preview-style-text-stack")) return;
+  const layers = stackRoot.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
   if (!layers.length) return;
-  const computed = getComputedStyle(root);
+  const source = host || stackRoot;
+  const computed = getComputedStyle(source);
   ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontVariationSettings", "letterSpacing", "lineHeight"].forEach(prop => {
-    const value = root.style[prop] || computed[prop];
+    const value = source.style[prop] || computed[prop];
     if (!value) return;
     layers.forEach(layer => { layer.style[prop] = value; });
   });
 }
 
 function ensurePreviewStyleLayerStack(element, text, order) {
-  if (!element) return { root: element, layers: [] };
+  if (!element) return { root: element, layers: [], host: element };
   const count = Array.isArray(order) ? order.length : 0;
   const resolvedText = text ?? getPreviewStyleStackText(element);
   if (count <= 1) {
-    if (element.classList.contains("preview-style-text-stack")) {
-      element.classList.remove("preview-style-text-stack");
-      element.textContent = resolvedText;
-    } else if (text != null) {
-      element.textContent = resolvedText;
-    }
-    return { root: element, layers: [element] };
+    if (resolvePreviewStyleStackRoot(element)) return flattenPreviewStyleStackHost(element, resolvedText);
+    if (text != null) element.textContent = resolvedText;
+    return { root: element, layers: [element], host: element };
   }
-  element.classList.add("preview-style-text-stack");
-  element.replaceChildren();
+  element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+  let stackRoot = element.querySelector(":scope > .preview-style-text-stack");
+  if (!stackRoot) {
+    element.replaceChildren();
+    stackRoot = document.createElement("span");
+    stackRoot.className = "preview-style-text-stack";
+    element.appendChild(stackRoot);
+  } else {
+    stackRoot.replaceChildren();
+  }
   const sizeEl = document.createElement("span");
   sizeEl.className = "preview-style-text-size";
   sizeEl.textContent = resolvedText;
   sizeEl.setAttribute("aria-hidden", "true");
-  element.appendChild(sizeEl);
+  stackRoot.appendChild(sizeEl);
   const layerEls = [];
   for (let index = 0; index < count; index++) {
     const layerEl = document.createElement("span");
@@ -2030,10 +2049,10 @@ function ensurePreviewStyleLayerStack(element, text, order) {
     layerEl.textContent = resolvedText;
     if (index === 0) layerEl.removeAttribute("aria-hidden");
     else layerEl.setAttribute("aria-hidden", "true");
-    element.appendChild(layerEl);
+    stackRoot.appendChild(layerEl);
     layerEls.push(layerEl);
   }
-  return { root: element, layers: layerEls, sizeEl };
+  return { root: stackRoot, layers: layerEls, sizeEl, host: element };
 }
 
 function applyPreviewStyleCssToElement(element, css) {
@@ -2058,8 +2077,11 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
   const canPreview = style && hasActiveCardPreviewStyle(style);
   if (!canPreview) {
     element.style.removeProperty("--preview-style-bleed");
-    const baseLayer = element.querySelector(".preview-style-text-layer, .preview-style-text-fill");
-    if (element.classList.contains("preview-style-text-stack")) {
+    const inner = resolvePreviewStyleStackRoot(element);
+    if (inner && inner !== element) {
+      element.textContent = getPreviewStyleStackText(inner);
+    } else if (element.classList.contains("preview-style-text-stack")) {
+      const baseLayer = element.querySelector(".preview-style-text-layer, .preview-style-text-fill");
       element.classList.remove("preview-style-text-stack", "is-gradient-fill");
       element.textContent = baseLayer?.textContent ?? element.textContent;
     } else {
@@ -2072,7 +2094,7 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
   if (bleed > 0) element.style.setProperty("--preview-style-bleed", `${bleed}px`);
   else element.style.removeProperty("--preview-style-bleed");
   const order = getEnabledStyleLayerOrder(style);
-  if (text != null && order.length <= 1 && !element.classList.contains("preview-style-text-stack")) {
+  if (text != null && order.length <= 1 && !resolvePreviewStyleStackRoot(element)) {
     element.textContent = text;
   }
   const stack = ensurePreviewStyleLayerStack(element, text, order);
@@ -2094,7 +2116,7 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
       applyPreviewStyleCssToElement(layerEl, cardPreviewStyleToEffectCssForLayer(key, style));
     }
   });
-  syncPreviewStyleTextStackTypography(stack.root);
+  syncPreviewStyleTextStackTypography(stack.root, stack.host);
 }
 
 function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
@@ -2268,7 +2290,7 @@ function renderCardPreviewStyleModalPreview() {
     ensureFontLoaded(font, text).then(() => {
       if (getCardPreviewStyleModalFont()?.id !== font.id) return;
       sample.style.fontFamily = cssName(font);
-      syncPreviewStyleTextStackTypography(sample);
+      syncPreviewStyleTextStackTypography(resolvePreviewStyleStackRoot(sample) || sample, sample);
       if (isManageTab) applyManagePresetIconStyles();
     });
   } else {
@@ -4290,24 +4312,31 @@ function setupLazyFontLoading() {
   ui.list.querySelectorAll(".font-card").forEach(card => fontObserver.observe(card));
 }
 
+function syncCardPreviewStyleStackTypography(sample) {
+  const stackRoot = resolvePreviewStyleStackRoot(sample);
+  if (stackRoot) syncPreviewStyleTextStackTypography(stackRoot, sample);
+}
+
 function fitCardSample(sample) {
   if (!sample || state.view === "single") return;
+  const measureTarget = resolvePreviewStyleStackRoot(sample) || sample;
   const maximum = cardBaseFontSize();
   sample.style.fontSize = `${maximum}px`;
-  if (sample.scrollWidth <= sample.clientWidth) {
-    if (sample.classList.contains("preview-style-text-stack")) syncPreviewStyleTextStackTypography(sample);
-    return;
-  }
-  if (!sample.clientWidth) return;
+  syncCardPreviewStyleStackTypography(sample);
+  const styles = getComputedStyle(sample);
+  const horizontalPadding = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.paddingRight) || 0);
+  const availableWidth = sample.clientWidth - horizontalPadding;
+  if (!availableWidth || measureTarget.scrollWidth <= availableWidth) return;
   let low = 10, high = maximum;
   for (let i = 0; i < 7; i++) {
     const middle = (low + high) / 2;
     sample.style.fontSize = `${middle}px`;
-    if (sample.scrollWidth <= sample.clientWidth) low = middle;
+    syncCardPreviewStyleStackTypography(sample);
+    if (measureTarget.scrollWidth <= availableWidth) low = middle;
     else high = middle;
   }
   sample.style.fontSize = `${Math.max(10, low - .5)}px`;
-  if (sample.classList.contains("preview-style-text-stack")) syncPreviewStyleTextStackTypography(sample);
+  syncCardPreviewStyleStackTypography(sample);
 }
 
 function cardBaseFontSize() {

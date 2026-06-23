@@ -867,7 +867,15 @@ kbd,
 .list-view .font-card { min-height: 94px; display: grid; grid-template-columns: minmax(150px, 240px) 1fr 120px; align-items: center; padding: 14px 48px 14px 18px; }
 .list-view .font-card strong,
 .list-view .font-card .card-family-switch { font-size: 14px; }
-.list-view .font-card .sample { height: auto; margin: 0; font-size: 28px; white-space: nowrap; }
+.list-view .font-card .sample {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  margin: 0;
+  font-size: 28px;
+  white-space: nowrap;
+}
 .list-view .font-card.has-preview-style .sample { overflow: visible; padding: var(--preview-style-bleed, 0px); }
 .list-view .font-card small { position: static; text-align: right; }
 .font-list.single-view {
@@ -924,7 +932,15 @@ kbd,
 .card-grid.focus-view .font-card:hover { box-shadow: none; }
 .focus-view .font-card > strong,
 .focus-view .font-card > .card-family-switch { position: absolute; top: 16px; left: 18px; right: 42px; }
-.focus-view .font-card .sample { width: 100%; height: 140px; margin: 0; justify-content: center; text-align: center; }
+.focus-view .font-card .sample {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 140px;
+  margin: 0;
+  text-align: center;
+}
 .focus-view .font-card.has-preview-style .sample {
   overflow: visible;
   padding: var(--preview-style-bleed, 0px);
@@ -1477,7 +1493,9 @@ kbd,
   background: var(--stage);
 }
 .preview-style-sample {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: 100%;
   overflow: visible;
   padding: var(--preview-style-bleed, 0px);
@@ -1486,6 +1504,17 @@ kbd,
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.font-card .sample > .preview-style-text-stack,
+.preview-style-sample > .preview-style-text-stack {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  flex: none;
+  font: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  text-align: inherit;
 }
 .preview-style-sample.is-gradient-fill,
 .font-card.has-preview-style .sample.is-gradient-fill {
@@ -1535,22 +1564,10 @@ kbd,
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
-.preview-style-sample.preview-style-text-stack {
-  font-size: 52px;
-  line-height: 1.1;
-  text-align: center;
-}
 .preview-style-text-fill.is-gradient-fill,
 .preview-style-text-layer.is-gradient-fill {
   -webkit-text-fill-color: transparent;
   color: transparent;
-}
-.card-grid .font-card .sample.preview-style-text-stack {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 100%;
 }
 .preview-style-workspace {
   min-height: 0;
