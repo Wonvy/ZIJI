@@ -185,6 +185,7 @@ const STROKE_POSITION_OPTIONS = [
   { value: "center", label: "居中" },
   { value: "inside", label: "向内" }
 ];
+const PREVIEW_STYLE_FILL_LAYER_ID = "__fill__";
 const MANAGE_PRESET_PREVIEW_CHAR = "永";
 const PREVIEW_EFFECT_TYPES = {
   dropShadow: {
@@ -318,6 +319,7 @@ function normalizeCardPreviewStyle(raw) {
   const style = cloneCardPreviewStyle(CARD_PREVIEW_STYLE_DEFAULTS);
   if (!raw || typeof raw !== "object") {
     style.layers = ensureDefaultPreviewLayers([]);
+    style.layerOrder = resolveStyleLayerOrder(style);
     return style;
   }
   if (raw.fill && typeof raw.fill === "object") {
@@ -331,7 +333,26 @@ function normalizeCardPreviewStyle(raw) {
     syncFillLegacyColors(style.fill);
   }
   style.layers = ensureDefaultPreviewLayers(raw.layers);
+  style.layerOrder = resolveStyleLayerOrder(style, raw.layerOrder);
   return style;
+}
+
+function resolveStyleLayerOrder(style, rawOrder) {
+  const layerIds = (style.layers || []).map(layer => layer.id);
+  let order = Array.isArray(rawOrder) ? rawOrder.map(String) : [PREVIEW_STYLE_FILL_LAYER_ID, ...layerIds];
+  order = order.filter(key => key === PREVIEW_STYLE_FILL_LAYER_ID || layerIds.includes(key));
+  layerIds.forEach(id => {
+    if (!order.includes(id)) order.push(id);
+  });
+  if (!order.includes(PREVIEW_STYLE_FILL_LAYER_ID)) order.unshift(PREVIEW_STYLE_FILL_LAYER_ID);
+  return order;
+}
+
+function syncStyleLayerOrder(draft = cardPreviewStyleDraft) {
+  if (!draft) return;
+  draft.layerOrder = resolveStyleLayerOrder(draft, draft.layerOrder);
+  const layerIds = draft.layerOrder.filter(key => key !== PREVIEW_STYLE_FILL_LAYER_ID);
+  draft.layers = layerIds.map(id => draft.layers.find(layer => layer.id === id)).filter(Boolean);
 }
 
 function loadUiSettings() {
@@ -1425,7 +1446,9 @@ let cardPreviewStyleModalTab = "edit";
 let cardPreviewStyleManagePresetId = "";
 let cardPreviewStyleManageHoverPresetId = null;
 let cardPreviewStyleSelectedStopIndex = 0;
+let cardPreviewStyleHoverStopIndex = null;
 let draggingGradientStopIndex = null;
+const PREVIEW_STYLE_GRADIENT_STATUS_HINT = "点击色带添加色标，左右拖动调整位置，向上拖出色带删除（至少保留 2 个）";
 let draggingGradientScope = null;
 let draggingGradientDeleteIntent = false;
 let draggingPreviewStyleLayerId = null;
@@ -1443,19 +1466,27 @@ function duplicatePreviewStyleLayer(layerId) {
   const source = cardPreviewStyleDraft.layers[index];
   const copy = normalizePreviewLayer({ ...source, id: nextPreviewStyleLayerId() });
   cardPreviewStyleDraft.layers.splice(index + 1, 0, copy);
+  syncStyleLayerOrder(cardPreviewStyleDraft);
+  const order = cardPreviewStyleDraft.layerOrder;
+  const sourceKey = order.indexOf(layerId);
+  if (sourceKey >= 0) order.splice(sourceKey + 1, 0, copy.id);
+  else order.push(copy.id);
+  syncStyleLayerOrder(cardPreviewStyleDraft);
   return copy.id;
 }
 
-function movePreviewStyleLayer(sourceId, targetId, before = true) {
-  if (!cardPreviewStyleDraft || sourceId === targetId) return;
-  const layers = cardPreviewStyleDraft.layers;
-  const from = layers.findIndex(layer => layer.id === sourceId);
-  const to = layers.findIndex(layer => layer.id === targetId);
+function movePreviewStyleLayer(sourceKey, targetKey, before = true) {
+  if (!cardPreviewStyleDraft || sourceKey === targetKey) return;
+  syncStyleLayerOrder(cardPreviewStyleDraft);
+  const order = cardPreviewStyleDraft.layerOrder;
+  const from = order.indexOf(sourceKey);
+  const to = order.indexOf(targetKey);
   if (from < 0 || to < 0) return;
-  const [item] = layers.splice(from, 1);
+  const [item] = order.splice(from, 1);
   let insertAt = before ? to : to + 1;
   if (from < to) insertAt--;
-  layers.splice(insertAt, 0, item);
+  order.splice(insertAt, 0, item);
+  syncStyleLayerOrder(cardPreviewStyleDraft);
 }
 
 function resolvePreviewFillColor(style) {
@@ -1635,10 +1666,134 @@ function innerStrokeShadows(width, color) {
   return shadows;
 }
 
-function cardPreviewStyleToCss(style = state.cardPreviewStyle, { assumeFillVisible = false } = {}) {
+function getEnabledStyleLayerOrder(style) {
+  if (!style) return [];
+  const normalized = normalizeCardPreviewStyle(style);
+  return resolveStyleLayerOrder(normalized).filter(key => {
+    if (key === PREVIEW_STYLE_FILL_LAYER_ID) return normalized.fill.enabled !== false;
+    return normalized.layers.find(layer => layer.id === key)?.enabled;
+  });
+}
+
+function cardPreviewStyleNeedsLayerStack(style) {
+  return getEnabledStyleLayerOrder(style).length > 1;
+}
+
+function cardPreviewStyleToEffectCssForLayer(layerId, style = state.cardPreviewStyle) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const layer = normalized.layers.find(item => item.id === layerId);
+  const isolated = cloneCardPreviewStyle(normalized);
+  isolated.fill = { ...isolated.fill, enabled: false };
+  isolated.layers = isolated.layers.map(item => ({
+    ...item,
+    enabled: item.id === layerId && item.enabled
+  }));
+  const css = cardPreviewStyleToEffectCss(isolated);
+  if (layer?.type === "dropShadow") {
+    css.color = "transparent";
+    css.webkitTextFillColor = "transparent";
+  }
+  return css;
+}
+
+function cardPreviewStyleToFillCss(style = state.cardPreviewStyle) {
   const normalized = normalizeCardPreviewStyle(style);
   const fill = normalized.fill;
-  const fillEnabled = fill.enabled !== false || (assumeFillVisible && fill.mode === "gradient");
+  const fillEnabled = fill.enabled !== false;
+  const css = {
+    color: "",
+    backgroundImage: "",
+    backgroundClip: "",
+    webkitBackgroundClip: "",
+    webkitTextFillColor: "",
+    webkitTextStroke: "",
+    textStroke: "",
+    paintOrder: "",
+    textShadow: "none",
+    backgroundSize: "",
+    backgroundRepeat: ""
+  };
+  if (fillEnabled && fill.mode === "gradient") {
+    css.backgroundImage = buildGradientCss(fill);
+    css.backgroundClip = "text";
+    css.webkitBackgroundClip = "text";
+    css.webkitTextFillColor = "transparent";
+    css.color = "transparent";
+    css.backgroundSize = "100% 100%";
+    css.backgroundRepeat = "no-repeat";
+  } else if (fillEnabled) {
+    css.color = hexWithOpacity(fill.color, fill.opacity);
+  } else {
+    css.color = "transparent";
+    css.webkitTextFillColor = "transparent";
+  }
+  return css;
+}
+
+function cardPreviewStyleToEffectCss(style = state.cardPreviewStyle) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const css = {
+    color: "transparent",
+    backgroundImage: "",
+    backgroundClip: "",
+    webkitBackgroundClip: "",
+    webkitTextFillColor: "transparent",
+    webkitTextStroke: "",
+    textStroke: "",
+    paintOrder: "",
+    textShadow: "none",
+    backgroundSize: "",
+    backgroundRepeat: ""
+  };
+  const shadows = [];
+  const strokeLayers = normalized.layers.filter(layer => layer.enabled && isStrokeLayer(layer));
+  for (const layer of normalized.layers) {
+    if (!layer.enabled) continue;
+    if (layer.type === "dropShadow") {
+      shadows.push(`${layer.offsetX}px ${layer.offsetY}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
+    }
+  }
+  let primaryWebkit = null;
+  strokeLayers.forEach(layer => {
+    const width = Number(layer.width) || 1;
+    const position = resolveStrokePosition(layer);
+    const useGradientStroke = layer.colorMode === "gradient";
+    if (useGradientStroke) {
+      shadows.unshift(...strokeLayerShadows(width, layer));
+      return;
+    }
+    const color = hexWithOpacity(layer.color, layer.opacity);
+    if (position === "inside") {
+      shadows.unshift(...innerStrokeShadows(width, color));
+      return;
+    }
+    if (position === "center") {
+      if (!primaryWebkit) {
+        primaryWebkit = { width, color, paintOrder: "fill stroke" };
+      } else {
+        shadows.unshift(...strokeOutlineShadows(width, color));
+      }
+      return;
+    }
+    if (!primaryWebkit) {
+      primaryWebkit = { width: width * 2, color, paintOrder: "stroke fill" };
+    } else {
+      shadows.unshift(...strokeOutlineShadows(width, color));
+    }
+  });
+  if (primaryWebkit) {
+    css.webkitTextStroke = `${primaryWebkit.width}px ${primaryWebkit.color}`;
+    css.textStroke = css.webkitTextStroke;
+    css.paintOrder = primaryWebkit.paintOrder;
+  }
+  if (shadows.length) css.textShadow = shadows.join(", ");
+  return css;
+}
+
+function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const fill = normalized.fill;
+  const fillEnabled = fill.enabled !== false;
   const useGradientFill = fillEnabled && fill.mode === "gradient";
   const css = {
     color: "",
@@ -1685,12 +1840,6 @@ function cardPreviewStyleToCss(style = state.cardPreviewStyle, { assumeFillVisib
       return;
     }
     const color = hexWithOpacity(layer.color, layer.opacity);
-    if (useGradientFill) {
-      // background-clip:text 渐变无法盖住 -webkit-text-stroke 的内侧半宽，向外/居中轮廓改用阴影叠在字形后面
-      if (position === "inside") shadows.unshift(...innerStrokeShadows(width, color));
-      else shadows.unshift(...outerStrokeShadows(width, color));
-      return;
-    }
     if (position === "inside") {
       shadows.unshift(...innerStrokeShadows(width, color));
       return;
@@ -1823,22 +1972,72 @@ function deleteCardPreviewStylePreset(id) {
   return true;
 }
 
-function applyCardPreviewStyleToElement(element, style, { themeDefault = false, assumeFillVisible = false } = {}) {
-  if (!element) return;
-  clearCardPreviewStyleOnElement(element);
-  const canPreview = style && (
-    hasActiveCardPreviewStyle(style)
-    || (assumeFillVisible && style.fill?.mode === "gradient")
-  );
-  if (!canPreview) {
-    element.style.removeProperty("--preview-style-bleed");
-    if (themeDefault) element.style.color = "var(--ink)";
+function getPreviewStyleStackText(element) {
+  if (!element) return "";
+  return element.querySelector(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill")?.textContent ?? element.textContent;
+}
+
+function getPreviewSampleText(sample) {
+  return getPreviewStyleStackText(sample);
+}
+
+function setPreviewSampleText(sample, text) {
+  if (!sample) return;
+  const layers = sample.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
+  if (layers.length) {
+    layers.forEach(layer => { layer.textContent = text; });
     return;
   }
-  const bleed = computePreviewStyleVisualBleed(style);
-  if (bleed > 0) element.style.setProperty("--preview-style-bleed", `${bleed}px`);
-  else element.style.removeProperty("--preview-style-bleed");
-  const css = cardPreviewStyleToCss(style, { assumeFillVisible });
+  sample.textContent = text;
+}
+
+function syncPreviewStyleTextStackTypography(root) {
+  if (!root?.classList.contains("preview-style-text-stack")) return;
+  const layers = root.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
+  if (!layers.length) return;
+  const computed = getComputedStyle(root);
+  ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontVariationSettings", "letterSpacing", "lineHeight"].forEach(prop => {
+    const value = root.style[prop] || computed[prop];
+    if (!value) return;
+    layers.forEach(layer => { layer.style[prop] = value; });
+  });
+}
+
+function ensurePreviewStyleLayerStack(element, text, order) {
+  if (!element) return { root: element, layers: [] };
+  const count = Array.isArray(order) ? order.length : 0;
+  const resolvedText = text ?? getPreviewStyleStackText(element);
+  if (count <= 1) {
+    if (element.classList.contains("preview-style-text-stack")) {
+      element.classList.remove("preview-style-text-stack");
+      element.textContent = resolvedText;
+    } else if (text != null) {
+      element.textContent = resolvedText;
+    }
+    return { root: element, layers: [element] };
+  }
+  element.classList.add("preview-style-text-stack");
+  element.replaceChildren();
+  const sizeEl = document.createElement("span");
+  sizeEl.className = "preview-style-text-size";
+  sizeEl.textContent = resolvedText;
+  sizeEl.setAttribute("aria-hidden", "true");
+  element.appendChild(sizeEl);
+  const layerEls = [];
+  for (let index = 0; index < count; index++) {
+    const layerEl = document.createElement("span");
+    layerEl.className = "preview-style-text-layer";
+    layerEl.textContent = resolvedText;
+    if (index === 0) layerEl.removeAttribute("aria-hidden");
+    else layerEl.setAttribute("aria-hidden", "true");
+    element.appendChild(layerEl);
+    layerEls.push(layerEl);
+  }
+  return { root: element, layers: layerEls, sizeEl };
+}
+
+function applyPreviewStyleCssToElement(element, css) {
+  if (!element || !css) return;
   element.style.color = css.color;
   element.style.backgroundImage = css.backgroundImage || "none";
   element.style.backgroundClip = css.backgroundClip || "";
@@ -1851,6 +2050,51 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
   element.style.backgroundSize = css.backgroundSize || "";
   element.style.backgroundRepeat = css.backgroundRepeat || "";
   element.classList.toggle("is-gradient-fill", Boolean(css.backgroundImage && css.webkitBackgroundClip === "text"));
+}
+
+function applyCardPreviewStyleToElement(element, style, { themeDefault = false, text = null } = {}) {
+  if (!element) return;
+  clearCardPreviewStyleOnElement(element);
+  const canPreview = style && hasActiveCardPreviewStyle(style);
+  if (!canPreview) {
+    element.style.removeProperty("--preview-style-bleed");
+    const baseLayer = element.querySelector(".preview-style-text-layer, .preview-style-text-fill");
+    if (element.classList.contains("preview-style-text-stack")) {
+      element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+      element.textContent = baseLayer?.textContent ?? element.textContent;
+    } else {
+      element.classList.remove("is-gradient-fill");
+    }
+    if (themeDefault) element.style.color = "var(--ink)";
+    return;
+  }
+  const bleed = computePreviewStyleVisualBleed(style);
+  if (bleed > 0) element.style.setProperty("--preview-style-bleed", `${bleed}px`);
+  else element.style.removeProperty("--preview-style-bleed");
+  const order = getEnabledStyleLayerOrder(style);
+  if (text != null && order.length <= 1 && !element.classList.contains("preview-style-text-stack")) {
+    element.textContent = text;
+  }
+  const stack = ensurePreviewStyleLayerStack(element, text, order);
+  if (order.length === 1) {
+    const key = order[0];
+    const css = key === PREVIEW_STYLE_FILL_LAYER_ID
+      ? cardPreviewStyleToFillCss(style)
+      : cardPreviewStyleToEffectCssForLayer(key, style);
+    applyPreviewStyleCssToElement(stack.layers[0], css);
+    return;
+  }
+  order.forEach((key, index) => {
+    const layerEl = stack.layers[index];
+    if (!layerEl) return;
+    layerEl.style.zIndex = String(index + 1);
+    if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
+      applyPreviewStyleCssToElement(layerEl, cardPreviewStyleToFillCss(style));
+    } else {
+      applyPreviewStyleCssToElement(layerEl, cardPreviewStyleToEffectCssForLayer(key, style));
+    }
+  });
+  syncPreviewStyleTextStackTypography(stack.root);
 }
 
 function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
@@ -1871,17 +2115,21 @@ function applyCardPreviewStyleToAllCards() {
 }
 
 function clearCardPreviewStyleOnElement(element) {
-  element.style.color = "";
-  element.style.backgroundImage = "";
-  element.style.backgroundClip = "";
-  element.style.webkitBackgroundClip = "";
-  element.style.webkitTextFillColor = "";
-  element.style.webkitTextStroke = "";
-  element.style.textStroke = "";
-  element.style.paintOrder = "";
-  element.style.textShadow = "";
-  element.style.backgroundSize = "";
-  element.style.backgroundRepeat = "";
+  const targets = [element, ...element.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-stroke, .preview-style-text-fill")];
+  targets.forEach(target => {
+    target.style.color = "";
+    target.style.backgroundImage = "";
+    target.style.backgroundClip = "";
+    target.style.webkitBackgroundClip = "";
+    target.style.webkitTextFillColor = "";
+    target.style.webkitTextStroke = "";
+    target.style.textStroke = "";
+    target.style.paintOrder = "";
+    target.style.textShadow = "";
+    target.style.backgroundSize = "";
+    target.style.backgroundRepeat = "";
+    target.classList.remove("is-gradient-fill");
+  });
   element.style.removeProperty("--preview-style-bleed");
   element.classList.remove("is-gradient-fill");
 }
@@ -1892,18 +2140,7 @@ function applyCardPreviewStyleToMagnifierText(target, sampleStyle, style = state
     target.style.color = sampleStyle.color;
     return;
   }
-  const css = cardPreviewStyleToCss(style);
-  target.style.color = css.color;
-  target.style.backgroundImage = css.backgroundImage || "none";
-  target.style.backgroundClip = css.backgroundClip || "";
-  target.style.webkitBackgroundClip = css.webkitBackgroundClip || "";
-  target.style.webkitTextFillColor = css.webkitTextFillColor || "";
-  target.style.webkitTextStroke = css.webkitTextStroke;
-  target.style.textStroke = css.textStroke;
-  target.style.paintOrder = css.paintOrder;
-  target.style.textShadow = css.textShadow;
-  target.style.backgroundSize = css.backgroundSize || "";
-  target.style.backgroundRepeat = css.backgroundRepeat || "";
+  applyCardPreviewStyleToElement(target, style);
 }
 
 function previewStyleUnitsPerPx(upm, referenceFontSize = state.cardSampleSize) {
@@ -2022,24 +2259,24 @@ function renderCardPreviewStyleModalPreview() {
   const font = getCardPreviewStyleModalFont();
   const isManageTab = cardPreviewStyleModalTab === "manage";
   const text = isManageTab ? MANAGE_PRESET_PREVIEW_CHAR : (cardPreviewText() || "字体有光");
-  sample.textContent = text;
+  const style = isManageTab
+    ? resolveManagePreviewStyle()
+    : (cardPreviewStyleDraft || state.cardPreviewStyle);
   if (font) {
     registerFont(font);
     sample.style.fontFamily = cssName(font);
     ensureFontLoaded(font, text).then(() => {
       if (getCardPreviewStyleModalFont()?.id !== font.id) return;
       sample.style.fontFamily = cssName(font);
+      syncPreviewStyleTextStackTypography(sample);
       if (isManageTab) applyManagePresetIconStyles();
     });
   } else {
     sample.style.fontFamily = "";
   }
-  const style = isManageTab
-    ? resolveManagePreviewStyle()
-    : (cardPreviewStyleDraft || state.cardPreviewStyle);
   applyCardPreviewStyleToElement(sample, style, {
     themeDefault: isManageTab || !style,
-    assumeFillVisible: !isManageTab
+    text
   });
 }
 
@@ -2075,6 +2312,19 @@ function renderStyleSelectField(field, value, attrs = "") {
     `<option value="${escapeHtml(option.value)}"${option.value === value ? " selected" : ""}>${escapeHtml(option.label)}</option>`
   ).join("");
   return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><select class="preview-style-select" ${attrs}>${options}</select></label>`;
+}
+
+function renderStrokePositionField(value) {
+  const icons = {
+    outside: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="7.5" y="7.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".35"/></svg>`,
+    center: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>`,
+    inside: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7.5" y="7.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="4.5" y="4.5" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".35"/></svg>`
+  };
+  const buttons = STROKE_POSITION_OPTIONS.map(option => {
+    const active = option.value === value ? " active" : "";
+    return `<button type="button" class="preview-stroke-position-btn${active}" data-layer-field="position" data-position-value="${option.value}" aria-label="${escapeHtml(option.label)}" aria-pressed="${option.value === value ? "true" : "false"}" title="${escapeHtml(option.label)}">${icons[option.value] || ""}</button>`;
+  }).join("");
+  return `<div class="preview-style-field preview-stroke-position-field"><span>位置</span><div class="preview-stroke-position-group" role="group" aria-label="轮廓位置">${buttons}</div></div>`;
 }
 
 function buildGradientBarPreviewCss(stops, fill) {
@@ -2180,9 +2430,47 @@ function getActiveGradientScope() {
   return null;
 }
 
+function updateGradientStopControls(scope, index) {
+  const target = getGradientEditTarget(scope);
+  const stop = target?.stops?.[index];
+  const panel = $("#cardPreviewStyleParams");
+  if (!stop || !panel) return;
+  const colorInput = panel.querySelector(`input[data-gradient-stop-field="color"][data-gradient-scope="${scope}"]`);
+  const opacityInput = panel.querySelector(`input[data-gradient-stop-field="opacity"][data-gradient-scope="${scope}"]`);
+  if (colorInput) {
+    colorInput.value = stop.color;
+    colorInput.dataset.stopIndex = String(index);
+  }
+  if (opacityInput) {
+    opacityInput.value = stop.opacity;
+    opacityInput.dataset.stopIndex = String(index);
+    syncStyleRangeProgress(opacityInput);
+  }
+}
+
+function updatePreviewStyleStatusBar() {
+  const bar = $("#cardPreviewStyleStatusBar");
+  if (!bar) return;
+  if (cardPreviewStyleModalTab !== "edit" || !cardPreviewStyleDraft) {
+    bar.textContent = "";
+    return;
+  }
+  const fillGradient = cardPreviewStyleSelectedLayerId == null && cardPreviewStyleDraft.fill.mode === "gradient";
+  const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
+  const layerGradient = layer && isStrokeLayer(layer) && layer.colorMode === "gradient";
+  bar.textContent = fillGradient || layerGradient ? PREVIEW_STYLE_GRADIENT_STATUS_HINT : "";
+}
+
 function syncGradientLegacyColors(target, scope) {
   if (scope === "fill") syncFillLegacyColors(target);
   else syncStrokeLayerLegacyColors(target);
+}
+
+function getEffectiveGradientStopIndex(scope = getActiveGradientScope()) {
+  if (cardPreviewStyleHoverStopIndex !== null && getGradientEditTarget(scope)?.stops?.[cardPreviewStyleHoverStopIndex]) {
+    return cardPreviewStyleHoverStopIndex;
+  }
+  return cardPreviewStyleSelectedStopIndex;
 }
 
 function ensureGradientEditTargetEnabled(scope) {
@@ -2240,6 +2528,7 @@ function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGra
     if (!stop) return;
     handle.style.left = `${stop.offset}%`;
     handle.classList.toggle("active", index === cardPreviewStyleSelectedStopIndex);
+    handle.classList.toggle("is-hover", index === cardPreviewStyleHoverStopIndex && index !== cardPreviewStyleSelectedStopIndex);
     handle.classList.toggle("dragging", index === draggingGradientStopIndex);
     handle.style.setProperty("--stop-color", hexWithOpacity(stop.color, stop.opacity));
   });
@@ -2250,7 +2539,9 @@ function selectGradientStop(index, scope = getActiveGradientScope()) {
   const target = getGradientEditTarget(scope);
   if (!target?.stops?.[index]) return;
   cardPreviewStyleSelectedStopIndex = index;
-  renderCardPreviewStyleParams();
+  cardPreviewStyleHoverStopIndex = null;
+  updateGradientStopControls(scope, index);
+  refreshGradientBarVisuals(scope);
 }
 
 function addGradientStopAtOffset(offset, scope = getActiveGradientScope()) {
@@ -2350,10 +2641,13 @@ function renderGradientStopsEditor(target, scope) {
   const barCss = buildGradientBarPreviewCss(stops, target);
   const handles = stops.map((stop, index) => {
     const active = index === cardPreviewStyleSelectedStopIndex ? " active" : "";
-    return `<button type="button" class="preview-gradient-stop-handle${active}" data-stop-index="${index}" data-gradient-scope="${scope}" style="left:${stop.offset}%;--stop-color:${escapeHtml(hexWithOpacity(stop.color, stop.opacity))}" aria-label="色标 ${index + 1}，${stop.offset}%">
+    const hover = index === cardPreviewStyleHoverStopIndex && index !== cardPreviewStyleSelectedStopIndex ? " is-hover" : "";
+    return `<button type="button" class="preview-gradient-stop-handle${active}${hover}" data-stop-index="${index}" data-gradient-scope="${scope}" style="left:${stop.offset}%;--stop-color:${escapeHtml(hexWithOpacity(stop.color, stop.opacity))}" aria-label="色标 ${index + 1}，${stop.offset}%">
       <span class="preview-gradient-stop-handle-arrow"></span>
     </button>`;
   }).join("");
+  const controlIndex = getEffectiveGradientStopIndex(scope);
+  const controlStop = stops[controlIndex] || selected;
   return `<div class="preview-gradient-editor">
     <div class="preview-gradient-bar-wrap">
       <div class="preview-gradient-bar" style="background-image:${escapeHtml(barCss)}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带，点击添加色标"></div>
@@ -2364,12 +2658,11 @@ function renderGradientStopsEditor(target, scope) {
       </div>
       <div class="preview-gradient-stops-track">${handles}</div>
     </div>
-    <div class="preview-gradient-stop-controls">
-      <label class="preview-style-field preview-gradient-stop-color"><span>色标颜色</span><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" value="${escapeHtml(selected.color)}" /></label>
-      ${renderStyleRangeField({ label: "色标不透明度", min: 0, max: 100, step: 1 }, selected.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" aria-label="色标不透明度"`)}
+    <div class="preview-gradient-stop-controls preview-gradient-stop-controls-inline">
+      <label class="preview-gradient-stop-color-inline"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
+      ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" aria-label="不透明度"`)}
     </div>
     ${renderStyleRangeField({ label: "角度", min: 0, max: 360, step: 1 }, target.angle, `data-gradient-field="angle" data-gradient-scope="${scope}" aria-label="渐变角度"`)}
-    <p class="preview-gradient-hint">点击色带添加色标，左右拖动调整位置，向上拖出色带删除（至少保留 2 个）</p>
   </div>`;
 }
 
@@ -2387,15 +2680,20 @@ function renderFillStyleParams() {
 function renderCardPreviewStyleLayerList() {
   const list = $("#cardPreviewStyleLayerList");
   if (!list || !cardPreviewStyleDraft) return;
-  const fillActive = cardPreviewStyleSelectedLayerId == null ? " active" : "";
+  syncStyleLayerOrder(cardPreviewStyleDraft);
   const fillEnabled = cardPreviewStyleDraft.fill.enabled !== false;
-  const fillDisabled = fillEnabled ? "" : " is-disabled";
-  let html = `<li class="preview-style-style-item is-fill${fillActive}${fillDisabled}" data-target="fill"><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span></li>`;
-  html += cardPreviewStyleDraft.layers.map(layer => {
+  const html = cardPreviewStyleDraft.layerOrder.map(key => {
+    if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
+      const fillActive = cardPreviewStyleSelectedLayerId == null ? " active" : "";
+      const fillDisabled = fillEnabled ? "" : " is-disabled";
+      return `<li class="preview-style-style-item${fillActive}${fillDisabled}" data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span><span class="layer-spacer" aria-hidden="true"></span></li>`;
+    }
+    const layer = cardPreviewStyleDraft.layers.find(item => item.id === key);
+    if (!layer) return "";
     const label = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
     const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
     const disabled = layer.enabled ? "" : " is-disabled";
-    return `<li class="preview-style-style-item${active}${disabled}" data-layer-id="${escapeHtml(layer.id)}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}">+</button></li>`;
+    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}">+</button></li>`;
   }).join("");
   list.innerHTML = html;
 }
@@ -2412,23 +2710,26 @@ function renderStrokeStyleParams(layer) {
   const opacityField = isGradient
     ? ""
     : renderStyleRangeField(meta.fields.find(field => field.key === "opacity"), layer.opacity, 'data-layer-field="opacity" aria-label="轮廓不透明度"');
-  const sizeFields = meta.fields.filter(field => field.key !== "color" && field.key !== "opacity").map(field => {
+  const sizeFields = meta.fields.filter(field => field.key !== "color" && field.key !== "opacity" && field.key !== "position").map(field => {
     const value = layer[field.key];
     if (field.type === "select") {
       return renderStyleSelectField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
     }
     return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
   }).join("");
+  const positionField = renderStrokePositionField(layer.position);
   const gradientFields = isGradient ? renderGradientStopsEditor(layer, "layer") : "";
-  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${modeField}${colorField}${opacityField}${sizeFields}${gradientFields}</div>`;
+  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${modeField}${colorField}${opacityField}${sizeFields}${positionField}${gradientFields}</div>`;
 }
 
 function renderCardPreviewStyleParams() {
   const panel = $("#cardPreviewStyleParams");
   if (!panel || !cardPreviewStyleDraft) return;
+  cardPreviewStyleHoverStopIndex = null;
   if (cardPreviewStyleSelectedLayerId == null) {
     panel.innerHTML = renderFillStyleParams();
     syncAllStyleRanges(panel);
+    updatePreviewStyleStatusBar();
     return;
   }
   const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
@@ -2436,12 +2737,14 @@ function renderCardPreviewStyleParams() {
     cardPreviewStyleSelectedLayerId = null;
     panel.innerHTML = renderFillStyleParams();
     syncAllStyleRanges(panel);
+    updatePreviewStyleStatusBar();
     return;
   }
   const meta = PREVIEW_EFFECT_TYPES[layer.type];
   if (layer.type === "stroke") {
     panel.innerHTML = renderStrokeStyleParams(layer);
     syncAllStyleRanges(panel);
+    updatePreviewStyleStatusBar();
     return;
   }
   const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
@@ -2456,6 +2759,7 @@ function renderCardPreviewStyleParams() {
     return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
   }).join("")}</div>`;
   syncAllStyleRanges(panel);
+  updatePreviewStyleStatusBar();
 }
 
 function resolveManagePreviewStyle() {
@@ -2538,6 +2842,7 @@ function setCardPreviewStyleModalTab(tab) {
     renderCardPreviewStyleParams();
   } else {
     renderCardPreviewStyleManagePanel();
+    updatePreviewStyleStatusBar();
   }
   syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
@@ -3016,16 +3321,16 @@ function wireCardPreviewStyleModal() {
   });
   const layerList = $("#cardPreviewStyleLayerList");
   layerList?.addEventListener("dragstart", event => {
-    const row = event.target.closest("[data-layer-id]");
+    const row = event.target.closest("[data-layer-key]");
     if (!row) return;
-    draggingPreviewStyleLayerId = row.dataset.layerId;
+    draggingPreviewStyleLayerId = row.dataset.layerKey;
     row.classList.add("dragging");
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", draggingPreviewStyleLayerId);
   });
   layerList?.addEventListener("dragover", event => {
-    const row = event.target.closest("[data-layer-id]");
-    if (!row || !draggingPreviewStyleLayerId || row.dataset.layerId === draggingPreviewStyleLayerId) return;
+    const row = event.target.closest("[data-layer-key]");
+    if (!row || !draggingPreviewStyleLayerId || row.dataset.layerKey === draggingPreviewStyleLayerId) return;
     event.preventDefault();
     const rect = row.getBoundingClientRect();
     row.dataset.dropPos = event.clientY < rect.top + rect.height / 2 ? "before" : "after";
@@ -3033,14 +3338,14 @@ function wireCardPreviewStyleModal() {
     row.classList.add(row.dataset.dropPos === "before" ? "drop-before" : "drop-after");
   });
   layerList?.addEventListener("dragleave", event => {
-    const row = event.target.closest("[data-layer-id]");
+    const row = event.target.closest("[data-layer-key]");
     row?.classList.remove("drop-before", "drop-after");
   });
   layerList?.addEventListener("drop", event => {
-    const row = event.target.closest("[data-layer-id]");
+    const row = event.target.closest("[data-layer-key]");
     if (!row || !draggingPreviewStyleLayerId) return;
     event.preventDefault();
-    movePreviewStyleLayer(draggingPreviewStyleLayerId, row.dataset.layerId, row.dataset.dropPos !== "after");
+    movePreviewStyleLayer(draggingPreviewStyleLayerId, row.dataset.layerKey, row.dataset.dropPos !== "after");
     draggingPreviewStyleLayerId = null;
     layerList.querySelectorAll(".dragging, .drop-before, .drop-after").forEach(item => item.classList.remove("dragging", "drop-before", "drop-after"));
     renderCardPreviewStyleLayerList();
@@ -3052,6 +3357,7 @@ function wireCardPreviewStyleModal() {
   });
   layerList?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
+    if (event.target.matches('input[type="checkbox"]')) return;
     if (event.target.closest(".layer-duplicate")) {
       event.stopPropagation();
       const layerId = event.target.closest("[data-layer-id]")?.dataset.layerId;
@@ -3061,7 +3367,7 @@ function wireCardPreviewStyleModal() {
       renderCardPreviewStyleModal();
       return;
     }
-    if (event.target.closest('[data-target="fill"]')) {
+    if (event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`) && !event.target.closest(".layer-duplicate")) {
       cardPreviewStyleSelectedLayerId = null;
       cardPreviewStyleSelectedStopIndex = 0;
       renderCardPreviewStyleLayerList();
@@ -3077,7 +3383,7 @@ function wireCardPreviewStyleModal() {
   });
   layerList?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft || !event.target.matches('input[type="checkbox"]')) return;
-    const fillItem = event.target.closest('[data-target="fill"]');
+    const fillItem = event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`);
     if (fillItem) {
       cardPreviewStyleDraft.fill.enabled = event.target.checked;
       renderCardPreviewStyleLayerList();
@@ -3121,6 +3427,15 @@ function wireCardPreviewStyleModal() {
   });
   $("#cardPreviewStyleParams")?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
+    const positionBtn = event.target.closest(".preview-stroke-position-btn");
+    if (positionBtn) {
+      const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
+      if (!layer || !isStrokeLayer(layer)) return;
+      layer.position = positionBtn.dataset.positionValue;
+      renderCardPreviewStyleParams();
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
     const handle = event.target.closest(".preview-gradient-stop-handle");
     if (handle) {
       selectGradientStop(Number(handle.dataset.stopIndex), handle.dataset.gradientScope);
@@ -3130,6 +3445,36 @@ function wireCardPreviewStyleModal() {
     if (bar) {
       addGradientStopAtOffset(gradientBarOffsetFromEvent(bar, event.clientX), bar.dataset.gradientScope);
     }
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("dblclick", event => {
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (!handle || !cardPreviewStyleDraft) return;
+    const scope = handle.dataset.gradientScope;
+    selectGradientStop(Number(handle.dataset.stopIndex), scope);
+    const colorInput = $("#cardPreviewStyleParams")?.querySelector(`input[data-gradient-stop-field="color"][data-gradient-scope="${scope}"]`);
+    if (colorInput?.showPicker) colorInput.showPicker();
+    else colorInput?.click();
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointerover", event => {
+    if (draggingGradientStopIndex !== null) return;
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (!handle) return;
+    const index = Number(handle.dataset.stopIndex);
+    const scope = handle.dataset.gradientScope;
+    if (!Number.isFinite(index) || index === cardPreviewStyleHoverStopIndex) return;
+    cardPreviewStyleHoverStopIndex = index;
+    updateGradientStopControls(scope, index);
+    refreshGradientBarVisuals(scope);
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointerout", event => {
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (!handle || cardPreviewStyleHoverStopIndex === null) return;
+    const related = event.relatedTarget;
+    if (related?.closest?.(".preview-gradient-stop-handle")) return;
+    const scope = handle.dataset.gradientScope;
+    cardPreviewStyleHoverStopIndex = null;
+    updateGradientStopControls(scope, cardPreviewStyleSelectedStopIndex);
+    refreshGradientBarVisuals(scope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerdown", event => {
     const handle = event.target.closest(".preview-gradient-stop-handle");
@@ -3888,7 +4233,7 @@ function loadCardFont(card) {
       fitCardSample(sample);
     }
   };
-  ensureFontLoaded(font, sample.textContent).then(finish);
+  ensureFontLoaded(font, getPreviewSampleText(sample)).then(finish);
 }
 
 function ensureFontLoaded(font, text = "字体有光") {
@@ -3935,7 +4280,7 @@ function setupLazyFontLoading() {
       if (entry.isIntersecting) {
         state.prefetchCards.add(entry.target);
         const sample = entry.target.querySelector(".sample");
-        if (sample.textContent !== cardPreviewText()) sample.textContent = cardPreviewText();
+        if (getPreviewSampleText(sample) !== cardPreviewText()) setPreviewSampleText(sample, cardPreviewText());
         loadCardFont(entry.target);
       } else {
         state.prefetchCards.delete(entry.target);
@@ -3949,7 +4294,11 @@ function fitCardSample(sample) {
   if (!sample || state.view === "single") return;
   const maximum = cardBaseFontSize();
   sample.style.fontSize = `${maximum}px`;
-  if (!sample.clientWidth || sample.scrollWidth <= sample.clientWidth) return;
+  if (sample.scrollWidth <= sample.clientWidth) {
+    if (sample.classList.contains("preview-style-text-stack")) syncPreviewStyleTextStackTypography(sample);
+    return;
+  }
+  if (!sample.clientWidth) return;
   let low = 10, high = maximum;
   for (let i = 0; i < 7; i++) {
     const middle = (low + high) / 2;
@@ -3958,6 +4307,7 @@ function fitCardSample(sample) {
     else high = middle;
   }
   sample.style.fontSize = `${Math.max(10, low - .5)}px`;
+  if (sample.classList.contains("preview-style-text-stack")) syncPreviewStyleTextStackTypography(sample);
 }
 
 function cardBaseFontSize() {
@@ -4636,7 +4986,7 @@ function scheduleLazyCardTextUpdate() {
     const cardText = cardPreviewText();
     state.prefetchCards.forEach(card => {
       const sample = card.querySelector(".sample");
-      if (sample && sample.textContent !== cardText) sample.textContent = cardText;
+      if (sample && getPreviewSampleText(sample) !== cardText) setPreviewSampleText(sample, cardText);
     });
     scheduleCardFit();
   });
@@ -5391,7 +5741,7 @@ ui.list.addEventListener("pointermove", event => {
   const glyphBounds = textRange.getBoundingClientRect();
   const overGlyph = event.clientX >= glyphBounds.left && event.clientX <= glyphBounds.right &&
     event.clientY >= glyphBounds.top && event.clientY <= glyphBounds.bottom;
-  if (!overGlyph || !sample.textContent.trim()) {
+  if (!overGlyph || !getPreviewSampleText(sample).trim()) {
     hideMagnifier(ui.cardMagnifier);
     return;
   }
@@ -5407,7 +5757,7 @@ ui.list.addEventListener("pointermove", event => {
   ui.cardMagnifier.style.top = `${top}px`;
   ui.cardMagnifier.style.backgroundColor = resolveMagnifierBackground(cardStyle.backgroundColor, "--panel");
   const enlarged = ui.cardMagnifiedText;
-  enlarged.textContent = sample.textContent;
+  enlarged.textContent = getPreviewSampleText(sample);
   enlarged.style.left = `${lens / 2 - (event.clientX - sampleRect.left) * zoom}px`;
   enlarged.style.top = `${lens / 2 - (event.clientY - sampleRect.top) * zoom}px`;
   enlarged.style.width = `${sampleRect.width}px`;
