@@ -594,13 +594,17 @@ kbd,
 .sort-filter-popover { min-width: 168px; }
 .card-area .scan-progress { margin: 6px 0 4px; }
 .font-list.card-grid {
+  --card-grid-sample-height: 66px;
+  --card-grid-min-height: 129px;
+  --card-grid-row-pitch: 143px;
   min-height: 0;
   flex: 1 1 auto;
   align-self: stretch;
   width: 100%;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: minmax(178px, auto);
+  grid-auto-rows: var(--card-grid-min-height, 129px);
+  align-items: start;
   justify-content: center;
   align-content: start;
   gap: 14px;
@@ -697,15 +701,16 @@ kbd,
 .page-button:disabled { cursor: default; opacity: .35; }
 .card-grid .font-card {
   min-width: 0;
-  min-height: 178px;
-  padding: 18px;
+  min-height: var(--card-grid-min-height, 129px);
+  height: var(--card-grid-min-height, 129px);
+  padding: 12px;
   overflow: visible;
   border: 0;
   border-radius: 3px;
   background: var(--paper);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
   content-visibility: auto;
-  contain-intrinsic-size: 245px 178px;
+  contain-intrinsic-size: 245px 129px;
 }
 .card-grid .font-card:has(.card-family-switch.is-open) {
   content-visibility: visible;
@@ -726,8 +731,8 @@ kbd,
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 92px;
-  margin: 7px 0 4px;
+  height: var(--card-grid-sample-height, 66px);
+  margin: 5px 0 3px;
   overflow: hidden;
   font-size: 34px;
   line-height: 1.15;
@@ -739,9 +744,9 @@ kbd,
 .font-card.font-loading .sample { opacity: .48; }
 .font-card.font-ready .sample { color: var(--ink); opacity: 1; transition: opacity .2s ease, color .2s ease; }
 .font-card.font-failed .sample { opacity: .2; }
-.card-grid .font-card small { position: absolute; left: 18px; bottom: 14px; cursor: default; }
+.card-grid .font-card small { position: absolute; left: 12px; bottom: 10px; cursor: default; }
 .card-grid .font-card:has(.card-family-switch) small { cursor: ns-resize; }
-.card-grid .font-card .star { right: 17px; top: 15px; }
+.card-grid .font-card .star { right: 11px; top: 10px; }
 .font-card .star { position: absolute; z-index: 3; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; font-size: 16px; }
 .font-card .star:hover { color: var(--accent); transform: scale(1.08); }
 .card-copy { width: 28px; height: 28px; display: grid; place-items: center; cursor: copy; border: 0; border-radius: 50%; color: var(--ink); background: var(--panel); box-shadow: 0 3px 10px rgba(0,0,0,.09); transition: opacity .15s ease, transform .15s ease; }

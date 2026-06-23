@@ -50,8 +50,8 @@ const SORT_LABELS = {
   wide: "宽→瘦"
 };
 const CARD_GRID_GAP = 14;
-const CARD_GRID_MIN_HEIGHT = 178;
-const CARD_GRID_ROW_HEIGHT = CARD_GRID_MIN_HEIGHT + CARD_GRID_GAP;
+const CARD_GRID_PADDING_BLOCK = 24;
+const CARD_GRID_META_HEIGHT = 39;
 const CARD_COLUMNS_MIN = 3;
 const CARD_COLUMNS_MAX = 12;
 const CARD_COLUMNS_DEFAULT = 7;
@@ -70,22 +70,39 @@ function resolveCardColumns(settings = {}) {
   return CARD_COLUMNS_DEFAULT;
 }
 
-function measureCardGridRowPitch() {
-  const sampleCard = ui.list?.querySelector(".font-card");
-  if (!sampleCard) return CARD_GRID_ROW_HEIGHT;
-  const cardHeight = Math.max(CARD_GRID_MIN_HEIGHT, Math.ceil(sampleCard.getBoundingClientRect().height));
-  return cardHeight + CARD_GRID_GAP;
+function getCardGridSampleHeight() {
+  return Math.max(44, Math.round(state.cardSampleSize * 1.35));
+}
+
+function getCardGridCardHeight() {
+  return getCardGridSampleHeight() + CARD_GRID_META_HEIGHT + CARD_GRID_PADDING_BLOCK;
+}
+
+function getCardGridRowPitch() {
+  return getCardGridCardHeight() + CARD_GRID_GAP;
+}
+
+function syncCardGridLayoutVars() {
+  if (!ui.list) return;
+  const sampleHeight = getCardGridSampleHeight();
+  const cardHeight = getCardGridCardHeight();
+  const rowPitch = getCardGridRowPitch();
+  ui.list.style.setProperty("--card-grid-sample-height", `${sampleHeight}px`);
+  ui.list.style.setProperty("--card-grid-min-height", `${cardHeight}px`);
+  ui.list.style.setProperty("--card-grid-row-pitch", `${rowPitch}px`);
 }
 
 function getFontGridViewportSize() {
+  const viewShell = ui.list?.closest(".font-view-shell");
   const pageArea = ui.list?.closest(".font-page-area");
   const listStyles = ui.list ? getComputedStyle(ui.list) : null;
   const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 72;
   const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 64;
   let viewportWidth = ui.list?.clientWidth || 800;
   let viewportHeight = 500;
-  if (pageArea) {
-    const rect = pageArea.getBoundingClientRect();
+  const measureEl = viewShell || pageArea;
+  if (measureEl) {
+    const rect = measureEl.getBoundingClientRect();
     if (rect.width > 0) viewportWidth = rect.width;
     if (rect.height > 0) viewportHeight = rect.height;
   } else if (ui.list?.parentElement?.clientHeight) {
@@ -94,15 +111,15 @@ function getFontGridViewportSize() {
   }
   return {
     width: Math.max(320, viewportWidth - padX),
-    height: Math.max(CARD_GRID_ROW_HEIGHT, viewportHeight - padY)
+    height: Math.max(getCardGridCardHeight(), viewportHeight - padY)
   };
 }
 
-function getCardGridLayout(options = {}) {
+function getCardGridLayout() {
   const { width, height } = getFontGridViewportSize();
   const columns = clampCardColumns(state.cardColumns);
   const cardWidth = Math.max(140, Math.floor((width - (columns - 1) * CARD_GRID_GAP) / columns));
-  const rowPitch = options.rowPitch || measureCardGridRowPitch();
+  const rowPitch = getCardGridRowPitch();
   const rows = Math.max(1, Math.floor((height + CARD_GRID_GAP) / rowPitch));
   return { width, height, columns, cardWidth, rows, rowPitch };
 }
@@ -3484,6 +3501,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
+  syncCardGridLayoutVars();
   ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view)
     ? `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`
     : "";
@@ -3762,11 +3780,20 @@ function stepCardSampleSize(direction) {
 function applyCardSampleSize({ fit = false } = {}) {
   state.cardSampleSize = Number(ui.cardSampleSize.value);
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+  syncCardGridLayoutVars();
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
     sample.style.fontSize = `${state.cardSampleSize}px`;
     applyCardPreviewStyleToSample(sample);
   });
   if (fit) scheduleCardSampleFit();
+}
+
+function refreshCardGridPageIfNeeded() {
+  if (!["grid", "focus"].includes(state.view)) return;
+  const nextPageSize = calculatePageSize();
+  if (nextPageSize === state.pageSize) return;
+  state.page = 0;
+  renderFontList({ remeasure: false });
 }
 
 function scheduleCardSampleFit() {
@@ -4864,6 +4891,7 @@ ui.cardSampleSize.addEventListener("input", () => {
 ui.cardSampleSize.addEventListener("change", () => {
   applyCardSampleSize({ fit: true });
   persistCardSampleSize();
+  refreshCardGridPageIfNeeded();
 });
 $("#cardSampleSizeDecrease").addEventListener("click", () => stepCardSampleSize(-1));
 $("#cardSampleSizeIncrease").addEventListener("click", () => stepCardSampleSize(1));
@@ -5213,6 +5241,7 @@ ui.list.addEventListener("dragstart", event => {
 });
 ui.list.addEventListener("dragend", () => { state.draggingFontId = null; clearCategoryDropStates(); });
 if ("ResizeObserver" in window) {
+  const viewShell = ui.list?.closest(".font-view-shell");
   const pageArea = ui.list?.closest(".font-page-area");
   const handleGridViewportResize = () => {
     scheduleCardFit();
@@ -5222,8 +5251,9 @@ if ("ResizeObserver" in window) {
     }, 120);
   };
   const gridResizeObserver = new ResizeObserver(handleGridViewportResize);
-  if (pageArea) gridResizeObserver.observe(pageArea);
-  else new ResizeObserver(handleGridViewportResize).observe(ui.list);
+  if (viewShell) gridResizeObserver.observe(viewShell);
+  else if (pageArea) gridResizeObserver.observe(pageArea);
+  else gridResizeObserver.observe(ui.list);
 }
 
 renderCategoryUI();
@@ -5233,6 +5263,7 @@ updateVisualSettings();
 updatePreview();
 syncDetailPreviewStage();
 updateCardSampleSizeControl();
+syncCardGridLayoutVars();
 wireCardPreviewStyleModal();
 wireCardPreviewStyleQuickMenu();
 if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
