@@ -54,16 +54,50 @@ main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   width: 100%;
   min-height: calc(var(--topbar-height) - 16px);
 }
-.brand { position: relative; z-index: 2; display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
-.brand-mark {
-  display: grid; place-items: center; width: 32px; height: 32px;
-  color: white; background: var(--ink); border-radius: 4px;
-  font-family: serif; font-size: 19px;
+.brand {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  transform: translateX(-50%);
+  transition: left .58s cubic-bezier(.77,0,.18,1), transform .58s cubic-bezier(.77,0,.18,1), gap .36s ease;
 }
-.brand strong { display: block; font-size: 15px; letter-spacing: .1em; }
-.brand small { display: block; margin-top: 1px; color: var(--muted); font-size: 7px; letter-spacing: .16em; }
-.version-badge { align-self: flex-start; margin: 0; padding: 1px 5px; border: 1px solid var(--line); border-radius: 20px; color: var(--muted); background: var(--panel); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
-.header-actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; }
+body.workspace-active .brand { left: 0; gap: 9px; transform: translateX(0); }
+.brand-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--ink);
+  transition: width .42s ease, height .42s ease, color .2s ease;
+}
+body.workspace-active .brand-mark { width: 32px; height: 32px; }
+.brand-mark svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.logo-frame { fill: var(--ink); stroke: var(--ink); stroke-width: 1.5; }
+.logo-glyph,
+.logo-guide {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.logo-guide { opacity: .42; }
+.logo-dot { fill: var(--accent); }
+.brand-copy { display: block; min-width: 0; }
+.brand-title-row { display: flex; align-items: center; gap: 6px; }
+.brand strong { font-size: 18px; letter-spacing: .12em; transition: font-size .36s ease; }
+body.workspace-active .brand strong { font-size: 15px; letter-spacing: .1em; }
+.brand small { display: block; margin-top: 2px; color: var(--muted); font-size: 8px; letter-spacing: .16em; transition: font-size .36s ease, margin-top .36s ease; }
+body.workspace-active .brand small { margin-top: 1px; font-size: 7px; }
+.version-badge { flex: none; margin: 0; padding: 1px 5px; border: 1px solid var(--line); border-radius: 20px; color: var(--muted); background: var(--panel); font-size: 10px; font-weight: 600; letter-spacing: .02em; }
+body.workspace-active .version-badge { font-size: 9px; }
+.header-actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .header-preview {
   position: absolute;
   left: 50%;
@@ -138,19 +172,58 @@ body.workspace-active .header-preview { display: flex; }
 .icon-button, .text-button, .pill-button, .chip { cursor: pointer; border: 0; background: transparent; }
 .icon-button { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; font-size: 16px; }
 .icon-button:hover { border-color: var(--ink); }
-.welcome { position: absolute; inset: 0; max-width: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5vh 7vw; text-align: center; transition: transform .58s cubic-bezier(.77,0,.18,1), opacity .35s ease; }
-.eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
-.welcome h1 { margin: 22px 0; font-family: Georgia, "Songti SC", serif; font-size: clamp(72px, 9vw, 126px); font-weight: 400; line-height: .93; letter-spacing: -.07em; }
-.welcome h1 em { color: var(--accent); font-style: italic; }
-.welcome > p { max-width: 570px; margin-left: auto; margin-right: auto; color: var(--muted); font-size: 17px; line-height: 1.8; }
+.welcome {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  text-align: center;
+  transition: transform .58s cubic-bezier(.77,0,.18,1), opacity .35s ease;
+}
+.welcome-inner {
+  width: min(920px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.welcome .eyebrow { margin-bottom: 2px; letter-spacing: .2em; }
+.welcome h1 {
+  margin: 20px 0 18px;
+  font-size: clamp(56px, 7.6vw, 108px);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -.03em;
+}
+.welcome-accent { color: var(--accent); font-style: normal; font-weight: 600; }
+.welcome-lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
 .primary-button {
-  width: 240px; height: 62px; display: flex; align-items: center; justify-content: space-between;
-  margin-top: 34px; padding: 0 21px; cursor: pointer; color: white; border: 0; border-radius: 3px; background: var(--ink);
+  min-width: 208px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 32px;
+  padding: 0 36px;
+  cursor: pointer;
+  color: white;
+  border: 0;
+  border-radius: 4px;
+  background: var(--ink);
+  font-size: 15px;
+  letter-spacing: .08em;
 }
 .primary-button:hover { background: var(--accent); }
-.primary-button b { font-size: 24px; font-weight: 300; }
 .primary-button:disabled { cursor: wait; opacity: .76; }
-.load-progress { width: 360px; max-width: 100%; margin-top: 22px; }
+.load-progress { width: min(360px, 100%); margin-top: 20px; }
 .progress-track { height: 3px; overflow: hidden; border-radius: 5px; background: var(--line); }
 .progress-track i { display: block; width: 0; height: 100%; background: var(--accent); transition: width .25s ease; }
 .load-progress.indeterminate .progress-track i {
@@ -159,7 +232,8 @@ body.workspace-active .header-preview { display: flex; }
 .progress-copy { display: flex; justify-content: space-between; margin-top: 9px; color: var(--muted); font-size: 11px; }
 .progress-copy strong { color: var(--ink); font-weight: 600; }
 @keyframes indeterminate { from { transform: translateX(-110%); } to { transform: translateX(290%); } }
-.welcome .support-note { margin-top: 15px; font-size: 12px; }
+.welcome .support-note { margin-top: 18px; color: var(--muted); font-size: 12px; opacity: .88; }
+.eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .workspace { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
 .sidebar { display: flex; flex-direction: column; min-height: 0; padding: 25px 20px 0; border-right: 1px solid var(--line); background: var(--panel); }
 .sidebar-heading, .panel-title, .font-meta-row { display: flex; align-items: center; justify-content: space-between; }
@@ -352,7 +426,7 @@ kbd,
 .toolbar-view .view-button:nth-child(3) { font-size: 13px; }
 .toolbar-view .view-button:nth-child(4) { font-size: 13px; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
-.toolbar-view .density-control input { width: 52px; }
+.toolbar-view .density-control input { width: 120px; }
 .toolbar-view .sort-select { height: 28px; max-width: 108px; padding: 0 24px 0 7px; font-size: 10px; }
 .filter-divider { width: 1px; height: 16px; margin: 0 1px; background: var(--line); }
 .filter-menu { position: relative; height: 26px; z-index: 1; }
@@ -381,7 +455,7 @@ kbd,
 .view-button:nth-child(4) { margin-left: -7px; border-radius: 0 4px 4px 0; font-size: 15px; }
 .view-button.active { z-index: 1; color: white; border-color: var(--ink); background: var(--ink); }
 .density-control { display: flex; align-items: center; gap: 4px; margin-left: 2px; color: var(--muted); font-size: 9px; }
-.density-control input { width: 52px; }
+.density-control input { width: 120px; }
 .sort-select { height: 28px; padding: 0 24px 0 7px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: var(--ink); background: var(--paper); font-size: 10px; }
 .card-area .scan-progress { margin: 6px 0 4px; }
 .font-list.card-grid {
@@ -450,7 +524,23 @@ kbd,
 .view-status-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .view-status { text-align: right; white-space: nowrap; }
 .card-sample-size-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
-.card-sample-size-control input { width: 72px; accent-color: var(--accent); }
+.card-sample-size-control input { width: 88px; accent-color: var(--accent); }
+.card-sample-size-control .step-button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 14px;
+  line-height: 1;
+}
+.card-sample-size-control .step-button:hover:not(:disabled) { color: white; border-color: var(--accent); background: var(--accent); }
+.card-sample-size-control .step-button:disabled { cursor: default; opacity: .35; }
 .card-sample-size-control output { min-width: 1.8em; color: var(--ink); font-size: 11px; text-align: right; }
 .card-sample-size-control:has(input:disabled) { opacity: .38; }
 .page-button { min-width: 78px; height: 28px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: var(--paper); font-size: 12px; }
@@ -489,11 +579,14 @@ kbd,
 .card-grid .font-card .sample {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   height: 92px;
   margin: 7px 0 4px;
   overflow: hidden;
   font-size: 34px;
   line-height: 1.15;
+  text-align: center;
   white-space: nowrap;
   overflow-wrap: normal;
 }
@@ -784,9 +877,21 @@ kbd,
     <header class="topbar">
       <div class="topbar-row topbar-main">
         <a class="brand" href="#" aria-label="字观首页">
-          <span class="brand-mark">字</span>
-          <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
-          <span class="version-badge" title="当前版本">v1.0.24</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
+              <path class="logo-guide" d="M13 34h22"></path>
+              <path class="logo-glyph" d="M16 15h16M24 15v20M18 23h12M20 30l4-7 4 7"></path>
+              <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
+            </svg>
+          </span>
+          <span class="brand-copy">
+            <span class="brand-title-row">
+              <strong>字观</strong>
+              <span class="version-badge" title="当前版本">v1.0.24</span>
+            </span>
+            <small>LOCAL TYPE VIEWER</small>
+          </span>
         </a>
         <div class="header-preview">
           <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
@@ -806,17 +911,17 @@ kbd,
 
     <main>
       <section id="welcome" class="welcome">
-        <div class="eyebrow">系统字体浏览器</div>
-        <h1>看见你电脑里的<br><em>每一种字。</em></h1>
-        <p>授权后即可搜索、比较并细看系统中安装的字体。所有处理都在浏览器内完成。</p>
-        <button id="loadFontsButton" class="primary-button">
-          <span>读取系统字体</span><b>→</b>
-        </button>
-        <div id="loadProgress" class="load-progress" hidden aria-live="polite">
-          <div class="progress-track"><i id="progressBar"></i></div>
-          <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+        <div class="welcome-inner">
+          <div class="eyebrow">系统字体浏览器</div>
+          <h1>看见你电脑里的<br><span class="welcome-accent">每一种字</span></h1>
+          <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
+          <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
+          <div id="loadProgress" class="load-progress" hidden aria-live="polite">
+            <div class="progress-track"><i id="progressBar"></i></div>
+            <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+          </div>
+          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问</p>
         </div>
-        <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问。</p>
       </section>
 
       <section id="workspace" class="workspace" hidden>
@@ -910,7 +1015,9 @@ kbd,
                 <div id="viewStatus" class="view-status">网格视图</div>
                 <label class="card-sample-size-control" title="卡片预览字号">
                   <span>字号</span>
+                  <button id="cardSampleSizeDecrease" class="step-button" type="button" aria-label="减小字号">−</button>
                   <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" aria-label="卡片预览字号" />
+                  <button id="cardSampleSizeIncrease" class="step-button" type="button" aria-label="增大字号">+</button>
                   <output id="cardSampleSizeOutput">49</output>
                 </label>
               </div>
@@ -1011,6 +1118,7 @@ kbd,
   <div id="toast" class="toast" role="status"></div>
   <script>
 const $ = (selector) => document.querySelector(selector);
+const LOAD_BUTTON_LABEL = "读取系统字体";
 const DEFAULT_DETAIL_PREVIEW = `天地玄黄 宇宙洪荒
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
@@ -1372,7 +1480,7 @@ async function loadFonts() {
     return;
   }
   ui.load.disabled = true;
-  ui.load.querySelector("span").textContent = "正在读取…";
+  ui.load.textContent = "正在读取…";
   setLoadProgress("请在浏览器弹窗中允许访问字体");
   try {
     const data = await window.queryLocalFonts();
@@ -1410,7 +1518,7 @@ async function loadFonts() {
     toast(message);
   } finally {
     ui.load.disabled = false;
-    ui.load.querySelector("span").textContent = "读取系统字体";
+    ui.load.textContent = LOAD_BUTTON_LABEL;
   }
 }
 
@@ -1841,8 +1949,22 @@ function cardBaseFontSize() {
 function updateCardSampleSizeControl() {
   const disabled = state.view === "single";
   ui.cardSampleSize.disabled = disabled;
+  $("#cardSampleSizeDecrease").disabled = disabled;
+  $("#cardSampleSizeIncrease").disabled = disabled;
   ui.cardSampleSize.value = state.cardSampleSize;
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+}
+
+function stepCardSampleSize(direction) {
+  if (ui.cardSampleSize.disabled) return;
+  const min = Number(ui.cardSampleSize.min);
+  const max = Number(ui.cardSampleSize.max);
+  const step = Number(ui.cardSampleSize.step) || 1;
+  const next = Math.max(min, Math.min(max, Number(ui.cardSampleSize.value) + direction * step));
+  if (next === Number(ui.cardSampleSize.value)) return;
+  ui.cardSampleSize.value = String(next);
+  applyCardSampleSize();
+  persistCardSampleSize();
 }
 
 function applyCardSampleSize({ fit = false } = {}) {
@@ -2909,6 +3031,8 @@ ui.cardSampleSize.addEventListener("change", () => {
   applyCardSampleSize({ fit: true });
   persistCardSampleSize();
 });
+$("#cardSampleSizeDecrease").addEventListener("click", () => stepCardSampleSize(-1));
+$("#cardSampleSizeIncrease").addEventListener("click", () => stepCardSampleSize(1));
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
 ui.previewText.addEventListener("dblclick", () => {
   setDetailPreviewEditing(true);

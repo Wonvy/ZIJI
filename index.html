@@ -12,9 +12,21 @@
     <header class="topbar">
       <div class="topbar-row topbar-main">
         <a class="brand" href="#" aria-label="字观首页">
-          <span class="brand-mark">字</span>
-          <span><strong>字观</strong><small>LOCAL TYPE VIEWER</small></span>
-          <span class="version-badge" title="当前版本">v1.0.24</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
+              <path class="logo-guide" d="M13 34h22"></path>
+              <path class="logo-glyph" d="M16 15h16M24 15v20M18 23h12M20 30l4-7 4 7"></path>
+              <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
+            </svg>
+          </span>
+          <span class="brand-copy">
+            <span class="brand-title-row">
+              <strong>字观</strong>
+              <span class="version-badge" title="当前版本">v1.0.24</span>
+            </span>
+            <small>LOCAL TYPE VIEWER</small>
+          </span>
         </a>
         <div class="header-preview">
           <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
@@ -34,17 +46,17 @@
 
     <main>
       <section id="welcome" class="welcome">
-        <div class="eyebrow">系统字体浏览器</div>
-        <h1>看见你电脑里的<br><em>每一种字。</em></h1>
-        <p>授权后即可搜索、比较并细看系统中安装的字体。所有处理都在浏览器内完成。</p>
-        <button id="loadFontsButton" class="primary-button">
-          <span>读取系统字体</span><b>→</b>
-        </button>
-        <div id="loadProgress" class="load-progress" hidden aria-live="polite">
-          <div class="progress-track"><i id="progressBar"></i></div>
-          <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+        <div class="welcome-inner">
+          <div class="eyebrow">系统字体浏览器</div>
+          <h1>看见你电脑里的<br><span class="welcome-accent">每一种字</span></h1>
+          <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
+          <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
+          <div id="loadProgress" class="load-progress" hidden aria-live="polite">
+            <div class="progress-track"><i id="progressBar"></i></div>
+            <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+          </div>
+          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问</p>
         </div>
-        <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问。</p>
       </section>
 
       <section id="workspace" class="workspace" hidden>
@@ -138,7 +150,9 @@
                 <div id="viewStatus" class="view-status">网格视图</div>
                 <label class="card-sample-size-control" title="卡片预览字号">
                   <span>字号</span>
+                  <button id="cardSampleSizeDecrease" class="step-button" type="button" aria-label="减小字号">−</button>
                   <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" aria-label="卡片预览字号" />
+                  <button id="cardSampleSizeIncrease" class="step-button" type="button" aria-label="增大字号">+</button>
                   <output id="cardSampleSizeOutput">49</output>
                 </label>
               </div>

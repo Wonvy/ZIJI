@@ -1,4 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
+const LOAD_BUTTON_LABEL = "读取系统字体";
 const DEFAULT_DETAIL_PREVIEW = `天地玄黄 宇宙洪荒
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
@@ -360,7 +361,7 @@ async function loadFonts() {
     return;
   }
   ui.load.disabled = true;
-  ui.load.querySelector("span").textContent = "正在读取…";
+  ui.load.textContent = "正在读取…";
   setLoadProgress("请在浏览器弹窗中允许访问字体");
   try {
     const data = await window.queryLocalFonts();
@@ -398,7 +399,7 @@ async function loadFonts() {
     toast(message);
   } finally {
     ui.load.disabled = false;
-    ui.load.querySelector("span").textContent = "读取系统字体";
+    ui.load.textContent = LOAD_BUTTON_LABEL;
   }
 }
 
@@ -829,8 +830,22 @@ function cardBaseFontSize() {
 function updateCardSampleSizeControl() {
   const disabled = state.view === "single";
   ui.cardSampleSize.disabled = disabled;
+  $("#cardSampleSizeDecrease").disabled = disabled;
+  $("#cardSampleSizeIncrease").disabled = disabled;
   ui.cardSampleSize.value = state.cardSampleSize;
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+}
+
+function stepCardSampleSize(direction) {
+  if (ui.cardSampleSize.disabled) return;
+  const min = Number(ui.cardSampleSize.min);
+  const max = Number(ui.cardSampleSize.max);
+  const step = Number(ui.cardSampleSize.step) || 1;
+  const next = Math.max(min, Math.min(max, Number(ui.cardSampleSize.value) + direction * step));
+  if (next === Number(ui.cardSampleSize.value)) return;
+  ui.cardSampleSize.value = String(next);
+  applyCardSampleSize();
+  persistCardSampleSize();
 }
 
 function applyCardSampleSize({ fit = false } = {}) {
@@ -1897,6 +1912,8 @@ ui.cardSampleSize.addEventListener("change", () => {
   applyCardSampleSize({ fit: true });
   persistCardSampleSize();
 });
+$("#cardSampleSizeDecrease").addEventListener("click", () => stepCardSampleSize(-1));
+$("#cardSampleSizeIncrease").addEventListener("click", () => stepCardSampleSize(1));
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
 ui.previewText.addEventListener("dblclick", () => {
   setDetailPreviewEditing(true);
