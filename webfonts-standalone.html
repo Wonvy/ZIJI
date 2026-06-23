@@ -15,7 +15,7 @@
   --accent: #e85832;
   --stage: #eee8dc;
   --shadow: 0 18px 60px rgba(38, 31, 21, .11);
-  --topbar-height: 104px;
+  --topbar-height: 88px;
   --toolbar-control-height: 34px;
 }
 
@@ -52,7 +52,7 @@ main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: calc(var(--topbar-height) - 16px);
+  min-height: calc(var(--topbar-height) - 10px);
 }
 .brand {
   position: absolute;
@@ -111,8 +111,45 @@ body.workspace-active .version-badge { font-size: 9px; }
   max-width: 520px;
   transform: translate(-50%, -50%);
 }
-body.workspace-active .header-preview { display: flex; }
+body.workspace-active .header-preview { display: flex; align-items: flex-start; }
+body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input { flex: 1; min-width: 0; background: var(--panel); }
+.header-preview-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.preview-input-history {
+  position: static;
+  width: 100%;
+  max-height: 120px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.preview-input-history[hidden] { display: none; }
+.preview-history-item {
+  width: 100%;
+  display: block;
+  padding: 8px 10px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview-history-item:hover { color: var(--accent); background: var(--paper); }
 .toolbar-meta {
   flex: none;
   gap: 8px;
@@ -137,6 +174,7 @@ body.workspace-active .header-preview { display: flex; }
 .toolbar-meta .font-count-value {
   color: var(--accent);
   font-weight: 700;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 .toolbar-icon-button {
@@ -219,7 +257,15 @@ body.workspace-active .header-preview { display: flex; }
   align-items: center;
   padding: 0 10px;
   font-size: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
   box-sizing: border-box;
+}
+.toolbar-filters .chip.active {
+  color: var(--panel);
+  border-color: var(--ink);
+  background: var(--ink);
 }
 .toolbar-filters .toolbar-search-wrap {
   flex: 1 1 150px;
@@ -298,23 +344,40 @@ body.workspace-active .header-preview { display: flex; }
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 32px;
+  padding: 0 32px 24px;
   text-align: center;
   transition: transform .58s cubic-bezier(.77,0,.18,1), opacity .35s ease;
 }
 .welcome-inner {
   width: min(920px, 100%);
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+}
+.welcome-brand-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(80px, 14vw, 112px);
+  height: clamp(80px, 14vw, 112px);
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.welcome-brand-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
 }
 .welcome .eyebrow { margin-bottom: 2px; letter-spacing: .2em; }
 .welcome h1 {
-  margin: 20px 0 18px;
+  margin: 8px 0 18px;
   font-size: clamp(56px, 7.6vw, 108px);
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.06;
   letter-spacing: -.03em;
 }
@@ -381,7 +444,14 @@ body.workspace-active .header-preview { display: flex; }
 .progress-copy { display: flex; justify-content: space-between; margin-top: 9px; color: var(--muted); font-size: 11px; }
 .progress-copy strong { color: var(--ink); font-weight: 600; }
 @keyframes indeterminate { from { transform: translateX(-110%); } to { transform: translateX(290%); } }
-.welcome .support-note { margin-top: 18px; color: var(--muted); font-size: 12px; opacity: .88; }
+.welcome .support-note,
+.welcome-footer-note {
+  flex: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: .88;
+}
 .eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .workspace { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
 .sidebar { display: flex; flex-direction: column; min-height: 0; padding: 25px 20px 0; border-right: 1px solid var(--line); background: var(--panel); }
@@ -395,7 +465,7 @@ body.workspace-active .header-preview { display: flex; }
 .search-box input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 13px; }
 kbd { color: var(--muted); font-size: 10px; }
 .filter-row { display: flex; gap: 6px; padding: 13px 0; }
-.card-toolbar .toolbar-filters.filter-row { border-bottom: 0; padding-bottom: 8px; }
+.card-toolbar .toolbar-filters.filter-row { border-bottom: 0; padding: 0; }
 .chip { padding: 6px 10px; border-radius: 30px; color: var(--muted); font-size: 11px; }
 .chip.active { color: var(--panel); background: var(--ink); }
 .font-list { min-height: 0; overflow-y: auto; }
@@ -526,7 +596,7 @@ kbd,
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 6px 0 8px;
+  padding: 2px 0 8px;
   border-bottom: 1px solid var(--line);
   overflow: visible;
   container-type: inline-size;
@@ -859,6 +929,11 @@ kbd,
 .font-status .favorite-status { color: var(--accent); }
 .view-status-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .view-status { text-align: right; white-space: nowrap; }
+.view-status-total {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .card-sample-size-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .card-sample-size-control input { width: 88px; accent-color: var(--accent); }
 .card-sample-size-control .step-button {
@@ -1370,7 +1445,6 @@ kbd,
 }
 .card-preview-style-button svg { width: 16px; height: 16px; }
 .card-preview-style-button:hover,
-.card-preview-style-menu:has(.card-preview-style-preset-dropdown:hover) .card-preview-style-button,
 .card-preview-style-menu:has(.card-preview-style-preset-dropdown[open]) .card-preview-style-button {
   color: white;
   border-color: var(--accent);
@@ -1399,32 +1473,68 @@ kbd,
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.card-preview-style-menu:has(.card-preview-style-preset-dropdown:hover) .card-preview-style-preset-dropdown summary,
-.card-preview-style-preset-dropdown[open] summary,
-.card-preview-style-preset-dropdown summary:hover {
+.card-preview-style-preset-dropdown.filter-menu-icon[open] summary {
   color: white;
   border-color: var(--accent);
   background: var(--accent);
 }
+.card-preview-style-preset-dropdown.filter-menu-icon[open] summary svg { stroke: white; }
 .card-preview-style-preset-popover {
+  top: calc(100% + 4px);
   right: 0;
   left: auto;
-  min-width: 168px;
-  max-height: min(280px, 48vh);
+  min-width: 240px;
+  max-width: min(320px, 92vw);
+  max-height: min(320px, 48vh);
   overflow: auto;
-  padding: 6px;
+  padding: 8px;
+  transform: none;
+  transition: none;
 }
-.card-preview-style-preset-popover label {
-  display: flex;
-  align-items: center;
+.card-preview-style-preset-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  padding: 7px 8px;
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 12px;
 }
-.card-preview-style-preset-popover label:hover { background: var(--paper); }
-.card-preview-style-preset-popover input[type="radio"] { accent-color: var(--accent); }
+.card-preview-style-preset-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 6px 4px 4px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 10px;
+  transition: border-color .12s ease;
+}
+.card-preview-style-preset-option:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+.card-preview-style-preset-option.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.card-preview-style-preset-option .preview-style-preset-glyph {
+  width: 100%;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+}
+.card-preview-style-preset-name {
+  width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .card-preview-style-preset-popover .popover-divider {
   display: block;
   height: 1px;
@@ -2604,10 +2714,13 @@ body.dark .preview-style-stage { background: #1a1917; }
           </span>
         </a>
         <div class="header-preview">
-          <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
-            <span class="preview-control-label">预览文字</span>
-            <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
-          </label>
+          <div class="header-preview-input-wrap search-control">
+            <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
+              <span class="preview-control-label">预览文字</span>
+              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击恢复默认预览文字" />
+            </label>
+            <div id="previewInputHistory" class="preview-input-history" hidden aria-label="预览文字历史"></div>
+          </div>
           <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
           </button>
@@ -2621,6 +2734,14 @@ body.dark .preview-style-stage { background: #1a1917; }
     <main>
       <section id="welcome" class="welcome">
         <div class="welcome-inner">
+          <span class="welcome-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
+              <path class="logo-guide" d="M13 34h22"></path>
+              <path class="logo-glyph" d="M16 15h16M24 15v20M18 23h12M20 30l4-7 4 7"></path>
+              <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
+            </svg>
+          </span>
           <h1>字己<span class="welcome-accent">找字也找自己</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
@@ -2632,8 +2753,8 @@ body.dark .preview-style-stage { background: #1a1917; }
             <div class="progress-track"><i id="progressBar"></i></div>
             <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
-          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge</p>
         </div>
+        <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
       </section>
 
       <section id="workspace" class="workspace" hidden>
@@ -2938,6 +3059,9 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
 0123456789
 ，。！？；：“”「」`;
+const DEFAULT_CARD_PREVIEW_TEXT = "字体有光";
+const PREVIEW_TEXT_HISTORY_KEY = "font-preview-text-history";
+const PREVIEW_TEXT_HISTORY_LIMIT = 10;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
 const DEFAULT_CHINESE_BRANDS = ["思源", "方正", "汉仪", "华文", "阿里巴巴", "站酷", "霞鹜", "鸿蒙", "小米", "文泉驿"];
 function loadCachedSearchBrands() {
@@ -3464,7 +3588,7 @@ const ui = {
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
   support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
   pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeOutput: $("#cardSampleSizeOutput"),
-  empty: $("#emptyState"), previewInput: $("#previewInput"), previewText: $("#previewText"),
+  empty: $("#emptyState"), previewInput: $("#previewInput"), previewInputHistory: $("#previewInputHistory"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
   cardMagnifier: $("#cardMagnifier"), cardMagnifiedText: $("#cardMagnifiedText"),
@@ -6051,6 +6175,54 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   return true;
 }
 
+function resolveQuickPresetStyle(presetId) {
+  if (!presetId) return null;
+  const preset = findCardPreviewStylePreset(presetId);
+  return preset ? preset.style : null;
+}
+
+function getQuickMenuPreviewFont() {
+  return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
+}
+
+function getQuickMenuPreviewChar() {
+  const text = cardPreviewText().trim();
+  return [...text][0] || MANAGE_PRESET_PREVIEW_CHAR;
+}
+
+function renderQuickPresetMenuItem(presetId, { active = false, name = "默认" } = {}) {
+  return `<button type="button" class="card-preview-style-preset-option${active ? " active is-current" : ""}" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(name)}">
+    <span class="preview-style-preset-glyph" aria-hidden="true">${escapeHtml(getQuickMenuPreviewChar())}</span>
+    <span class="card-preview-style-preset-name">${escapeHtml(name)}</span>
+  </button>`;
+}
+
+function applyQuickPresetMenuStyles() {
+  const menu = $("#cardPreviewStylePresetMenu");
+  if (!menu) return;
+  const font = getQuickMenuPreviewFont();
+  const previewChar = getQuickMenuPreviewChar();
+  menu.querySelectorAll(".card-preview-style-preset-option").forEach(item => {
+    const glyph = item.querySelector(".preview-style-preset-glyph");
+    if (!glyph) return;
+    glyph.textContent = previewChar;
+    if (font) {
+      registerFont(font);
+      glyph.style.fontFamily = cssName(font);
+    } else {
+      glyph.style.fontFamily = "";
+    }
+    applyCardPreviewStyleToElement(glyph, resolveQuickPresetStyle(item.dataset.presetId || ""), { themeDefault: true });
+  });
+  if (!font) return;
+  ensureFontLoaded(font, previewChar).then(() => {
+    if (!menu.isConnected) return;
+    menu.querySelectorAll(".card-preview-style-preset-option .preview-style-preset-glyph").forEach(glyph => {
+      glyph.style.fontFamily = cssName(font);
+    });
+  });
+}
+
 function syncCardPreviewStyleButtonLabel() {
   const button = $("#cardPreviewStyleButton");
   if (!button) return;
@@ -6066,13 +6238,15 @@ function renderCardPreviewStyleQuickMenu() {
   const menu = $("#cardPreviewStylePresetMenu");
   if (!menu) return;
   const activeId = state.activeCardPreviewStylePresetId || "";
-  let html = `<label><input type="radio" name="card-preview-preset" value="" ${!activeId ? "checked" : ""}> 默认</label>`;
+  let html = `<div class="card-preview-style-preset-list">`;
+  html += renderQuickPresetMenuItem("", { active: !activeId, name: "默认" });
   html += state.cardPreviewStylePresets.map(preset =>
-    `<label><input type="radio" name="card-preview-preset" value="${escapeHtml(preset.id)}" ${preset.id === activeId ? "checked" : ""}> ${escapeHtml(preset.name)}</label>`
+    renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
-  html += `<span class="popover-divider"></span>
+  html += `</div><span class="popover-divider"></span>
     <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理方案…</button>`;
   menu.innerHTML = html;
+  applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
 }
 
@@ -6081,10 +6255,8 @@ function wireCardPreviewStyleQuickMenu() {
   const menu = $("#cardPreviewStylePresetMenu");
   if (!dropdown || !menu) return;
   renderCardPreviewStyleQuickMenu();
-  menu.addEventListener("change", event => {
-    if (event.target.name !== "card-preview-preset") return;
-    applyCardPreviewStylePresetById(event.target.value || null);
-    dropdown.removeAttribute("open");
+  dropdown.addEventListener("toggle", () => {
+    if (dropdown.open) applyQuickPresetMenuStyles();
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
@@ -6092,7 +6264,12 @@ function wireCardPreviewStyleQuickMenu() {
       dropdown.removeAttribute("open");
       openCardPreviewStyleModal();
       setCardPreviewStyleModalTab("manage");
+      return;
     }
+    const item = event.target.closest("[data-preset-id]");
+    if (!item) return;
+    applyCardPreviewStylePresetById(item.dataset.presetId || null);
+    dropdown.removeAttribute("open");
   });
 }
 
@@ -7162,7 +7339,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.textContent = `本页 ${pageFonts.length} / ${state.filtered.length} 款`;
+  ui.viewStatus.innerHTML = `本页 ${pageFonts.length} / <span class="view-status-total">${state.filtered.length}</span> 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -8081,6 +8258,7 @@ function updatePreview() {
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
+  if ($("#cardPreviewStylePresetDropdown")?.open) applyQuickPresetMenuStyles();
 }
 
 function scheduleLazyCardTextUpdate() {
@@ -8526,6 +8704,60 @@ function resetSettings() {
   if (state.selected?.axes) renderAxes(state.selected.axes);
 }
 
+function loadPreviewTextHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PREVIEW_TEXT_HISTORY_KEY) || "[]");
+    return Array.isArray(value)
+      ? value.filter(item => typeof item === "string" && item.trim()).slice(0, PREVIEW_TEXT_HISTORY_LIMIT)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePreviewTextHistory(history) {
+  localStorage.setItem(PREVIEW_TEXT_HISTORY_KEY, JSON.stringify(history.slice(0, PREVIEW_TEXT_HISTORY_LIMIT)));
+}
+
+function pushPreviewTextHistory(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return;
+  const history = loadPreviewTextHistory().filter(item => item !== trimmed);
+  history.unshift(trimmed);
+  savePreviewTextHistory(history);
+}
+
+function renderPreviewInputHistory() {
+  const panel = ui.previewInputHistory;
+  if (!panel) return;
+  const history = loadPreviewTextHistory();
+  if (!history.length) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+  panel.innerHTML = history.map(text =>
+    `<button type="button" class="preview-history-item">${escapeHtml(text)}</button>`
+  ).join("");
+  panel.hidden = false;
+}
+
+function hidePreviewInputHistory() {
+  if (ui.previewInputHistory) ui.previewInputHistory.hidden = true;
+}
+
+function setCardPreviewInputValue(text, { save = true, recordHistory = false } = {}) {
+  ui.previewInput.value = text;
+  if (save) localStorage.setItem("font-preview-text", text);
+  if (recordHistory) pushPreviewTextHistory(text);
+  updatePreview();
+}
+
+function commitPreviewInputHistory() {
+  pushPreviewTextHistory(ui.previewInput.value);
+  renderPreviewInputHistory();
+}
+
 function escapeHtml(value = "") {
   const el = document.createElement("span"); el.textContent = value; return el.innerHTML;
 }
@@ -8544,6 +8776,39 @@ document.addEventListener("keydown", event => {
 ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
+});
+ui.previewInput.addEventListener("focus", () => {
+  renderPreviewInputHistory();
+});
+ui.previewInput.addEventListener("blur", () => {
+  commitPreviewInputHistory();
+  setTimeout(() => {
+    if (!ui.previewInputHistory?.matches(":hover") && !ui.previewInputHistory?.contains(document.activeElement)) {
+      hidePreviewInputHistory();
+    }
+  }, 120);
+});
+ui.previewInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    commitPreviewInputHistory();
+    hidePreviewInputHistory();
+  }
+  if (event.key === "Escape") hidePreviewInputHistory();
+});
+ui.previewInput.addEventListener("dblclick", event => {
+  event.preventDefault();
+  setCardPreviewInputValue(DEFAULT_CARD_PREVIEW_TEXT, { recordHistory: true });
+  renderPreviewInputHistory();
+});
+ui.previewInputHistory?.addEventListener("mousedown", event => event.preventDefault());
+ui.previewInputHistory?.addEventListener("click", event => {
+  const item = event.target.closest(".preview-history-item");
+  if (!item) return;
+  setCardPreviewInputValue(item.textContent, { recordHistory: false });
+  hidePreviewInputHistory();
+});
+document.addEventListener("pointerdown", event => {
+  if (!event.target.closest(".header-preview-input-wrap")) hidePreviewInputHistory();
 });
 ui.cardSampleSize.addEventListener("input", () => {
   applyCardSampleSize();

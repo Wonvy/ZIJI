@@ -5,6 +5,9 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
 0123456789
 ，。！？；：“”「」`;
+const DEFAULT_CARD_PREVIEW_TEXT = "字体有光";
+const PREVIEW_TEXT_HISTORY_KEY = "font-preview-text-history";
+const PREVIEW_TEXT_HISTORY_LIMIT = 10;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
 const DEFAULT_CHINESE_BRANDS = ["思源", "方正", "汉仪", "华文", "阿里巴巴", "站酷", "霞鹜", "鸿蒙", "小米", "文泉驿"];
 function loadCachedSearchBrands() {
@@ -531,7 +534,7 @@ const ui = {
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
   support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
   pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeOutput: $("#cardSampleSizeOutput"),
-  empty: $("#emptyState"), previewInput: $("#previewInput"), previewText: $("#previewText"),
+  empty: $("#emptyState"), previewInput: $("#previewInput"), previewInputHistory: $("#previewInputHistory"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
   cardMagnifier: $("#cardMagnifier"), cardMagnifiedText: $("#cardMagnifiedText"),
@@ -3118,6 +3121,54 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   return true;
 }
 
+function resolveQuickPresetStyle(presetId) {
+  if (!presetId) return null;
+  const preset = findCardPreviewStylePreset(presetId);
+  return preset ? preset.style : null;
+}
+
+function getQuickMenuPreviewFont() {
+  return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
+}
+
+function getQuickMenuPreviewChar() {
+  const text = cardPreviewText().trim();
+  return [...text][0] || MANAGE_PRESET_PREVIEW_CHAR;
+}
+
+function renderQuickPresetMenuItem(presetId, { active = false, name = "默认" } = {}) {
+  return `<button type="button" class="card-preview-style-preset-option${active ? " active is-current" : ""}" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(name)}">
+    <span class="preview-style-preset-glyph" aria-hidden="true">${escapeHtml(getQuickMenuPreviewChar())}</span>
+    <span class="card-preview-style-preset-name">${escapeHtml(name)}</span>
+  </button>`;
+}
+
+function applyQuickPresetMenuStyles() {
+  const menu = $("#cardPreviewStylePresetMenu");
+  if (!menu) return;
+  const font = getQuickMenuPreviewFont();
+  const previewChar = getQuickMenuPreviewChar();
+  menu.querySelectorAll(".card-preview-style-preset-option").forEach(item => {
+    const glyph = item.querySelector(".preview-style-preset-glyph");
+    if (!glyph) return;
+    glyph.textContent = previewChar;
+    if (font) {
+      registerFont(font);
+      glyph.style.fontFamily = cssName(font);
+    } else {
+      glyph.style.fontFamily = "";
+    }
+    applyCardPreviewStyleToElement(glyph, resolveQuickPresetStyle(item.dataset.presetId || ""), { themeDefault: true });
+  });
+  if (!font) return;
+  ensureFontLoaded(font, previewChar).then(() => {
+    if (!menu.isConnected) return;
+    menu.querySelectorAll(".card-preview-style-preset-option .preview-style-preset-glyph").forEach(glyph => {
+      glyph.style.fontFamily = cssName(font);
+    });
+  });
+}
+
 function syncCardPreviewStyleButtonLabel() {
   const button = $("#cardPreviewStyleButton");
   if (!button) return;
@@ -3133,13 +3184,15 @@ function renderCardPreviewStyleQuickMenu() {
   const menu = $("#cardPreviewStylePresetMenu");
   if (!menu) return;
   const activeId = state.activeCardPreviewStylePresetId || "";
-  let html = `<label><input type="radio" name="card-preview-preset" value="" ${!activeId ? "checked" : ""}> 默认</label>`;
+  let html = `<div class="card-preview-style-preset-list">`;
+  html += renderQuickPresetMenuItem("", { active: !activeId, name: "默认" });
   html += state.cardPreviewStylePresets.map(preset =>
-    `<label><input type="radio" name="card-preview-preset" value="${escapeHtml(preset.id)}" ${preset.id === activeId ? "checked" : ""}> ${escapeHtml(preset.name)}</label>`
+    renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
-  html += `<span class="popover-divider"></span>
+  html += `</div><span class="popover-divider"></span>
     <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理方案…</button>`;
   menu.innerHTML = html;
+  applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
 }
 
@@ -3148,10 +3201,8 @@ function wireCardPreviewStyleQuickMenu() {
   const menu = $("#cardPreviewStylePresetMenu");
   if (!dropdown || !menu) return;
   renderCardPreviewStyleQuickMenu();
-  menu.addEventListener("change", event => {
-    if (event.target.name !== "card-preview-preset") return;
-    applyCardPreviewStylePresetById(event.target.value || null);
-    dropdown.removeAttribute("open");
+  dropdown.addEventListener("toggle", () => {
+    if (dropdown.open) applyQuickPresetMenuStyles();
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
@@ -3159,7 +3210,12 @@ function wireCardPreviewStyleQuickMenu() {
       dropdown.removeAttribute("open");
       openCardPreviewStyleModal();
       setCardPreviewStyleModalTab("manage");
+      return;
     }
+    const item = event.target.closest("[data-preset-id]");
+    if (!item) return;
+    applyCardPreviewStylePresetById(item.dataset.presetId || null);
+    dropdown.removeAttribute("open");
   });
 }
 
@@ -4229,7 +4285,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.textContent = `本页 ${pageFonts.length} / ${state.filtered.length} 款`;
+  ui.viewStatus.innerHTML = `本页 ${pageFonts.length} / <span class="view-status-total">${state.filtered.length}</span> 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -5148,6 +5204,7 @@ function updatePreview() {
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
+  if ($("#cardPreviewStylePresetDropdown")?.open) applyQuickPresetMenuStyles();
 }
 
 function scheduleLazyCardTextUpdate() {
@@ -5593,6 +5650,60 @@ function resetSettings() {
   if (state.selected?.axes) renderAxes(state.selected.axes);
 }
 
+function loadPreviewTextHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PREVIEW_TEXT_HISTORY_KEY) || "[]");
+    return Array.isArray(value)
+      ? value.filter(item => typeof item === "string" && item.trim()).slice(0, PREVIEW_TEXT_HISTORY_LIMIT)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePreviewTextHistory(history) {
+  localStorage.setItem(PREVIEW_TEXT_HISTORY_KEY, JSON.stringify(history.slice(0, PREVIEW_TEXT_HISTORY_LIMIT)));
+}
+
+function pushPreviewTextHistory(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return;
+  const history = loadPreviewTextHistory().filter(item => item !== trimmed);
+  history.unshift(trimmed);
+  savePreviewTextHistory(history);
+}
+
+function renderPreviewInputHistory() {
+  const panel = ui.previewInputHistory;
+  if (!panel) return;
+  const history = loadPreviewTextHistory();
+  if (!history.length) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+  panel.innerHTML = history.map(text =>
+    `<button type="button" class="preview-history-item">${escapeHtml(text)}</button>`
+  ).join("");
+  panel.hidden = false;
+}
+
+function hidePreviewInputHistory() {
+  if (ui.previewInputHistory) ui.previewInputHistory.hidden = true;
+}
+
+function setCardPreviewInputValue(text, { save = true, recordHistory = false } = {}) {
+  ui.previewInput.value = text;
+  if (save) localStorage.setItem("font-preview-text", text);
+  if (recordHistory) pushPreviewTextHistory(text);
+  updatePreview();
+}
+
+function commitPreviewInputHistory() {
+  pushPreviewTextHistory(ui.previewInput.value);
+  renderPreviewInputHistory();
+}
+
 function escapeHtml(value = "") {
   const el = document.createElement("span"); el.textContent = value; return el.innerHTML;
 }
@@ -5611,6 +5722,39 @@ document.addEventListener("keydown", event => {
 ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
+});
+ui.previewInput.addEventListener("focus", () => {
+  renderPreviewInputHistory();
+});
+ui.previewInput.addEventListener("blur", () => {
+  commitPreviewInputHistory();
+  setTimeout(() => {
+    if (!ui.previewInputHistory?.matches(":hover") && !ui.previewInputHistory?.contains(document.activeElement)) {
+      hidePreviewInputHistory();
+    }
+  }, 120);
+});
+ui.previewInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    commitPreviewInputHistory();
+    hidePreviewInputHistory();
+  }
+  if (event.key === "Escape") hidePreviewInputHistory();
+});
+ui.previewInput.addEventListener("dblclick", event => {
+  event.preventDefault();
+  setCardPreviewInputValue(DEFAULT_CARD_PREVIEW_TEXT, { recordHistory: true });
+  renderPreviewInputHistory();
+});
+ui.previewInputHistory?.addEventListener("mousedown", event => event.preventDefault());
+ui.previewInputHistory?.addEventListener("click", event => {
+  const item = event.target.closest(".preview-history-item");
+  if (!item) return;
+  setCardPreviewInputValue(item.textContent, { recordHistory: false });
+  hidePreviewInputHistory();
+});
+document.addEventListener("pointerdown", event => {
+  if (!event.target.closest(".header-preview-input-wrap")) hidePreviewInputHistory();
 });
 ui.cardSampleSize.addEventListener("input", () => {
   applyCardSampleSize();

@@ -28,10 +28,13 @@
           </span>
         </a>
         <div class="header-preview">
-          <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
-            <span class="preview-control-label">预览文字</span>
-            <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" />
-          </label>
+          <div class="header-preview-input-wrap search-control">
+            <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
+              <span class="preview-control-label">预览文字</span>
+              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击恢复默认预览文字" />
+            </label>
+            <div id="previewInputHistory" class="preview-input-history" hidden aria-label="预览文字历史"></div>
+          </div>
           <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
           </button>
@@ -45,6 +48,14 @@
     <main>
       <section id="welcome" class="welcome">
         <div class="welcome-inner">
+          <span class="welcome-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
+              <path class="logo-guide" d="M13 34h22"></path>
+              <path class="logo-glyph" d="M16 15h16M24 15v20M18 23h12M20 30l4-7 4 7"></path>
+              <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
+            </svg>
+          </span>
           <h1>字己<span class="welcome-accent">找字也找自己</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
@@ -56,8 +67,8 @@
             <div class="progress-track"><i id="progressBar"></i></div>
             <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
-          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge</p>
         </div>
+        <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
       </section>
 
       <section id="workspace" class="workspace" hidden>
