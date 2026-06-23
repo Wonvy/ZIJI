@@ -2052,22 +2052,19 @@ function clearGradientStopDragFeedback(scope = draggingGradientScope) {
   const wrap = getGradientBarWrap(scope);
   wrap?.classList.remove("is-stop-delete-ready", "is-stop-dragging");
   wrap?.querySelector(".preview-gradient-stop-handle.dragging")?.classList.remove("is-delete-intent");
-  wrap?.querySelector(".preview-gradient-delete-zone")?.setAttribute("hidden", "");
   wrap?.querySelector(".preview-gradient-position-indicator")?.setAttribute("hidden", "");
 }
 
 function updateGradientStopDragFeedback(event, scope = draggingGradientScope) {
   const wrap = getGradientBarWrap(scope);
   const target = getGradientEditTarget(scope);
-  const track = wrap?.querySelector(".preview-gradient-stops-track");
-  if (!wrap || !track || !target) return;
-  const trackRect = track.getBoundingClientRect();
+  const bar = wrap?.querySelector(".preview-gradient-bar");
+  if (!wrap || !bar || !target) return;
+  const barRect = bar.getBoundingClientRect();
   const canDelete = target.stops.length > 2;
-  draggingGradientDeleteIntent = canDelete && event.clientY > trackRect.bottom + 18;
+  draggingGradientDeleteIntent = canDelete && event.clientY < barRect.top;
   wrap.classList.toggle("is-stop-delete-ready", draggingGradientDeleteIntent);
   wrap.classList.toggle("is-stop-dragging", draggingGradientStopIndex !== null);
-  const deleteZone = wrap.querySelector(".preview-gradient-delete-zone");
-  if (deleteZone) deleteZone.hidden = !(draggingGradientStopIndex !== null && canDelete);
   wrap.querySelector(".preview-gradient-stop-handle.dragging")
     ?.classList.toggle("is-delete-intent", draggingGradientDeleteIntent);
 }
@@ -2268,14 +2265,13 @@ function renderGradientStopsEditor(target, scope) {
         <span class="preview-gradient-position-tag"></span>
       </div>
       <div class="preview-gradient-stops-track">${handles}</div>
-      <div class="preview-gradient-delete-zone" hidden>拖到此处删除色标</div>
     </div>
     <div class="preview-gradient-stop-controls">
       <label class="preview-style-field preview-gradient-stop-color"><span>色标颜色</span><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" value="${escapeHtml(selected.color)}" /></label>
       ${renderStyleRangeField({ label: "色标不透明度", min: 0, max: 100, step: 1 }, selected.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" aria-label="色标不透明度"`)}
     </div>
     ${renderStyleRangeField({ label: "角度", min: 0, max: 360, step: 1 }, target.angle, `data-gradient-field="angle" data-gradient-scope="${scope}" aria-label="渐变角度"`)}
-    <p class="preview-gradient-hint">点击色带添加色标，左右拖动调整位置，拖到下方删除（至少保留 2 个）</p>
+    <p class="preview-gradient-hint">点击色带添加色标，左右拖动调整位置，向上拖出色带删除（至少保留 2 个）</p>
   </div>`;
 }
 
@@ -3048,9 +3044,6 @@ function wireCardPreviewStyleModal() {
     handle.setPointerCapture(event.pointerId);
     const wrap = getGradientBarWrap(draggingGradientScope);
     wrap?.classList.add("is-stop-dragging");
-    const deleteZone = wrap?.querySelector(".preview-gradient-delete-zone");
-    const target = getGradientEditTarget(draggingGradientScope);
-    if (deleteZone) deleteZone.hidden = !(target && target.stops.length > 2);
     refreshGradientBarVisuals(draggingGradientScope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {

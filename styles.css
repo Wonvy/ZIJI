@@ -1576,7 +1576,7 @@ kbd,
 }
 .preview-gradient-bar-wrap {
   position: relative;
-  padding: 22px 10px 30px;
+  padding: 22px 10px 26px;
 }
 .preview-gradient-bar {
   position: relative;
@@ -1590,7 +1590,7 @@ kbd,
 .preview-gradient-position-indicator {
   position: absolute;
   top: 22px;
-  bottom: 30px;
+  bottom: 26px;
   left: 0;
   z-index: 1;
   width: 0;
@@ -1681,29 +1681,12 @@ kbd,
     drop-shadow(0 0 0 1px #fff)
     drop-shadow(0 0 0 2px rgba(232,88,50,.55));
 }
-.preview-gradient-delete-zone {
-  position: absolute;
-  right: 10px;
-  bottom: 0;
-  left: 10px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
-  border-radius: 3px;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-  font-size: 10px;
-  pointer-events: none;
-}
-.preview-gradient-delete-zone[hidden] { display: none !important; }
-.preview-gradient-bar-wrap.is-stop-delete-ready .preview-gradient-delete-zone {
-  color: var(--accent);
-  border-style: solid;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
 .preview-gradient-bar-wrap.is-stop-dragging .preview-gradient-bar {
   outline: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 1px;
+}
+.preview-gradient-bar-wrap.is-stop-delete-ready .preview-gradient-bar {
+  outline: 1px dashed var(--accent);
   outline-offset: 1px;
 }
 .preview-gradient-stop-controls {

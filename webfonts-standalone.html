@@ -1584,7 +1584,7 @@ kbd,
 }
 .preview-gradient-bar-wrap {
   position: relative;
-  padding: 22px 10px 30px;
+  padding: 22px 10px 26px;
 }
 .preview-gradient-bar {
   position: relative;
@@ -4393,22 +4393,19 @@ function clearGradientStopDragFeedback(scope = draggingGradientScope) {
   const wrap = getGradientBarWrap(scope);
   wrap?.classList.remove("is-stop-delete-ready", "is-stop-dragging");
   wrap?.querySelector(".preview-gradient-stop-handle.dragging")?.classList.remove("is-delete-intent");
-  wrap?.querySelector(".preview-gradient-delete-zone")?.setAttribute("hidden", "");
   wrap?.querySelector(".preview-gradient-position-indicator")?.setAttribute("hidden", "");
 }
 
 function updateGradientStopDragFeedback(event, scope = draggingGradientScope) {
   const wrap = getGradientBarWrap(scope);
   const target = getGradientEditTarget(scope);
-  const track = wrap?.querySelector(".preview-gradient-stops-track");
-  if (!wrap || !track || !target) return;
-  const trackRect = track.getBoundingClientRect();
+  const bar = wrap?.querySelector(".preview-gradient-bar");
+  if (!wrap || !bar || !target) return;
+  const barRect = bar.getBoundingClientRect();
   const canDelete = target.stops.length > 2;
-  draggingGradientDeleteIntent = canDelete && event.clientY > trackRect.bottom + 18;
+  draggingGradientDeleteIntent = canDelete && event.clientY < barRect.top;
   wrap.classList.toggle("is-stop-delete-ready", draggingGradientDeleteIntent);
   wrap.classList.toggle("is-stop-dragging", draggingGradientStopIndex !== null);
-  const deleteZone = wrap.querySelector(".preview-gradient-delete-zone");
-  if (deleteZone) deleteZone.hidden = !(draggingGradientStopIndex !== null && canDelete);
   wrap.querySelector(".preview-gradient-stop-handle.dragging")
     ?.classList.toggle("is-delete-intent", draggingGradientDeleteIntent);
 }
@@ -4609,7 +4606,6 @@ function renderGradientStopsEditor(target, scope) {
         <span class="preview-gradient-position-tag"></span>
       </div>
       <div class="preview-gradient-stops-track">${handles}</div>
-      <div class="preview-gradient-delete-zone" hidden>拖到此处删除色标</div>
     </div>
     <div class="preview-gradient-stop-controls">
       <label class="preview-style-field preview-gradient-stop-color"><span>色标颜色</span><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" value="${escapeHtml(selected.color)}" /></label>
