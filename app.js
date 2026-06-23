@@ -1949,11 +1949,6 @@ function createPreviewSvgUse(sourceId) {
   return use;
 }
 
-function previewSvgStrokePaintWidth(layer, unitsPerPx = 1) {
-  const position = resolveStrokePosition(layer);
-  return scalePreviewStylePx(Number(layer.width) || 1, unitsPerPx) * (position === "center" ? 1 : 2);
-}
-
 function buildPreviewSvgTextStack(root, host, style) {
   const normalized = normalizeCardPreviewStyle(style);
   const text = root.dataset.previewText || "";
@@ -2001,14 +1996,7 @@ function buildPreviewSvgTextStack(root, host, style) {
     key,
     layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
   }));
-  const svgDrawLayers = [
-    ...orderedSvgLayers.filter(item => item.layer?.type === "dropShadow"),
-    ...orderedSvgLayers
-      .filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) !== "inside")
-      .sort((a, b) => previewSvgStrokePaintWidth(b.layer) - previewSvgStrokePaintWidth(a.layer)),
-    ...orderedSvgLayers.filter(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID),
-    ...orderedSvgLayers.filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) === "inside")
-  ];
+  const svgDrawLayers = [...orderedSvgLayers].reverse();
   svgDrawLayers.forEach(({ key, layer }, index) => {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       const fillUse = createPreviewSvgUse(sourceId);
@@ -2048,7 +2036,7 @@ function buildPreviewSvgTextStack(root, host, style) {
     }
     if (!isStrokeLayer(layer)) return;
     const position = resolveStrokePosition(layer);
-    const strokeWidth = previewSvgStrokePaintWidth(layer);
+    const strokeWidth = (Number(layer.width) || 1) * (position === "center" ? 1 : 2);
     const strokeUse = createPreviewSvgUse(sourceId);
     setPreviewSvgAttrs(strokeUse, {
       fill: "none",
@@ -2685,14 +2673,7 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     key,
     layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
   }));
-  const svgDrawLayers = [
-    ...orderedSvgLayers.filter(item => item.layer?.type === "dropShadow"),
-    ...orderedSvgLayers
-      .filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) !== "inside")
-      .sort((a, b) => previewSvgStrokePaintWidth(b.layer, unitsPerPx) - previewSvgStrokePaintWidth(a.layer, unitsPerPx)),
-    ...orderedSvgLayers.filter(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID),
-    ...orderedSvgLayers.filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) === "inside")
-  ];
+  const svgDrawLayers = [...orderedSvgLayers].reverse();
   svgDrawLayers.forEach(({ key, layer }, index) => {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       body += usePath(` fill="${fillValue}"`);
@@ -2714,7 +2695,7 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     }
     if (!isStrokeLayer(layer)) return;
     const position = resolveStrokePosition(layer);
-    const strokeWidth = previewSvgStrokePaintWidth(layer, unitsPerPx);
+    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * (position === "center" ? 1 : 2);
     let clipAttr = "";
     if (position === "inside") {
       const clipId = `preview-clip-${index}`;
@@ -3595,8 +3576,10 @@ function renderCardPreviewStyleManagePanel() {
   list.innerHTML = html;
   applyManagePresetIconStyles();
   const hasPreset = Boolean(cardPreviewStyleManagePresetId);
+  const editBtn = $("#cardPreviewStyleManageEdit");
   const renameBtn = $("#cardPreviewStyleManageRename");
   const deleteBtn = $("#cardPreviewStyleManageDelete");
+  if (editBtn) editBtn.disabled = !hasPreset;
   if (renameBtn) renameBtn.disabled = !hasPreset;
   if (deleteBtn) deleteBtn.disabled = !hasPreset;
 }
@@ -3785,6 +3768,10 @@ function wireCardPreviewStyleQuickMenu() {
 }
 
 function loadManagePresetToEdit() {
+  if (!cardPreviewStyleManagePresetId) {
+    toast("默认样式不可编辑，请新建样式");
+    return;
+  }
   loadCardPreviewStylePresetDraft(cardPreviewStyleManagePresetId || null);
   setCardPreviewStyleModalTab("edit");
 }
