@@ -531,7 +531,7 @@ const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
-  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
+  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, pointerInHeader: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
@@ -859,6 +859,42 @@ function syncToolbarPreview(font) {
   ui.previewInput.style.fontVariationSettings = toolbarVariationSettings();
   $("#previewInputWrap")?.classList.add("is-previewing");
   syncDetailMetaFonts(font);
+}
+
+function shouldHeaderCardPreviewFocus() {
+  return ["grid", "focus"].includes(state.view)
+    && state.pointerInFontView
+    && Boolean(state.hovered)
+    && !state.pointerInHeader;
+}
+
+function updateHeaderCardPreviewFocus() {
+  document.body.classList.toggle("header-card-preview-focus", shouldHeaderCardPreviewFocus());
+  syncHeaderPreviewFocusDisplay();
+}
+
+function syncHeaderPreviewFocusDisplay() {
+  const display = $("#headerPreviewFocusDisplay");
+  if (!display) return;
+  if (!shouldHeaderCardPreviewFocus() || !state.previewed) {
+    display.hidden = true;
+    display.replaceChildren();
+    clearCardPreviewStyleOnElement(display);
+    display.style.fontFamily = "";
+    display.style.fontVariationSettings = "";
+    return;
+  }
+  const font = state.previewed;
+  const text = cardPreviewText();
+  display.hidden = false;
+  registerFont(font);
+  display.style.fontFamily = cssName(font);
+  display.style.fontVariationSettings = toolbarVariationSettings();
+  applyCardPreviewStyleToElement(display, state.cardPreviewStyle, { themeDefault: true, text });
+  ensureFontLoaded(font, text).then(() => {
+    if (!display.isConnected || !shouldHeaderCardPreviewFocus()) return;
+    display.style.fontFamily = cssName(font);
+  });
 }
 
 function syncDetailMetaFonts(font) {
@@ -2240,6 +2276,7 @@ function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
 function applyCardPreviewStyleToAllCards() {
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => applyCardPreviewStyleToSample(sample));
   renderCardPreviewStyleModalPreview();
+  syncHeaderPreviewFocusDisplay();
 }
 
 function clearCardPreviewStyleOnElement(element) {
@@ -4720,6 +4757,7 @@ function previewFont(font, temporary = true, { immediate = false } = {}) {
   clearTimeout(previewFont.timer);
   registerFont(font);
   syncToolbarPreview(font);
+  if (temporary) updateHeaderCardPreviewFocus();
   ui.selectedName.textContent = font.displayName || font.fullName || font.family;
   ui.selectedStyle.textContent = font.style || "REGULAR";
   ui.previewText.style.fontFamily = cssName(font);
@@ -4771,6 +4809,7 @@ function clearPreview() {
 
 function restorePinnedPreview() {
   state.hovered = null;
+  updateHeaderCardPreviewFocus();
   if (state.selected) previewFont(state.selected, false);
   else clearPreview();
 }
@@ -5292,6 +5331,7 @@ function updateVariation() {
     ui.previewInput.style.fontVariationSettings = value;
     ui.selectedName.style.fontVariationSettings = value;
     ui.selectedStyle.style.fontVariationSettings = value;
+    if (document.body.classList.contains("header-card-preview-focus")) syncHeaderPreviewFocusDisplay();
   }
 }
 
@@ -5307,6 +5347,7 @@ function updatePreview() {
     }
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
+  if (document.body.classList.contains("header-card-preview-focus")) syncHeaderPreviewFocusDisplay();
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
   if ($("#cardPreviewStylePresetDropdown")?.open || $(".card-preview-style-menu")?.matches(":hover")) applyQuickPresetMenuStyles();
@@ -6049,6 +6090,7 @@ function updateFilterControls() {
 function setView(view) {
   view = normalizeView(view);
   state.view = view;
+  updateHeaderCardPreviewFocus();
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#singleViewButton").classList.toggle("active", view === "single");
   const focusViewToggle = $("#focusViewToggle");
@@ -6081,8 +6123,26 @@ ui.list.addEventListener("wheel", event => {
 }, { passive: false });
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
 ui.nextPage.addEventListener("click", () => goToPage(state.page + 1));
-ui.list.addEventListener("pointerenter", () => state.pointerInFontView = true);
-ui.list.addEventListener("pointerleave", () => state.pointerInFontView = false);
+ui.list.addEventListener("pointerenter", () => {
+  state.pointerInFontView = true;
+  updateHeaderCardPreviewFocus();
+});
+ui.list.addEventListener("pointerleave", event => {
+  state.pointerInFontView = false;
+  updateHeaderCardPreviewFocus();
+  if (event.relatedTarget?.closest?.(".topbar")) return;
+  hideMagnifier(ui.cardMagnifier);
+  restorePinnedPreview();
+});
+const topbar = $(".topbar");
+topbar?.addEventListener("pointerenter", () => {
+  state.pointerInHeader = true;
+  updateHeaderCardPreviewFocus();
+});
+topbar?.addEventListener("pointerleave", () => {
+  state.pointerInHeader = false;
+  updateHeaderCardPreviewFocus();
+});
 document.addEventListener("keydown", event => {
   if (!state.pointerInFontView || event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.target.matches("input, textarea, select, [contenteditable='true']")) return;
@@ -6231,10 +6291,6 @@ ui.list.addEventListener("contextmenu", event => {
   if (!card) return hideContextMenu();
   const font = state.fonts.find(item => item.id === Number(card.dataset.id));
   if (font) showContextMenu(font, event.clientX, event.clientY);
-});
-ui.list.addEventListener("pointerleave", () => {
-  hideMagnifier(ui.cardMagnifier);
-  restorePinnedPreview();
 });
 ui.list.addEventListener("dragstart", event => {
   const card = event.target.closest(".font-card");

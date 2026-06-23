@@ -767,6 +767,44 @@ kbd,
   stroke-linecap: round;
 }
 .magnifier-toolbar-button.active { color: white; border-color: var(--accent); background: var(--accent); }
+.header-preview-focus-display {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: calc(var(--topbar-height) - 24px);
+  padding: 0 16px;
+  overflow: hidden;
+  pointer-events: none;
+  font-size: clamp(36px, 6.8vw, 92px);
+  line-height: 1.04;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+body.header-card-preview-focus .header-preview {
+  z-index: 3;
+  align-items: center;
+  width: min(calc(100vw - 180px), 980px);
+}
+body.header-card-preview-focus .header-preview-input-wrap,
+body.header-card-preview-focus #magnifierButton {
+  visibility: hidden;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+body.header-card-preview-focus .header-preview-focus-display:not([hidden]) {
+  display: flex;
+}
+body.header-card-preview-focus .preview-input-history {
+  display: none !important;
+}
 .toolbar-filters .filter-menu { position: relative; z-index: 1; }
 .toolbar-filters .filter-menu[open] { z-index: 40; }
 .toolbar-filters .filter-menu,
