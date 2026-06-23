@@ -403,6 +403,31 @@ async function loadFonts() {
   }
 }
 
+function compareFontName(a, b) {
+  return (a.displayName || a.family).localeCompare(b.displayName || b.family, "zh-CN");
+}
+
+function fontLanguageRank(font, { prefer = "chinese" } = {}) {
+  const chinese = font.details?.supportsChinese;
+  const latin = font.details?.supportsLatin;
+  if (font.details) {
+    if (prefer === "chinese") {
+      if (chinese && !latin) return 0;
+      if (chinese && latin) return 1;
+      if (latin) return 2;
+      return 3;
+    }
+    if (latin && !chinese) return 0;
+    if (latin && chinese) return 1;
+    if (chinese) return 2;
+    return 3;
+  }
+  const name = font.displayName || font.family || "";
+  if (/\p{Script=Han}/u.test(name)) return prefer === "chinese" ? 0 : 2;
+  if (/^[A-Za-z0-9\s.-]+$/.test(name)) return prefer === "latin" ? 0 : 2;
+  return 3;
+}
+
 function applyFilter() {
   const query = ui.search.value.trim().toLowerCase().replace(/\s/g, "");
   state.filtered = state.fonts.filter(font => {
@@ -424,10 +449,20 @@ function applyFilter() {
       const favoriteDifference = Number(state.favorites.has(b.postscriptName)) - Number(state.favorites.has(a.postscriptName));
       if (favoriteDifference) return favoriteDifference;
     }
+    if (state.sort === "chinese-first") {
+      const rankDifference = fontLanguageRank(a, { prefer: "chinese" }) - fontLanguageRank(b, { prefer: "chinese" });
+      if (rankDifference) return rankDifference;
+      return compareFontName(a, b);
+    }
+    if (state.sort === "latin-first") {
+      const rankDifference = fontLanguageRank(a, { prefer: "latin" }) - fontLanguageRank(b, { prefer: "latin" });
+      if (rankDifference) return rankDifference;
+      return compareFontName(a, b);
+    }
     if (state.sort === "square") return Math.abs((a.aspectRatio ?? 99) - 1) - Math.abs((b.aspectRatio ?? 99) - 1);
     if (state.sort === "narrow") return (a.aspectRatio ?? 99) - (b.aspectRatio ?? 99);
     if (state.sort === "wide") return (b.aspectRatio ?? -1) - (a.aspectRatio ?? -1);
-    return (a.displayName || a.family).localeCompare(b.displayName || b.family, "zh-CN");
+    return compareFontName(a, b);
   });
   state.page = 0;
   renderFavoriteSidebar();
@@ -2018,6 +2053,7 @@ $("#cardDensity").addEventListener("input", event => {
 $("#sortSelect").addEventListener("change", event => {
   state.sort = event.target.value;
   if (["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)) scanFontShapes();
+  else if (["chinese-first", "latin-first"].includes(state.sort) && state.fonts.some(font => !font.details)) scanFontCapabilities();
   else applyFilter();
 });
 document.querySelectorAll("[data-language]").forEach(input => input.addEventListener("change", () => {

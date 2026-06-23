@@ -427,7 +427,7 @@ kbd,
 .toolbar-view .view-button:nth-child(4) { font-size: 13px; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .density-control input { width: 120px; }
-.toolbar-view .sort-select { height: 28px; max-width: 108px; padding: 0 24px 0 7px; font-size: 10px; }
+.toolbar-view .sort-select { height: 28px; max-width: 128px; padding: 0 24px 0 7px; font-size: 10px; }
 .filter-divider { width: 1px; height: 16px; margin: 0 1px; background: var(--line); }
 .filter-menu { position: relative; height: 26px; z-index: 1; }
 .filter-menu[open] { z-index: 40; }
@@ -457,6 +457,8 @@ kbd,
 .density-control { display: flex; align-items: center; gap: 4px; margin-left: 2px; color: var(--muted); font-size: 9px; }
 .density-control input { width: 120px; }
 .sort-select { height: 28px; padding: 0 24px 0 7px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: var(--ink); background: var(--paper); font-size: 10px; }
+.sort-select optgroup { color: var(--muted); font-size: 10px; font-weight: 600; font-style: normal; }
+.sort-select option { color: var(--ink); font-weight: 400; }
 .card-area .scan-progress { margin: 6px 0 4px; }
 .font-list.card-grid {
   min-height: 0;
@@ -977,11 +979,19 @@ kbd,
                 <button id="focusViewButton" class="view-button" title="无干扰视图" aria-label="无干扰视图">净</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
                 <select id="sortSelect" class="sort-select" aria-label="字体排序">
-                  <option value="name">名称排序</option>
-                  <option value="favorite">收藏优先</option>
-                  <option value="square">首字接近正方形</option>
-                  <option value="narrow">首字由瘦到宽</option>
-                  <option value="wide">首字由宽到瘦</option>
+                  <optgroup label="常规">
+                    <option value="name">名称排序</option>
+                    <option value="favorite">收藏优先</option>
+                  </optgroup>
+                  <optgroup label="语言">
+                    <option value="chinese-first">中文优先</option>
+                    <option value="latin-first">英文优先</option>
+                  </optgroup>
+                  <optgroup label="字形比例">
+                    <option value="square">首字接近正方形</option>
+                    <option value="narrow">首字由瘦到宽</option>
+                    <option value="wide">首字由宽到瘦</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -1522,6 +1532,31 @@ async function loadFonts() {
   }
 }
 
+function compareFontName(a, b) {
+  return (a.displayName || a.family).localeCompare(b.displayName || b.family, "zh-CN");
+}
+
+function fontLanguageRank(font, { prefer = "chinese" } = {}) {
+  const chinese = font.details?.supportsChinese;
+  const latin = font.details?.supportsLatin;
+  if (font.details) {
+    if (prefer === "chinese") {
+      if (chinese && !latin) return 0;
+      if (chinese && latin) return 1;
+      if (latin) return 2;
+      return 3;
+    }
+    if (latin && !chinese) return 0;
+    if (latin && chinese) return 1;
+    if (chinese) return 2;
+    return 3;
+  }
+  const name = font.displayName || font.family || "";
+  if (/\p{Script=Han}/u.test(name)) return prefer === "chinese" ? 0 : 2;
+  if (/^[A-Za-z0-9\s.-]+$/.test(name)) return prefer === "latin" ? 0 : 2;
+  return 3;
+}
+
 function applyFilter() {
   const query = ui.search.value.trim().toLowerCase().replace(/\s/g, "");
   state.filtered = state.fonts.filter(font => {
@@ -1543,10 +1578,20 @@ function applyFilter() {
       const favoriteDifference = Number(state.favorites.has(b.postscriptName)) - Number(state.favorites.has(a.postscriptName));
       if (favoriteDifference) return favoriteDifference;
     }
+    if (state.sort === "chinese-first") {
+      const rankDifference = fontLanguageRank(a, { prefer: "chinese" }) - fontLanguageRank(b, { prefer: "chinese" });
+      if (rankDifference) return rankDifference;
+      return compareFontName(a, b);
+    }
+    if (state.sort === "latin-first") {
+      const rankDifference = fontLanguageRank(a, { prefer: "latin" }) - fontLanguageRank(b, { prefer: "latin" });
+      if (rankDifference) return rankDifference;
+      return compareFontName(a, b);
+    }
     if (state.sort === "square") return Math.abs((a.aspectRatio ?? 99) - 1) - Math.abs((b.aspectRatio ?? 99) - 1);
     if (state.sort === "narrow") return (a.aspectRatio ?? 99) - (b.aspectRatio ?? 99);
     if (state.sort === "wide") return (b.aspectRatio ?? -1) - (a.aspectRatio ?? -1);
-    return (a.displayName || a.family).localeCompare(b.displayName || b.family, "zh-CN");
+    return compareFontName(a, b);
   });
   state.page = 0;
   renderFavoriteSidebar();

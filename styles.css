@@ -419,7 +419,7 @@ kbd,
 .toolbar-view .view-button:nth-child(4) { font-size: 13px; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .density-control input { width: 120px; }
-.toolbar-view .sort-select { height: 28px; max-width: 108px; padding: 0 24px 0 7px; font-size: 10px; }
+.toolbar-view .sort-select { height: 28px; max-width: 128px; padding: 0 24px 0 7px; font-size: 10px; }
 .filter-divider { width: 1px; height: 16px; margin: 0 1px; background: var(--line); }
 .filter-menu { position: relative; height: 26px; z-index: 1; }
 .filter-menu[open] { z-index: 40; }
@@ -449,6 +449,8 @@ kbd,
 .density-control { display: flex; align-items: center; gap: 4px; margin-left: 2px; color: var(--muted); font-size: 9px; }
 .density-control input { width: 120px; }
 .sort-select { height: 28px; padding: 0 24px 0 7px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: var(--ink); background: var(--paper); font-size: 10px; }
+.sort-select optgroup { color: var(--muted); font-size: 10px; font-weight: 600; font-style: normal; }
+.sort-select option { color: var(--ink); font-weight: 400; }
 .card-area .scan-progress { margin: 6px 0 4px; }
 .font-list.card-grid {
   min-height: 0;

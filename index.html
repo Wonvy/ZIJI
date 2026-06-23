@@ -112,11 +112,19 @@
                 <button id="focusViewButton" class="view-button" title="无干扰视图" aria-label="无干扰视图">净</button>
                 <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
                 <select id="sortSelect" class="sort-select" aria-label="字体排序">
-                  <option value="name">名称排序</option>
-                  <option value="favorite">收藏优先</option>
-                  <option value="square">首字接近正方形</option>
-                  <option value="narrow">首字由瘦到宽</option>
-                  <option value="wide">首字由宽到瘦</option>
+                  <optgroup label="常规">
+                    <option value="name">名称排序</option>
+                    <option value="favorite">收藏优先</option>
+                  </optgroup>
+                  <optgroup label="语言">
+                    <option value="chinese-first">中文优先</option>
+                    <option value="latin-first">英文优先</option>
+                  </optgroup>
+                  <optgroup label="字形比例">
+                    <option value="square">首字接近正方形</option>
+                    <option value="narrow">首字由瘦到宽</option>
+                    <option value="wide">首字由宽到瘦</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
