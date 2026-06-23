@@ -656,7 +656,7 @@ function stepFamilyFont(font, direction) {
   return true;
 }
 
-const CARD_WHEEL_NO_PAGE = ".card-family-switch, .card-family-menu, .card-family-option, strong, .star, .card-actions, .card-copy, .card-copy-svg, small";
+const CARD_WHEEL_NO_PAGE = ".card-family-switch, .card-family-menu, .card-family-option, strong, .star, .card-actions, .card-download-svg, .card-copy, .card-copy-svg, small";
 
 function isCardWheelPageZone(target, card) {
   if (!card?.contains(target)) return false;
@@ -1010,6 +1010,7 @@ function pickInitialDisplayName(family = "", fullName = "") {
 }
 
 const CARD_SVG_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path fill="currentColor" d="M7 8h10v2H7zm0 3h10v2H7zm0 3h7v2H7z"/></svg>`;
+const CARD_DOWNLOAD_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.5 10.5 12 14l3.5-3.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M5 18h14"/></svg>`;
 
 function escapeXml(value = "") {
   return String(value)
@@ -1021,6 +1022,138 @@ function escapeXml(value = "") {
 
 function formatOutlineNumber(value) {
   return Math.round(value * 10) / 10;
+}
+
+function pathMove(x, y) { return { type: "M", args: [x, y] }; }
+function pathLine(x, y) { return { type: "L", args: [x, y] }; }
+function pathQuad(cx, cy, x, y) { return { type: "Q", args: [cx, cy, x, y] }; }
+function pathClose() { return { type: "Z", args: [] }; }
+
+function pathCommandToSvg(command) {
+  if (command.type === "Z") return "Z";
+  const nums = command.args.map(formatOutlineNumber);
+  if (command.type === "M" || command.type === "L") {
+    return `${command.type}${nums[0]} ${nums[1]}`;
+  }
+  return `Q${nums[0]} ${nums[1]} ${nums[2]} ${nums[3]}`;
+}
+
+function pathCommandsToSvgData(commands) {
+  return commands.map(pathCommandToSvg).join(" ");
+}
+
+function pathCommandsSvgBoundingBox(commands) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const addPoint = (x, y) => {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  };
+  for (const command of commands) {
+    if (command.type === "Z") continue;
+    if (command.type === "M" || command.type === "L") addPoint(command.args[0], command.args[1]);
+    else if (command.type === "Q") {
+      addPoint(command.args[0], command.args[1]);
+      addPoint(command.args[2], command.args[3]);
+    }
+  }
+  if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  return { minX, minY, maxX, maxY };
+}
+
+function trueTypeToSvgCommands(commands) {
+  return commands.map(command => {
+    if (command.type === "Z") return command;
+    const args = command.args.slice();
+    for (let index = 1; index < args.length; index += 2) args[index] = -args[index];
+    return { type: command.type, args };
+  });
+}
+
+function translateSvgPathCommands(commands, dx, dy) {
+  return commands.map(command => {
+    if (command.type === "Z") return command;
+    const args = command.args.slice();
+    for (let index = 0; index < args.length; index += 2) {
+      args[index] += dx;
+      if (index + 1 < args.length) args[index + 1] += dy;
+    }
+    return { type: command.type, args };
+  });
+}
+
+function translatePathCommands(commands, dx, dy) {
+  return commands.map(command => {
+    if (command.type === "Z") return command;
+    const args = command.args.slice();
+    for (let index = 0; index < args.length; index += 2) {
+      args[index] += dx;
+      args[index + 1] += dy;
+    }
+    return { type: command.type, args };
+  });
+}
+
+function transformPoints(points, matrix, offsetX, offsetY) {
+  return points.map(point => ({
+    x: matrix.a * point.x + matrix.b * point.y + offsetX,
+    y: matrix.c * point.x + matrix.d * point.y + offsetY,
+    onCurve: point.onCurve
+  }));
+}
+
+function mapMatrixPoint(matrix, x, y) {
+  return {
+    x: matrix.a * x + matrix.b * y,
+    y: matrix.c * x + matrix.d * y
+  };
+}
+
+function transformPathCommands(commands, matrix, offsetX, offsetY) {
+  const mapPoint = (x, y) => ({
+    x: matrix.a * x + matrix.b * y + offsetX,
+    y: matrix.c * x + matrix.d * y + offsetY
+  });
+  return commands.map(command => {
+    if (command.type === "Z") return command;
+    const args = command.args.slice();
+    for (let index = 0; index < args.length; index += 2) {
+      const mapped = mapPoint(args[index], args[index + 1]);
+      args[index] = mapped.x;
+      args[index + 1] = mapped.y;
+    }
+    return { type: command.type, args };
+  });
+}
+
+function outlinePreviewCharacters(text = cardPreviewText()) {
+  const trimmed = String(text ?? "").trim();
+  const source = trimmed || "字";
+  const characters = [];
+  for (let index = 0; index < source.length; ) {
+    const codePoint = source.codePointAt(index);
+    characters.push(String.fromCodePoint(codePoint));
+    index += codePoint > 0xFFFF ? 2 : 1;
+  }
+  return characters.slice(0, 24);
+}
+
+async function copySvgValue(svg) {
+  if (!svg) throw new Error("SVG 内容为空");
+  try {
+    await navigator.clipboard.writeText(svg);
+  } catch {
+    const input = document.createElement("textarea");
+    input.value = svg;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    input.remove();
+  }
+  toast("已复制 SVG 轮廓");
 }
 
 function cmapGetGlyphIndex(cmap, codepoint) {
@@ -1130,116 +1263,176 @@ function readGlyphCoords(view, flags, startPos, numPoints, shortFlag, sameFlag) 
   return { values, pos };
 }
 
-function contoursToPathCommands(endPts, xs, ys) {
+function contourToPathCommands(contour) {
+  if (!contour.length) return [];
+  let start = contour[0];
+  if (!start.onCurve) {
+    const last = contour[contour.length - 1];
+    start = last.onCurve
+      ? last
+      : { x: (contour[0].x + last.x) / 2, y: (contour[0].y + last.y) / 2, onCurve: true };
+  }
+  const commands = [pathMove(start.x, start.y)];
+  for (let index = 0; index < contour.length; index++) {
+    const pt = contour[index];
+    const next = contour[(index + 1) % contour.length];
+    if (pt.onCurve && next.onCurve) {
+      commands.push(pathLine(next.x, next.y));
+    } else if (pt.onCurve && !next.onCurve) {
+      const next2 = contour[(index + 2) % contour.length];
+      if (next2.onCurve) {
+        commands.push(pathQuad(next.x, next.y, next2.x, next2.y));
+        index++;
+      } else {
+        commands.push(pathQuad(next.x, next.y, (next.x + next2.x) / 2, (next.y + next2.y) / 2));
+      }
+    } else if (!pt.onCurve && next.onCurve) {
+      commands.push(pathQuad(pt.x, pt.y, next.x, next.y));
+    } else {
+      commands.push(pathQuad(pt.x, pt.y, (pt.x + next.x) / 2, (pt.y + next.y) / 2));
+    }
+  }
+  commands.push(pathClose());
+  return commands;
+}
+
+function contoursToPathCommands(endPts, points) {
   const commands = [];
   let start = 0;
   for (const end of endPts) {
     if (end < start) continue;
-    commands.push(`M${formatOutlineNumber(xs[start])} ${formatOutlineNumber(-ys[start])}`);
-    for (let i = start + 1; i <= end; i++) {
-      commands.push(`L${formatOutlineNumber(xs[i])} ${formatOutlineNumber(-ys[i])}`);
-    }
-    commands.push("Z");
+    commands.push(...contourToPathCommands(points.slice(start, end + 1)));
     start = end + 1;
   }
   return commands;
 }
 
-function parseSimpleGlyph(view, offset, numContours) {
+const GLYPH_HEADER_SIZE = 10;
+
+function sanitizeSimpleEndPts(endPts, numContours, glyphSize) {
+  const valid = [];
+  for (let index = 0; index < endPts.length; index++) {
+    const endPt = endPts[index];
+    if (index > 0 && endPt <= valid[index - 1]) break;
+    if (endPt >= 0xF000) break;
+    const numPoints = endPt + 1;
+    if (numPoints < 1 || numPoints > 8192) break;
+    const minBytes = GLYPH_HEADER_SIZE + numContours * 2 + 2 + numPoints;
+    if (minBytes > glyphSize) break;
+    valid.push(endPt);
+  }
+  return valid.length === endPts.length ? valid : valid.length ? valid : null;
+}
+
+function parseSimpleGlyph(view, offset, numContours, glyphSize) {
+  if (numContours <= 0 || glyphSize < GLYPH_HEADER_SIZE) return { commands: [], points: [] };
   const endPts = [];
-  for (let i = 0; i < numContours; i++) endPts.push(view.getUint16(offset + 2 + i * 2));
-  const instructionLength = view.getUint16(offset + 2 + numContours * 2);
-  let pos = offset + 2 + numContours * 2 + 2 + instructionLength;
-  const numPoints = endPts.length ? endPts[endPts.length - 1] + 1 : 0;
-  if (!numPoints) return [];
+  for (let index = 0; index < numContours; index++) endPts.push(view.getUint16(offset + GLYPH_HEADER_SIZE + index * 2));
+  const validEndPts = sanitizeSimpleEndPts(endPts, numContours, glyphSize);
+  if (!validEndPts) return { commands: [], points: [] };
+  let instructionLength = view.getUint16(offset + GLYPH_HEADER_SIZE + numContours * 2);
+  let pos = offset + GLYPH_HEADER_SIZE + numContours * 2 + 2;
+  if (pos + instructionLength > offset + glyphSize) instructionLength = 0;
+  pos = offset + GLYPH_HEADER_SIZE + numContours * 2 + 2 + instructionLength;
+  const numPoints = validEndPts[validEndPts.length - 1] + 1;
+  if (pos >= offset + glyphSize) return { commands: [], points: [] };
   const flagRead = readGlyphFlags(view, pos, numPoints);
   const xRead = readGlyphCoords(view, flagRead.flags, flagRead.pos, numPoints, 0x02, 0x10);
   const yRead = readGlyphCoords(view, flagRead.flags, xRead.pos, numPoints, 0x04, 0x20);
-  return contoursToPathCommands(endPts, xRead.values, yRead.values);
+  if (yRead.pos > offset + glyphSize) return { commands: [], points: [] };
+  const points = [];
+  for (let index = 0; index < numPoints; index++) {
+    points.push({
+      x: xRead.values[index],
+      y: yRead.values[index],
+      onCurve: Boolean(flagRead.flags[index] & 0x01)
+    });
+  }
+  return { commands: contoursToPathCommands(validEndPts, points), points };
 }
 
-function transformGlyphCommands(commands, matrix, offsetX, offsetY) {
-  return commands.map(command => {
-    if (command === "Z") return command;
-    const parts = command.slice(1).trim().split(/\s+/);
-    let x = Number(parts[0]), y = Number(parts[1]);
-    const nx = matrix.a * x + matrix.b * y + offsetX;
-    const ny = matrix.c * x + matrix.d * y + offsetY;
-    return `${command[0]}${formatOutlineNumber(nx)} ${formatOutlineNumber(-ny)}`;
-  });
-}
-
-function parseCompositeGlyph(view, offset, getGlyphCommands, depth = 0) {
-  if (depth > 8) return [];
-  let pos = offset + 10;
-  const commands = [];
+function parseCompositeGlyphBody(view, bodyOffset, glyphEnd, getGlyphData, depth = 0) {
+  if (depth > 8 || bodyOffset + 4 > glyphEnd) return { commands: [], points: [] };
+  let pos = bodyOffset;
+  const result = { commands: [], points: [] };
   let more = true;
-  while (more && pos + 4 <= view.byteLength) {
+  while (more && pos + 4 <= glyphEnd) {
     const flags = view.getUint16(pos);
     const glyphIndex = view.getUint16(pos + 2);
     pos += 4;
     let arg1, arg2;
     if (flags & 0x0001) {
+      if (pos + 4 > glyphEnd) break;
       arg1 = view.getInt16(pos); arg2 = view.getInt16(pos + 2); pos += 4;
     } else {
-      arg1 = view.getInt8(pos); arg2 = view.getInt8(pos + 1); pos += 2;
+      if (pos + 2 > glyphEnd) break;
+      arg1 = view.getUint8(pos); arg2 = view.getUint8(pos + 1); pos += 2;
     }
     let matrix = { a: 1, b: 0, c: 0, d: 1 };
-    let offsetX = arg1, offsetY = arg2;
-    if (flags & 0x0008) {
-      const scale = view.getInt16(pos) / 16384; pos += 2;
-      matrix = { a: scale, b: 0, c: 0, d: scale };
-    } else if (flags & 0x0040) {
-      matrix.a = view.getInt16(pos) / 16384; matrix.b = view.getInt16(pos + 2) / 16384;
-      matrix.c = view.getInt16(pos + 4) / 16384; matrix.d = view.getInt16(pos + 6) / 16384;
-      pos += 8;
-    } else if (flags & 0x0080) {
+    let offsetX = 0, offsetY = 0;
+    if (flags & 0x0080) {
+      if (pos + 12 > glyphEnd) break;
       matrix.a = view.getInt16(pos) / 16384; matrix.b = view.getInt16(pos + 2) / 16384;
       matrix.c = view.getInt16(pos + 4) / 16384; matrix.d = view.getInt16(pos + 6) / 16384;
       offsetX = view.getInt16(pos + 8); offsetY = view.getInt16(pos + 10); pos += 12;
+    } else {
+      if (flags & 0x0008) {
+        if (pos + 2 > glyphEnd) break;
+        const scale = view.getInt16(pos) / 16384; pos += 2;
+        matrix = { a: scale, b: 0, c: 0, d: scale };
+      } else if (flags & 0x0040) {
+        if (pos + 8 > glyphEnd) break;
+        matrix.a = view.getInt16(pos) / 16384; matrix.b = view.getInt16(pos + 2) / 16384;
+        matrix.c = view.getInt16(pos + 4) / 16384; matrix.d = view.getInt16(pos + 6) / 16384;
+        pos += 8;
+      }
+      if (flags & 0x0002) {
+        offsetX = arg1;
+        offsetY = arg2;
+      }
     }
-    if (flags & 0x0002) { offsetX = arg1; offsetY = arg2; }
-    const child = getGlyphCommands(glyphIndex, depth + 1);
-    commands.push(...transformGlyphCommands(child, matrix, offsetX, offsetY));
+    const child = getGlyphData(glyphIndex, depth + 1);
+    if (!(flags & 0x0080) && !(flags & 0x0002)) {
+      const parentPoint = result.points[arg1] || result.points[result.points.length - 1];
+      const childPoint = child.points[arg2] || child.points[0];
+      if (parentPoint && childPoint) {
+        const mappedChild = mapMatrixPoint(matrix, childPoint.x, childPoint.y);
+        offsetX = parentPoint.x - mappedChild.x;
+        offsetY = parentPoint.y - mappedChild.y;
+      }
+    }
+    result.commands.push(...transformPathCommands(child.commands, matrix, offsetX, offsetY));
+    result.points.push(...transformPoints(child.points, matrix, offsetX, offsetY));
+    if (flags & 0x0100) {
+      if (pos + 2 > glyphEnd) break;
+      pos += 2 + view.getUint16(pos);
+    }
     more = Boolean(flags & 0x0020);
   }
-  return commands;
+  return result;
 }
 
-function getGlyphPathCommands(glyf, loca, glyphIndex, indexToLocFormat, getGlyphCommands, depth = 0) {
+function parseCompositeGlyph(view, offset, getGlyphData, depth = 0, glyphEnd = view.byteLength) {
+  if (depth > 8) return { commands: [], points: [] };
+  return parseCompositeGlyphBody(view, offset + GLYPH_HEADER_SIZE, glyphEnd, getGlyphData, depth);
+}
+
+function getGlyphPathData(glyf, loca, glyphIndex, indexToLocFormat, getGlyphData, depth = 0) {
   const start = getLocaOffset(loca, glyphIndex, indexToLocFormat);
   const end = getLocaOffset(loca, glyphIndex + 1, indexToLocFormat);
-  if (start == null || end == null || start === end || start + 10 > glyf.byteLength) return [];
+  if (start == null || end == null || start === end || start + GLYPH_HEADER_SIZE > glyf.byteLength) return { commands: [], points: [] };
+  const glyphSize = end - start;
   const numberOfContours = glyf.getInt16(start);
-  if (numberOfContours > 0) return parseSimpleGlyph(glyf, start, numberOfContours);
-  if (numberOfContours < 0) return parseCompositeGlyph(glyf, start, getGlyphCommands, depth);
-  return [];
-}
-
-function commandsBoundingBox(commands) {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const command of commands) {
-    if (command === "Z") continue;
-    const parts = command.slice(1).trim().split(/\s+/);
-    const x = Number(parts[0]), y = Number(parts[1]);
-    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-  }
-  if (!Number.isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-  return { minX, minY, maxX, maxY };
-}
-
-function translateCommands(commands, dx, dy) {
-  return commands.map(command => {
-    if (command === "Z") return command;
-    const parts = command.slice(1).trim().split(/\s+/);
-    return `${command[0]}${formatOutlineNumber(Number(parts[0]) + dx)} ${formatOutlineNumber(Number(parts[1]) + dy)}`;
-  });
+  if (numberOfContours > 0) return parseSimpleGlyph(glyf, start, numberOfContours, glyphSize);
+  if (numberOfContours < 0) return parseCompositeGlyph(glyf, start, getGlyphData, depth, end);
+  return { commands: [], points: [] };
 }
 
 async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   const ctx = await getFontContext(font);
   if (ctx.unsupported) throw new Error("暂不支持 WOFF/WOFF2/TTC 轮廓导出");
+  const hasCff = ctx.tables.includes("CFF ") || ctx.tables.includes("CFF2");
+  if (hasCff && !ctx.tables.includes("glyf")) throw new Error("该字体使用 CFF 轮廓，暂不支持导出 SVG");
   if (!ctx.tables.includes("glyf") || !ctx.tables.includes("loca") || !ctx.tables.includes("cmap")) {
     throw new Error("该字体不含 TrueType 轮廓数据");
   }
@@ -1252,9 +1445,8 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   const indexToLocFormat = head.byteLength >= 52 ? head.getInt16(50) : 0;
   const numGlyphs = maxp.byteLength >= 6 ? maxp.getUint16(4) : 0;
   const numOfLongHorMetrics = hhea?.byteLength >= 36 ? hhea.getUint16(34) : 0;
-  const getGlyphCommands = (glyphIndex, depth = 0) => getGlyphPathCommands(glyf, loca, glyphIndex, indexToLocFormat, getGlyphCommands, depth);
-  const characters = [...String(text || "Aa").trim()].slice(0, 24);
-  if (!characters.length) characters.push("A");
+  const getGlyphData = (glyphIndex, depth = 0) => getGlyphPathData(glyf, loca, glyphIndex, indexToLocFormat, getGlyphData, depth);
+  const characters = outlinePreviewCharacters(text);
   const allCommands = [];
   let cursorX = 0;
   for (const char of characters) {
@@ -1264,29 +1456,62 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
       continue;
     }
     const metrics = getGlyphMetrics(hmtx, glyphIndex, numOfLongHorMetrics);
-    const commands = getGlyphCommands(glyphIndex);
-    if (commands.length) allCommands.push(...translateCommands(commands, cursorX - metrics.lsb, 0));
+    const glyphData = getGlyphData(glyphIndex);
+    if (glyphData.commands.length) {
+      allCommands.push(...translatePathCommands(glyphData.commands, cursorX - metrics.lsb, 0));
+    }
     cursorX += metrics.advance || Math.round(upm * 0.5);
   }
   if (!allCommands.length) throw new Error("未能解析预览文字轮廓");
-  const bbox = commandsBoundingBox(allCommands);
+  const svgCommands = trueTypeToSvgCommands(allCommands);
+  const bbox = pathCommandsSvgBoundingBox(svgCommands);
   const padding = Math.round(upm * 0.08);
-  const minX = bbox.minX - padding;
-  const minY = bbox.minY - padding;
+  const originX = bbox.minX - padding;
+  const originY = bbox.minY - padding;
   const width = Math.max(1, bbox.maxX - bbox.minX + padding * 2);
   const height = Math.max(1, bbox.maxY - bbox.minY + padding * 2);
-  const pathData = allCommands.join(" ");
+  const normalizedCommands = translateSvgPathCommands(svgCommands, -originX, -originY);
+  const pathData = pathCommandsToSvgData(normalizedCommands);
   const label = escapeXml(font.displayName || font.family || "font");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${formatOutlineNumber(minX)} ${formatOutlineNumber(minY)} ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="currentColor" d="${pathData}"/>\n</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="#000" d="${pathData}"/>\n</svg>`;
 }
 
 async function copyFontSvg(font) {
   try {
     toast("正在生成 SVG 轮廓…");
     const svg = await buildFontOutlineSvg(font);
-    await copyValue(svg, "SVG 轮廓");
+    await copySvgValue(svg);
   } catch (error) {
     toast(error.message || "无法导出 SVG 轮廓");
+  }
+}
+
+function outlineSvgFilename(font) {
+  const base = (font.postscriptName || font.displayName || font.family || "font")
+    .replace(/[^\w\u4e00-\u9fff-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "font";
+  const preview = outlinePreviewCharacters().join("").slice(0, 8)
+    .replace(/[^\w\u4e00-\u9fff-]+/g, "") || "preview";
+  return `${base}-${preview}.svg`;
+}
+
+async function downloadFontSvg(font) {
+  try {
+    toast("正在生成 SVG 轮廓…");
+    const svg = await buildFontOutlineSvg(font);
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = outlineSvgFilename(font);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("已开始下载 SVG 轮廓");
+  } catch (error) {
+    toast(error.message || "无法下载 SVG 轮廓");
   }
 }
 
@@ -1312,7 +1537,7 @@ function createFontCard(font) {
   const ratioText = Number.isFinite(font.aspectRatio) ? ` · ${font.aspectRatio.toFixed(2)}:1` : "";
   const displayName = font.displayName || font.family;
   card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
-  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
   card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
   if (readyForRender) {
     registerFont(font);
@@ -1323,6 +1548,10 @@ function createFontCard(font) {
   card.querySelector(".card-copy").addEventListener("click", event => {
     event.stopPropagation();
     copyValue(font.displayName || font.family, "字体名称");
+  });
+  card.querySelector(".card-download-svg").addEventListener("click", event => {
+    event.stopPropagation();
+    downloadFontSvg(font);
   });
   card.querySelector(".card-copy-svg").addEventListener("click", event => {
     event.stopPropagation();

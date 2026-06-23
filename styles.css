@@ -748,13 +748,14 @@ kbd,
 .font-card:hover .card-actions,
 .font-card:focus-within .card-actions,
 .card-actions:focus-within { opacity: 1; pointer-events: auto; }
-.card-copy-svg {
+.card-copy-svg,
+.card-download-svg {
   width: 28px;
   height: 28px;
   display: grid;
   place-items: center;
   padding: 0;
-  cursor: copy;
+  cursor: pointer;
   border: 0;
   border-radius: 50%;
   color: var(--ink);
@@ -762,13 +763,17 @@ kbd,
   box-shadow: 0 3px 10px rgba(0,0,0,.09);
   transition: transform .15s ease, color .15s ease, background .15s ease;
 }
-.card-copy-svg svg { width: 15px; height: 15px; display: block; }
+.card-copy-svg svg,
+.card-download-svg svg { width: 15px; height: 15px; display: block; }
 .card-copy:hover,
-.card-copy-svg:hover { color: white; background: var(--accent); transform: scale(1.06); }
+.card-copy-svg:hover,
+.card-download-svg:hover { color: white; background: var(--accent); transform: scale(1.06); }
 .single-view .card-actions { right: 5px; bottom: 5px; gap: 4px; }
 .single-view .card-copy,
-.single-view .card-copy-svg { width: 24px; height: 24px; font-size: 11px; }
-.single-view .card-copy-svg svg { width: 13px; height: 13px; }
+.single-view .card-copy-svg,
+.single-view .card-download-svg { width: 24px; height: 24px; font-size: 11px; }
+.single-view .card-copy-svg svg,
+.single-view .card-download-svg svg { width: 13px; height: 13px; }
 .card-family-switch {
   position: relative;
   z-index: 4;
