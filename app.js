@@ -833,15 +833,24 @@ function updateCardSampleSizeControl() {
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
 }
 
-function applyCardSampleSize() {
+function applyCardSampleSize({ fit = false } = {}) {
   state.cardSampleSize = Number(ui.cardSampleSize.value);
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
-  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
     sample.style.fontSize = `${state.cardSampleSize}px`;
-    fitCardSample(sample);
   });
-  scheduleCardFit();
+  if (fit) scheduleCardSampleFit();
+}
+
+function scheduleCardSampleFit() {
+  cancelAnimationFrame(scheduleCardSampleFit.frame);
+  scheduleCardSampleFit.frame = requestAnimationFrame(() => {
+    ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => fitCardSample(sample));
+  });
+}
+
+function persistCardSampleSize() {
+  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
 }
 
 function scheduleCardFit() {
@@ -1883,7 +1892,11 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
-ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
+ui.cardSampleSize.addEventListener("input", () => applyCardSampleSize());
+ui.cardSampleSize.addEventListener("change", () => {
+  applyCardSampleSize({ fit: true });
+  persistCardSampleSize();
+});
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
 ui.previewText.addEventListener("dblclick", () => {
   setDetailPreviewEditing(true);

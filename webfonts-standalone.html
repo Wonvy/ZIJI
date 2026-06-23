@@ -429,7 +429,7 @@ kbd,
 .favorite-sidebar-data { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 9px 6px 0; border-top: 1px solid var(--line); }
 .favorite-sidebar-data .data-button { height: 30px; padding: 0 4px; }
 .status-bar { min-height: 42px; flex: none; display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(180px, 1fr); align-items: center; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: 12px; }
-.pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .page-info { display: inline-flex; align-items: center; gap: 0.35em; }
 .page-current {
   display: inline-flex;
@@ -454,6 +454,16 @@ kbd,
 .card-sample-size-control output { min-width: 1.8em; color: var(--ink); font-size: 11px; text-align: right; }
 .card-sample-size-control:has(input:disabled) { opacity: .38; }
 .page-button { min-width: 78px; height: 28px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: var(--paper); font-size: 12px; }
+.page-button-icon {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+}
 .page-button:hover:not(:disabled) { color: white; border-color: var(--accent); background: var(--accent); }
 .page-button:disabled { cursor: default; opacity: .35; }
 .card-grid .font-card {
@@ -892,9 +902,9 @@ kbd,
             <footer id="statusBar" class="status-bar">
               <div id="fontStatus" class="font-status">将鼠标移到字体卡片查看信息</div>
               <nav id="paginationBar" class="pagination-bar" aria-label="字体分页">
-                <button id="previousPage" class="page-button" type="button">← 上一页</button>
+                <button id="previousPage" class="page-button page-button-icon" type="button" title="上一页" aria-label="上一页">‹</button>
                 <span id="pageInfo" class="page-info">第 <span class="page-current">1</span> / 1 页</span>
-                <button id="nextPage" class="page-button" type="button">下一页 →</button>
+                <button id="nextPage" class="page-button page-button-icon" type="button" title="下一页" aria-label="下一页">›</button>
               </nav>
               <div class="view-status-wrap">
                 <div id="viewStatus" class="view-status">网格视图</div>
@@ -1835,15 +1845,24 @@ function updateCardSampleSizeControl() {
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
 }
 
-function applyCardSampleSize() {
+function applyCardSampleSize({ fit = false } = {}) {
   state.cardSampleSize = Number(ui.cardSampleSize.value);
   ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
-  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
     sample.style.fontSize = `${state.cardSampleSize}px`;
-    fitCardSample(sample);
   });
-  scheduleCardFit();
+  if (fit) scheduleCardSampleFit();
+}
+
+function scheduleCardSampleFit() {
+  cancelAnimationFrame(scheduleCardSampleFit.frame);
+  scheduleCardSampleFit.frame = requestAnimationFrame(() => {
+    ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => fitCardSample(sample));
+  });
+}
+
+function persistCardSampleSize() {
+  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
 }
 
 function scheduleCardFit() {
@@ -2885,7 +2904,11 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
-ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
+ui.cardSampleSize.addEventListener("input", () => applyCardSampleSize());
+ui.cardSampleSize.addEventListener("change", () => {
+  applyCardSampleSize({ fit: true });
+  persistCardSampleSize();
+});
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
 ui.previewText.addEventListener("dblclick", () => {
   setDetailPreviewEditing(true);

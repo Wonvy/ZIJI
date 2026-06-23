@@ -421,7 +421,7 @@ kbd,
 .favorite-sidebar-data { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 9px 6px 0; border-top: 1px solid var(--line); }
 .favorite-sidebar-data .data-button { height: 30px; padding: 0 4px; }
 .status-bar { min-height: 42px; flex: none; display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(180px, 1fr); align-items: center; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: 12px; }
-.pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .page-info { display: inline-flex; align-items: center; gap: 0.35em; }
 .page-current {
   display: inline-flex;
@@ -446,6 +446,16 @@ kbd,
 .card-sample-size-control output { min-width: 1.8em; color: var(--ink); font-size: 11px; text-align: right; }
 .card-sample-size-control:has(input:disabled) { opacity: .38; }
 .page-button { min-width: 78px; height: 28px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: var(--paper); font-size: 12px; }
+.page-button-icon {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+}
 .page-button:hover:not(:disabled) { color: white; border-color: var(--accent); background: var(--accent); }
 .page-button:disabled { cursor: default; opacity: .35; }
 .card-grid .font-card {
