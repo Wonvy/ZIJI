@@ -773,12 +773,13 @@ kbd,
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: calc(var(--topbar-height) - 24px);
-  padding: 0 16px;
+  min-height: 0;
+  max-height: calc(var(--topbar-height) - 22px);
+  padding: 10px 16px;
   overflow: hidden;
   pointer-events: none;
-  font-size: clamp(36px, 6.8vw, 92px);
-  line-height: 1.04;
+  font-size: clamp(26px, 4.2vw, 56px);
+  line-height: 1.08;
   letter-spacing: 0;
   text-align: center;
   white-space: nowrap;
@@ -789,6 +790,7 @@ body.header-card-preview-focus .header-preview {
   z-index: 3;
   align-items: center;
   width: min(calc(100vw - 180px), 980px);
+  max-height: calc(var(--topbar-height) - 12px);
 }
 body.header-card-preview-browsing .header-preview-input-wrap,
 body.header-card-preview-browsing #magnifierButton,

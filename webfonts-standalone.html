@@ -781,12 +781,13 @@ kbd,
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: calc(var(--topbar-height) - 24px);
-  padding: 0 16px;
+  min-height: 0;
+  max-height: calc(var(--topbar-height) - 22px);
+  padding: 10px 16px;
   overflow: hidden;
   pointer-events: none;
-  font-size: clamp(36px, 6.8vw, 92px);
-  line-height: 1.04;
+  font-size: clamp(26px, 4.2vw, 56px);
+  line-height: 1.08;
   letter-spacing: 0;
   text-align: center;
   white-space: nowrap;
@@ -797,6 +798,7 @@ body.header-card-preview-focus .header-preview {
   z-index: 3;
   align-items: center;
   width: min(calc(100vw - 180px), 980px);
+  max-height: calc(var(--topbar-height) - 12px);
 }
 body.header-card-preview-browsing .header-preview-input-wrap,
 body.header-card-preview-browsing #magnifierButton,
@@ -9594,24 +9596,17 @@ ui.list.addEventListener("wheel", event => {
 }, { passive: false });
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
 ui.nextPage.addEventListener("click", () => goToPage(state.page + 1));
-ui.list.addEventListener("pointerenter", () => {
+const cardArea = $(".card-area");
+cardArea?.addEventListener("pointerenter", () => {
+  if (!["grid", "focus"].includes(state.view)) return;
   state.pointerInFontView = true;
   updateHeaderCardPreviewFocus();
 });
-ui.list.addEventListener("pointerleave", event => {
+cardArea?.addEventListener("pointerleave", () => {
+  if (!state.pointerInFontView) return;
   state.pointerInFontView = false;
-  updateHeaderCardPreviewFocus();
-  if (event.relatedTarget?.closest?.(".topbar")) return;
   hideMagnifier(ui.cardMagnifier);
   restorePinnedPreview();
-});
-const topbar = $(".topbar");
-topbar?.addEventListener("pointerenter", () => {
-  state.pointerInHeader = true;
-  updateHeaderCardPreviewFocus();
-});
-topbar?.addEventListener("pointerleave", () => {
-  state.pointerInHeader = false;
   updateHeaderCardPreviewFocus();
 });
 document.addEventListener("keydown", event => {
@@ -9690,7 +9685,10 @@ document.addEventListener("keydown", event => {
 ui.list.addEventListener("pointermove", event => {
   const card = event.target.closest(".font-card");
   if (!card) {
-    if (state.hovered) restorePinnedPreview();
+    if (state.hovered) {
+      state.hovered = null;
+      updateHeaderCardPreviewFocus();
+    }
     hideMagnifier(ui.cardMagnifier);
     return;
   }
