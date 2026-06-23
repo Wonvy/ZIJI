@@ -102,6 +102,22 @@ function getCardGridRowPitch() {
   return getCardGridCardHeight() + CARD_GRID_GAP;
 }
 
+function getCardGridRowCountOnPage() {
+  const layout = getCardGridLayout();
+  const pageSize = state.pageSize || layout.columns * layout.rows;
+  const itemsOnPage = Math.min(pageSize, Math.max(0, state.filtered.length - state.page * pageSize));
+  if (!itemsOnPage) return layout.rows;
+  return Math.max(1, Math.ceil(itemsOnPage / layout.columns));
+}
+
+function getCardGridMaxHeight(rowCount = getCardGridRowCountOnPage()) {
+  const min = getCardGridCardHeight();
+  const { height } = getFontGridViewportSize();
+  const rows = Math.max(1, rowCount);
+  if (!height) return min;
+  return Math.max(min, Math.floor((height - Math.max(0, rows - 1) * CARD_GRID_GAP) / rows));
+}
+
 function syncCardGridLayoutVars() {
   if (!ui.list) return;
   const sampleHeight = getCardGridSampleHeight();
@@ -110,6 +126,11 @@ function syncCardGridLayoutVars() {
   ui.list.style.setProperty("--card-grid-sample-height", `${sampleHeight}px`);
   ui.list.style.setProperty("--card-grid-min-height", `${cardHeight}px`);
   ui.list.style.setProperty("--card-grid-row-pitch", `${rowPitch}px`);
+  if (["grid", "focus"].includes(state.view)) {
+    ui.list.style.setProperty("--card-grid-max-height", `${getCardGridMaxHeight()}px`);
+  } else {
+    ui.list.style.removeProperty("--card-grid-max-height");
+  }
 }
 
 function getFontGridViewportSize() {
@@ -1091,6 +1112,7 @@ function closeAllFamilyMenus() {
 
 function setupFilterMenus() {
   document.querySelectorAll(".filter-menu").forEach(menu => {
+    if (menu.id === "cardPreviewStylePresetDropdown") return;
     const popover = menu.querySelector(".filter-popover");
     const summary = menu.querySelector("summary");
     if (!popover || !summary) return;
@@ -1115,8 +1137,13 @@ function setupFilterMenus() {
       clearTimeout(menu.closeTimer);
       menu.closeTimer = setTimeout(closeMenu, 320);
     };
+    const openMenu = () => {
+      clearTimeout(menu.closeTimer);
+      if (!menu.open) menu.setAttribute("open", "");
+    };
+    summary.addEventListener("click", event => event.preventDefault());
     menu.addEventListener("toggle", syncPopover);
-    menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    menu.addEventListener("mouseenter", openMenu);
     menu.addEventListener("mouseleave", scheduleClose);
     popover.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
     popover.addEventListener("mouseleave", scheduleClose);
@@ -3214,30 +3241,52 @@ function wireCardPreviewStyleQuickMenu() {
   const menuWrap = $(".card-preview-style-menu");
   const dropdown = $("#cardPreviewStylePresetDropdown");
   const menu = $("#cardPreviewStylePresetMenu");
-  if (!menuWrap || !dropdown || !menu) return;
+  const summary = dropdown?.querySelector("summary");
+  if (!menuWrap || !dropdown || !menu || !summary) return;
   renderCardPreviewStyleQuickMenu();
+  const presetPopoverOptions = { align: "left", minWidth: 320 };
   let closeTimer = null;
+  const closeMenu = () => {
+    dropdown.removeAttribute("open");
+    resetFloatingPopover(menu, dropdown);
+  };
+  const syncPopover = () => {
+    if (dropdown.open) {
+      document.querySelectorAll(".filter-menu[open]").forEach(other => {
+        if (other === dropdown) return;
+        other.removeAttribute("open");
+        resetFloatingPopover(other.querySelector(".filter-popover"), other);
+      });
+      mountFloatingPopover(menu, summary, presetPopoverOptions);
+      applyQuickPresetMenuStyles();
+    } else {
+      resetFloatingPopover(menu, dropdown);
+    }
+  };
   const openMenu = () => {
     clearTimeout(closeTimer);
     closeTimer = null;
-    dropdown.setAttribute("open", "");
-    applyQuickPresetMenuStyles();
+    if (!dropdown.open) dropdown.setAttribute("open", "");
+    else applyQuickPresetMenuStyles();
   };
-  const scheduleClose = () => {
+  const scheduleClose = event => {
+    if (isWithinFloatingMenu(event?.relatedTarget, dropdown, menu)) return;
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(() => dropdown.removeAttribute("open"), 140);
+    closeTimer = setTimeout(closeMenu, 320);
   };
+  summary.addEventListener("click", event => event.preventDefault());
+  dropdown.addEventListener("toggle", syncPopover);
   menuWrap.addEventListener("mouseenter", openMenu);
   menuWrap.addEventListener("mouseleave", scheduleClose);
-  menu.addEventListener("mouseenter", openMenu);
+  menu.addEventListener("mouseenter", () => clearTimeout(closeTimer));
   menu.addEventListener("mouseleave", scheduleClose);
-  dropdown.querySelector("summary")?.addEventListener("click", event => {
-    event.preventDefault();
+  window.addEventListener("resize", () => {
+    if (dropdown.open) mountFloatingPopover(menu, summary, presetPopoverOptions);
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
     if (actionBtn?.dataset.presetAction === "manage") {
-      dropdown.removeAttribute("open");
+      closeMenu();
       openCardPreviewStyleModal();
       setCardPreviewStyleModalTab("manage");
       return;
@@ -3245,7 +3294,7 @@ function wireCardPreviewStyleQuickMenu() {
     const item = event.target.closest("[data-preset-id]");
     if (!item) return;
     applyCardPreviewStylePresetById(item.dataset.presetId || null);
-    dropdown.removeAttribute("open");
+    closeMenu();
   });
 }
 
@@ -4333,6 +4382,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
         return;
       }
     }
+    scheduleCardSampleFit();
     hydratePage();
   };
   if (deferFonts) requestAnimationFrame(() => requestAnimationFrame(finishRender));
@@ -6171,6 +6221,8 @@ if ("ResizeObserver" in window) {
   const viewShell = ui.list?.closest(".font-view-shell");
   const pageArea = ui.list?.closest(".font-page-area");
   const handleGridViewportResize = () => {
+    syncCardGridLayoutVars();
+    scheduleCardSampleFit();
     scheduleCardFit();
     clearTimeout(ui.list.pageResizeTimer);
     ui.list.pageResizeTimer = setTimeout(() => {

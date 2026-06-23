@@ -259,10 +259,10 @@ body:not(.workspace-active) .topbar { display: none; }
 }
 .toolbar-search-wrap {
   position: relative;
-  flex: 1 1 160px;
+  flex: 1 1 200px;
   width: auto;
-  min-width: 112px;
-  max-width: 220px;
+  min-width: 140px;
+  max-width: 300px;
   z-index: 12;
 }
 .toolbar-search,
@@ -278,7 +278,13 @@ body:not(.workspace-active) .topbar { display: none; }
   border-radius: 4px;
   background: var(--panel);
 }
-.toolbar-search input { font-size: 12px; }
+.toolbar-search input { font-size: 13px; }
+.toolbar-search span {
+  flex: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
 .toolbar-search kbd { font-size: 9px; }
 .toolbar-filters {
   display: flex;
@@ -308,10 +314,10 @@ body:not(.workspace-active) .topbar { display: none; }
   background: var(--ink);
 }
 .toolbar-filters .toolbar-search-wrap {
-  flex: 1 1 150px;
+  flex: 1 1 180px;
   width: auto;
-  min-width: 108px;
-  max-width: 200px;
+  min-width: 130px;
+  max-width: 280px;
 }
 .toolbar-filters .filter-divider { height: calc(var(--toolbar-control-height) - 12px); margin: 0 1px; }
 .toolbar-view { flex: none; justify-self: end; grid-column: 3; margin-left: auto; }
@@ -609,8 +615,7 @@ button, input, select, textarea, summary, kbd, output { font-family: "Microsoft 
 .welcome h1,
 .sidebar-heading strong,
 .panel-title strong,
-.toolbar-meta strong,
-.view-button:nth-child(3) { font-family: "Microsoft YaHei", "微软雅黑", sans-serif !important; }
+.toolbar-meta strong { font-family: "Microsoft YaHei", "微软雅黑", sans-serif !important; }
 
 .brand small,
 .eyebrow,
@@ -759,8 +764,6 @@ kbd,
   height: var(--toolbar-control-height);
   font-size: 14px;
 }
-.toolbar-view .view-button:nth-child(2) { font-size: 13px; }
-.view-controls > .view-button + .view-button { font-size: 13px; }
 .toolbar-view .grid-layout-control,
 .toolbar-view .columns-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .grid-layout-control input,
@@ -906,18 +909,18 @@ kbd,
   font-size: 14px;
   box-sizing: border-box;
 }
-.view-button:first-child { border-radius: 4px 0 0 4px; }
-.view-button:nth-child(2) { margin-left: -7px; border-radius: 0; }
-.view-button:nth-child(3) { margin-left: -7px; border-radius: 0 4px 4px 0; font-family: Georgia, "Songti SC", serif; font-size: 15px; }
 .view-controls > .view-button:first-of-type {
   border-radius: 4px 0 0 4px;
 }
 .view-controls > .view-button + .view-button {
   margin-left: -7px;
   border-radius: 0 4px 4px 0;
-  font-family: Georgia, "Songti SC", serif;
+}
+#singleViewButton {
+  font-family: Georgia, "Songti SC", serif !important;
   font-size: 15px;
 }
+#gridViewButton { font-size: 13px; }
 .view-controls .card-preview-style-menu {
   margin-right: 6px;
   margin-left: 0;
@@ -961,17 +964,18 @@ kbd,
 .font-list.card-grid {
   --card-grid-sample-height: 66px;
   --card-grid-min-height: 129px;
+  --card-grid-max-height: none;
   --card-grid-row-pitch: 143px;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   width: 100%;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: var(--card-grid-min-height, 129px);
+  grid-auto-rows: minmax(var(--card-grid-min-height, 129px), 1fr);
   align-items: stretch;
+  align-content: stretch;
   justify-content: center;
   justify-items: stretch;
-  align-content: center;
-  place-content: center;
   gap: 14px;
   padding: 32px 36px;
   overflow-x: hidden;
@@ -1015,8 +1019,8 @@ kbd,
 .favorite-category-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .favorite-category-item b { color: var(--muted); font-size: 12px; font-weight: 500; }
 .favorite-category-item:hover { color: var(--ink); background: var(--paper); }
-.favorite-category-item.active { color: white; background: var(--ink); }
-.favorite-category-item.active b { color: rgba(255,255,255,.7); }
+.favorite-category-item.active { color: var(--paper); background: var(--ink); }
+.favorite-category-item.active b { color: color-mix(in srgb, var(--paper) 65%, transparent); }
 .favorite-category-row { display: flex; align-items: center; }
 .favorite-category-row.dragging { opacity: .35; }
 .favorite-category-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
@@ -1093,7 +1097,8 @@ kbd,
 .card-grid .font-card {
   min-width: 0;
   min-height: var(--card-grid-min-height, 129px);
-  height: var(--card-grid-min-height, 129px);
+  max-height: var(--card-grid-max-height, none);
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -1103,7 +1108,7 @@ kbd,
   background: var(--paper);
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
   content-visibility: auto;
-  contain-intrinsic-size: 245px 129px;
+  contain-intrinsic-size: 245px var(--card-grid-min-height, 129px);
 }
 .card-grid .font-card:has(.card-family-switch.is-open) {
   content-visibility: visible;
@@ -1131,6 +1136,7 @@ kbd,
   justify-content: center;
   width: 100%;
   min-height: var(--card-grid-sample-height, 66px);
+  max-height: none;
   margin: 4px 0 0;
   overflow: hidden;
   font-size: 34px;
@@ -1624,32 +1630,32 @@ kbd,
   top: calc(100% + 4px);
   left: 0;
   right: auto;
-  min-width: 300px;
-  max-width: min(380px, 92vw);
-  max-height: min(440px, 58vh);
+  min-width: 320px;
+  max-width: min(440px, 92vw);
+  max-height: min(520px, 62vh);
   overflow: auto;
-  padding: 10px;
+  padding: 12px;
   transform: none;
   transition: none;
 }
 .card-preview-style-preset-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 .card-preview-style-preset-option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-height: 72px;
-  padding: 6px 4px 4px;
+  gap: 6px;
+  min-height: 96px;
+  padding: 8px 6px 6px;
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--ink);
   background: var(--paper);
-  font-size: 10px;
+  font-size: 11px;
   transition: border-color .12s ease;
 }
 .card-preview-style-preset-option:hover {
@@ -1661,17 +1667,17 @@ kbd,
 }
 .card-preview-style-preset-option .preview-style-preset-glyph {
   width: 100%;
-  min-height: 40px;
+  min-height: 56px;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  font-size: 36px;
   line-height: 1;
 }
 .card-preview-style-preset-name {
   width: 100%;
   overflow: hidden;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3003,8 +3009,8 @@ body.dark .preview-style-stage { background: #1a1917; }
                     <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                   </details>
                 </div>
-                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <label class="grid-layout-control" title="每行显示列数">列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /><output id="cardColumnsOutput">7</output></label>
                 <label class="grid-layout-control" title="每页显示行数">行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /><output id="cardRowsOutput">4</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
@@ -3326,6 +3332,22 @@ function getCardGridRowPitch() {
   return getCardGridCardHeight() + CARD_GRID_GAP;
 }
 
+function getCardGridRowCountOnPage() {
+  const layout = getCardGridLayout();
+  const pageSize = state.pageSize || layout.columns * layout.rows;
+  const itemsOnPage = Math.min(pageSize, Math.max(0, state.filtered.length - state.page * pageSize));
+  if (!itemsOnPage) return layout.rows;
+  return Math.max(1, Math.ceil(itemsOnPage / layout.columns));
+}
+
+function getCardGridMaxHeight(rowCount = getCardGridRowCountOnPage()) {
+  const min = getCardGridCardHeight();
+  const { height } = getFontGridViewportSize();
+  const rows = Math.max(1, rowCount);
+  if (!height) return min;
+  return Math.max(min, Math.floor((height - Math.max(0, rows - 1) * CARD_GRID_GAP) / rows));
+}
+
 function syncCardGridLayoutVars() {
   if (!ui.list) return;
   const sampleHeight = getCardGridSampleHeight();
@@ -3334,6 +3356,11 @@ function syncCardGridLayoutVars() {
   ui.list.style.setProperty("--card-grid-sample-height", `${sampleHeight}px`);
   ui.list.style.setProperty("--card-grid-min-height", `${cardHeight}px`);
   ui.list.style.setProperty("--card-grid-row-pitch", `${rowPitch}px`);
+  if (["grid", "focus"].includes(state.view)) {
+    ui.list.style.setProperty("--card-grid-max-height", `${getCardGridMaxHeight()}px`);
+  } else {
+    ui.list.style.removeProperty("--card-grid-max-height");
+  }
 }
 
 function getFontGridViewportSize() {
@@ -4315,6 +4342,7 @@ function closeAllFamilyMenus() {
 
 function setupFilterMenus() {
   document.querySelectorAll(".filter-menu").forEach(menu => {
+    if (menu.id === "cardPreviewStylePresetDropdown") return;
     const popover = menu.querySelector(".filter-popover");
     const summary = menu.querySelector("summary");
     if (!popover || !summary) return;
@@ -4339,8 +4367,13 @@ function setupFilterMenus() {
       clearTimeout(menu.closeTimer);
       menu.closeTimer = setTimeout(closeMenu, 320);
     };
+    const openMenu = () => {
+      clearTimeout(menu.closeTimer);
+      if (!menu.open) menu.setAttribute("open", "");
+    };
+    summary.addEventListener("click", event => event.preventDefault());
     menu.addEventListener("toggle", syncPopover);
-    menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
+    menu.addEventListener("mouseenter", openMenu);
     menu.addEventListener("mouseleave", scheduleClose);
     popover.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
     popover.addEventListener("mouseleave", scheduleClose);
@@ -6438,30 +6471,52 @@ function wireCardPreviewStyleQuickMenu() {
   const menuWrap = $(".card-preview-style-menu");
   const dropdown = $("#cardPreviewStylePresetDropdown");
   const menu = $("#cardPreviewStylePresetMenu");
-  if (!menuWrap || !dropdown || !menu) return;
+  const summary = dropdown?.querySelector("summary");
+  if (!menuWrap || !dropdown || !menu || !summary) return;
   renderCardPreviewStyleQuickMenu();
+  const presetPopoverOptions = { align: "left", minWidth: 320 };
   let closeTimer = null;
+  const closeMenu = () => {
+    dropdown.removeAttribute("open");
+    resetFloatingPopover(menu, dropdown);
+  };
+  const syncPopover = () => {
+    if (dropdown.open) {
+      document.querySelectorAll(".filter-menu[open]").forEach(other => {
+        if (other === dropdown) return;
+        other.removeAttribute("open");
+        resetFloatingPopover(other.querySelector(".filter-popover"), other);
+      });
+      mountFloatingPopover(menu, summary, presetPopoverOptions);
+      applyQuickPresetMenuStyles();
+    } else {
+      resetFloatingPopover(menu, dropdown);
+    }
+  };
   const openMenu = () => {
     clearTimeout(closeTimer);
     closeTimer = null;
-    dropdown.setAttribute("open", "");
-    applyQuickPresetMenuStyles();
+    if (!dropdown.open) dropdown.setAttribute("open", "");
+    else applyQuickPresetMenuStyles();
   };
-  const scheduleClose = () => {
+  const scheduleClose = event => {
+    if (isWithinFloatingMenu(event?.relatedTarget, dropdown, menu)) return;
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(() => dropdown.removeAttribute("open"), 140);
+    closeTimer = setTimeout(closeMenu, 320);
   };
+  summary.addEventListener("click", event => event.preventDefault());
+  dropdown.addEventListener("toggle", syncPopover);
   menuWrap.addEventListener("mouseenter", openMenu);
   menuWrap.addEventListener("mouseleave", scheduleClose);
-  menu.addEventListener("mouseenter", openMenu);
+  menu.addEventListener("mouseenter", () => clearTimeout(closeTimer));
   menu.addEventListener("mouseleave", scheduleClose);
-  dropdown.querySelector("summary")?.addEventListener("click", event => {
-    event.preventDefault();
+  window.addEventListener("resize", () => {
+    if (dropdown.open) mountFloatingPopover(menu, summary, presetPopoverOptions);
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
     if (actionBtn?.dataset.presetAction === "manage") {
-      dropdown.removeAttribute("open");
+      closeMenu();
       openCardPreviewStyleModal();
       setCardPreviewStyleModalTab("manage");
       return;
@@ -6469,7 +6524,7 @@ function wireCardPreviewStyleQuickMenu() {
     const item = event.target.closest("[data-preset-id]");
     if (!item) return;
     applyCardPreviewStylePresetById(item.dataset.presetId || null);
-    dropdown.removeAttribute("open");
+    closeMenu();
   });
 }
 
@@ -7557,6 +7612,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
         return;
       }
     }
+    scheduleCardSampleFit();
     hydratePage();
   };
   if (deferFonts) requestAnimationFrame(() => requestAnimationFrame(finishRender));
@@ -9395,6 +9451,8 @@ if ("ResizeObserver" in window) {
   const viewShell = ui.list?.closest(".font-view-shell");
   const pageArea = ui.list?.closest(".font-page-area");
   const handleGridViewportResize = () => {
+    syncCardGridLayoutVars();
+    scheduleCardSampleFit();
     scheduleCardFit();
     clearTimeout(ui.list.pageResizeTimer);
     ui.list.pageResizeTimer = setTimeout(() => {
