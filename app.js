@@ -74,13 +74,33 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelWidth: null,
   favoriteCategoryView: "all",
   collapseFamilyFonts: false,
-  cardPreviewStyle: null
+  cardPreviewStyle: null,
+  cardPreviewStylePresets: [],
+  activeCardPreviewStylePresetId: null
 };
 
 const CARD_PREVIEW_STYLE_DEFAULTS = {
-  fill: { color: "#171714", opacity: 100 },
+  fill: {
+    enabled: true,
+    mode: "solid",
+    color: "#171714",
+    color2: "#e85832",
+    angle: 90,
+    opacity: 100,
+    stops: [
+      { color: "#171714", opacity: 100, offset: 0 },
+      { color: "#e85832", opacity: 100, offset: 100 }
+    ]
+  },
   layers: []
 };
+const PREVIEW_EFFECT_TYPE_ORDER = ["dropShadow", "stroke"];
+const STROKE_POSITION_OPTIONS = [
+  { value: "outside", label: "向外" },
+  { value: "center", label: "居中" },
+  { value: "inside", label: "向内" }
+];
+const MANAGE_PRESET_PREVIEW_CHAR = "永";
 const PREVIEW_EFFECT_TYPES = {
   dropShadow: {
     label: "投影",
@@ -91,28 +111,33 @@ const PREVIEW_EFFECT_TYPES = {
       { key: "offsetY", type: "range", label: "Y 偏移", min: -40, max: 40, step: 1 },
       { key: "blur", type: "range", label: "模糊", min: 0, max: 40, step: 1 }
     ],
-    defaults: { enabled: true, color: "#000000", opacity: 35, offsetX: 2, offsetY: 3, blur: 4 }
+    defaults: { color: "#000000", opacity: 35, offsetX: 2, offsetY: 3, blur: 4 }
   },
-  outerStroke: {
-    label: "外轮廓",
+  stroke: {
+    label: "轮廓",
     fields: [
       { key: "color", type: "color", label: "颜色" },
       { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
-      { key: "width", type: "range", label: "粗细", min: 1, max: 16, step: 1 }
+      { key: "width", type: "range", label: "粗细", min: 1, max: 16, step: 1 },
+      { key: "position", type: "select", label: "位置", options: STROKE_POSITION_OPTIONS }
     ],
-    defaults: { enabled: true, color: "#000000", opacity: 100, width: 2 }
-  },
-  innerStroke: {
-    label: "内轮廓",
-    fields: [
-      { key: "color", type: "color", label: "颜色" },
-      { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
-      { key: "width", type: "range", label: "粗细", min: 1, max: 10, step: 1 }
-    ],
-    defaults: { enabled: true, color: "#ffffff", opacity: 100, width: 1 }
+    defaults: {
+      color: "#000000",
+      color2: "#e85832",
+      opacity: 100,
+      width: 2,
+      position: "outside",
+      colorMode: "solid",
+      angle: 90,
+      stops: [
+        { color: "#000000", opacity: 100, offset: 0 },
+        { color: "#e85832", opacity: 100, offset: 100 }
+      ]
+    }
   }
 };
 let cardPreviewStyleLayerCounter = 0;
+let cardPreviewStylePresetCounter = 0;
 
 function cloneCardPreviewStyle(style = CARD_PREVIEW_STYLE_DEFAULTS) {
   return JSON.parse(JSON.stringify(style));
@@ -123,27 +148,104 @@ function nextPreviewStyleLayerId() {
   return `preview-layer-${cardPreviewStyleLayerCounter}`;
 }
 
+function normalizePreviewLayer(layer) {
+  if (layer?.type === "outerStroke") {
+    layer = { ...layer, type: "stroke", position: layer.position || "outside" };
+  } else if (layer?.type === "innerStroke") {
+    layer = { ...layer, type: "stroke", position: layer.position || "inside" };
+  }
+  const type = PREVIEW_EFFECT_TYPES[layer?.type] ? layer.type : null;
+  if (!type) return null;
+  const defaults = PREVIEW_EFFECT_TYPES[type].defaults;
+  const normalized = { id: String(layer.id || nextPreviewStyleLayerId()), type, enabled: layer.enabled === true };
+  PREVIEW_EFFECT_TYPES[type].fields.forEach(field => {
+    if (field.type === "color") {
+      normalized[field.key] = typeof layer[field.key] === "string" ? layer[field.key] : defaults[field.key];
+    } else if (field.type === "select") {
+      const allowed = field.options.map(option => option.value);
+      normalized[field.key] = allowed.includes(layer[field.key]) ? layer[field.key] : defaults[field.key];
+    } else {
+      normalized[field.key] = Number.isFinite(Number(layer[field.key])) ? Number(layer[field.key]) : defaults[field.key];
+    }
+  });
+  if (type === "stroke") {
+    normalized.colorMode = layer.colorMode === "gradient" ? "gradient" : "solid";
+    normalized.angle = Number.isFinite(Number(layer.angle)) ? Number(layer.angle) : defaults.angle;
+    normalized.color2 = typeof layer.color2 === "string" ? layer.color2 : defaults.color2;
+    normalized.stops = normalizeGradientStops(layer.stops, normalized);
+    syncStrokeLayerLegacyColors(normalized);
+  }
+  return normalized;
+}
+
+function normalizeGradientStops(rawStops, fill) {
+  const fallbackColor = fill?.color || CARD_PREVIEW_STYLE_DEFAULTS.fill.color;
+  const fallbackColor2 = fill?.color2 || CARD_PREVIEW_STYLE_DEFAULTS.fill.color2;
+  const fallbackOpacity = Number.isFinite(Number(fill?.opacity)) ? Number(fill.opacity) : 100;
+  if (Array.isArray(rawStops) && rawStops.length >= 2) {
+    return rawStops.map((stop, index, list) => ({
+      color: typeof stop?.color === "string" ? stop.color : (index === list.length - 1 ? fallbackColor2 : fallbackColor),
+      opacity: Number.isFinite(Number(stop?.opacity)) ? Number(stop.opacity) : fallbackOpacity,
+      offset: Number.isFinite(Number(stop?.offset))
+        ? Math.max(0, Math.min(100, Number(stop.offset)))
+        : (list.length <= 1 ? 0 : (index / (list.length - 1)) * 100)
+    })).sort((a, b) => a.offset - b.offset);
+  }
+  return [
+    { color: fallbackColor, opacity: fallbackOpacity, offset: 0 },
+    { color: fallbackColor2, opacity: fallbackOpacity, offset: 100 }
+  ];
+}
+
+function syncFillLegacyColors(fill) {
+  if (fill.mode !== "gradient") {
+    const opacity = Number.isFinite(Number(fill.opacity)) ? Number(fill.opacity) : 100;
+    const color = fill.color || CARD_PREVIEW_STYLE_DEFAULTS.fill.color;
+    fill.stops = [{ color, opacity, offset: 0 }, { color, opacity, offset: 100 }];
+  } else {
+    fill.stops = normalizeGradientStops(fill.stops, fill);
+  }
+  fill.color = fill.stops[0].color;
+  fill.color2 = fill.stops[fill.stops.length - 1].color;
+}
+
+function syncStrokeLayerLegacyColors(layer) {
+  if (layer.colorMode !== "gradient") {
+    const opacity = Number.isFinite(Number(layer.opacity)) ? Number(layer.opacity) : 100;
+    const color = layer.color || PREVIEW_EFFECT_TYPES.stroke.defaults.color;
+    layer.stops = [{ color, opacity, offset: 0 }, { color, opacity, offset: 100 }];
+  } else {
+    layer.stops = normalizeGradientStops(layer.stops, layer);
+  }
+  layer.color = layer.stops[0].color;
+  layer.color2 = layer.stops[layer.stops.length - 1].color;
+}
+
+function ensureDefaultPreviewLayers(layers) {
+  const normalized = (Array.isArray(layers) ? layers : []).map(normalizePreviewLayer).filter(Boolean);
+  for (const type of PREVIEW_EFFECT_TYPE_ORDER) {
+    if (!normalized.some(layer => layer.type === type)) normalized.push(createPreviewStyleLayer(type, false));
+  }
+  return normalized;
+}
+
 function normalizeCardPreviewStyle(raw) {
   const style = cloneCardPreviewStyle(CARD_PREVIEW_STYLE_DEFAULTS);
-  if (!raw || typeof raw !== "object") return style;
+  if (!raw || typeof raw !== "object") {
+    style.layers = ensureDefaultPreviewLayers([]);
+    return style;
+  }
   if (raw.fill && typeof raw.fill === "object") {
+    style.fill.enabled = raw.fill.enabled !== false;
+    style.fill.mode = raw.fill.mode === "gradient" ? "gradient" : "solid";
     style.fill.color = typeof raw.fill.color === "string" ? raw.fill.color : style.fill.color;
+    style.fill.color2 = typeof raw.fill.color2 === "string" ? raw.fill.color2 : style.fill.color2;
+    style.fill.angle = Number.isFinite(Number(raw.fill.angle)) ? Number(raw.fill.angle) : style.fill.angle;
     style.fill.opacity = Number.isFinite(Number(raw.fill.opacity)) ? Number(raw.fill.opacity) : style.fill.opacity;
+    style.fill.stops = normalizeGradientStops(raw.fill.stops, style.fill);
+    syncFillLegacyColors(style.fill);
   }
-  if (Array.isArray(raw.layers)) {
-    style.layers = raw.layers.map(layer => {
-      const type = PREVIEW_EFFECT_TYPES[layer?.type] ? layer.type : null;
-      if (!type) return null;
-      const defaults = PREVIEW_EFFECT_TYPES[type].defaults;
-      const normalized = { id: String(layer.id || nextPreviewStyleLayerId()), type, enabled: layer.enabled !== false };
-      PREVIEW_EFFECT_TYPES[type].fields.forEach(field => {
-        normalized[field.key] = field.type === "color"
-          ? (typeof layer[field.key] === "string" ? layer[field.key] : defaults[field.key])
-          : Number.isFinite(Number(layer[field.key])) ? Number(layer[field.key]) : defaults[field.key];
-      });
-      return normalized;
-    }).filter(Boolean);
-  }
+  style.layers = ensureDefaultPreviewLayers(raw.layers);
   return style;
 }
 
@@ -186,7 +288,9 @@ function collectUiSettings() {
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
     collapseFamilyFonts: state.collapseFamilyFonts,
-    cardPreviewStyle: state.cardPreviewStyle
+    cardPreviewStyle: state.cardPreviewStyle,
+    cardPreviewStylePresets: state.cardPreviewStylePresets,
+    activeCardPreviewStylePresetId: state.activeCardPreviewStylePresetId
   };
 }
 let persistUiSettingsTimer;
@@ -240,14 +344,27 @@ function applyStoredUiSettings(settings) {
 }
 const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
+const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
   view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
-  cardPreviewStyle: normalizeCardPreviewStyle(uiSettings.cardPreviewStyle),
+  cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
+  cardPreviewStylePresets: loadedCardPreviewStylePresets,
+  activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
+if (state.activeCardPreviewStylePresetId) {
+  const activePreset = findCardPreviewStylePreset(state.activeCardPreviewStylePresetId);
+  if (activePreset) {
+    state.cardPreviewStyle = hasActiveCardPreviewStyle(activePreset.style)
+      ? cloneCardPreviewStyle(activePreset.style)
+      : null;
+  } else {
+    state.activeCardPreviewStylePresetId = null;
+  }
+}
 let fontObserver;
 const pinyinBoundaries = [
   ["A", "阿"], ["B", "八"], ["C", "嚓"], ["D", "搭"], ["E", "蛾"], ["F", "发"], ["G", "噶"],
@@ -1216,11 +1333,190 @@ function outlinePreviewCharacters(text = cardPreviewText()) {
 let cardPreviewStyleDraft = null;
 let cardPreviewStyleSelectedLayerId = null;
 let cardPreviewStylePreviewFontId = null;
+let cardPreviewStyleDraftPresetId = null;
+let cardPreviewStylePresetEditorMode = null;
+let cardPreviewStyleModalTab = "edit";
+let cardPreviewStyleManagePresetId = "";
+let cardPreviewStyleManageHoverPresetId = null;
+let cardPreviewStyleSelectedStopIndex = 0;
+let draggingGradientStopIndex = null;
+let draggingGradientScope = null;
+let draggingPreviewStyleLayerId = null;
 
-function createPreviewStyleLayer(type) {
+function createPreviewStyleLayer(type, enabled = false, overrides = {}) {
   const meta = PREVIEW_EFFECT_TYPES[type];
   if (!meta) return null;
-  return { id: nextPreviewStyleLayerId(), type, ...meta.defaults, enabled: true };
+  return { id: nextPreviewStyleLayerId(), type, ...meta.defaults, enabled, ...overrides };
+}
+
+function duplicatePreviewStyleLayer(layerId) {
+  if (!cardPreviewStyleDraft) return null;
+  const index = cardPreviewStyleDraft.layers.findIndex(layer => layer.id === layerId);
+  if (index < 0) return null;
+  const source = cardPreviewStyleDraft.layers[index];
+  const copy = normalizePreviewLayer({ ...source, id: nextPreviewStyleLayerId() });
+  cardPreviewStyleDraft.layers.splice(index + 1, 0, copy);
+  return copy.id;
+}
+
+function movePreviewStyleLayer(sourceId, targetId, before = true) {
+  if (!cardPreviewStyleDraft || sourceId === targetId) return;
+  const layers = cardPreviewStyleDraft.layers;
+  const from = layers.findIndex(layer => layer.id === sourceId);
+  const to = layers.findIndex(layer => layer.id === targetId);
+  if (from < 0 || to < 0) return;
+  const [item] = layers.splice(from, 1);
+  let insertAt = before ? to : to + 1;
+  if (from < to) insertAt--;
+  layers.splice(insertAt, 0, item);
+}
+
+function resolvePreviewFillColor(style) {
+  return style?.fill?.color || CARD_PREVIEW_STYLE_DEFAULTS.fill.color;
+}
+
+function buildPreviewFillValue(fill, defsParts) {
+  if (fill.enabled === false) return "none";
+  if (fill.mode === "gradient") {
+    const stops = normalizeGradientStops(fill.stops, fill);
+    const gradId = "preview-fill-gradient";
+    appendLinearGradientDef(defsParts, gradId, stops, fill.angle);
+    return `url(#${gradId})`;
+  }
+  return escapeXml(hexWithOpacity(fill.color, fill.opacity));
+}
+
+function appendLinearGradientDef(defsParts, gradId, stops, angle) {
+  const angleValue = Number(angle) || 0;
+  const rad = ((angleValue - 90) * Math.PI) / 180;
+  const x1 = 0.5 - Math.cos(rad) * 0.5;
+  const y1 = 0.5 - Math.sin(rad) * 0.5;
+  const x2 = 0.5 + Math.cos(rad) * 0.5;
+  const y2 = 0.5 + Math.sin(rad) * 0.5;
+  const stopMarkup = stops.map(stop =>
+    `<stop offset="${formatOutlineNumber(stop.offset)}%" stop-color="${escapeXml(stop.color)}" stop-opacity="${formatOutlineNumber(stop.opacity / 100)}"/>`
+  ).join("");
+  defsParts.push(`<linearGradient id="${gradId}" gradientUnits="objectBoundingBox" x1="${formatOutlineNumber(x1)}" y1="${formatOutlineNumber(y1)}" x2="${formatOutlineNumber(x2)}" y2="${formatOutlineNumber(y2)}">${stopMarkup}</linearGradient>`);
+}
+
+function buildPreviewStrokeValue(layer, defsParts, suffix) {
+  if (layer.colorMode === "gradient") {
+    const stops = normalizeGradientStops(layer.stops, layer);
+    const gradId = `preview-stroke-gradient-${suffix}`;
+    appendLinearGradientDef(defsParts, gradId, stops, layer.angle);
+    return `url(#${gradId})`;
+  }
+  return escapeXml(hexWithOpacity(layer.color, layer.opacity));
+}
+
+function buildGradientCss(fill) {
+  const stops = normalizeGradientStops(fill.stops, fill);
+  const stopCss = stops.map(stop => `${hexWithOpacity(stop.color, stop.opacity)} ${stop.offset}%`).join(", ");
+  return `linear-gradient(${Number(fill.angle) || 0}deg, ${stopCss})`;
+}
+
+function parseHexColor(hex) {
+  const match = String(hex || "#000000").trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return { r: 0, g: 0, b: 0 };
+  const value = match[1];
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16)
+  };
+}
+
+function sampleGradientColor(stops, context, offset) {
+  const normalized = normalizeGradientStops(stops, context);
+  const clamped = Math.max(0, Math.min(100, Number(offset) || 0));
+  if (clamped <= normalized[0].offset) {
+    return hexWithOpacity(normalized[0].color, normalized[0].opacity);
+  }
+  const last = normalized[normalized.length - 1];
+  if (clamped >= last.offset) {
+    return hexWithOpacity(last.color, last.opacity);
+  }
+  for (let i = 1; i < normalized.length; i++) {
+    const right = normalized[i];
+    const left = normalized[i - 1];
+    if (clamped > right.offset) continue;
+    const span = right.offset - left.offset || 1;
+    const ratio = (clamped - left.offset) / span;
+    const leftRgb = parseHexColor(left.color);
+    const rightRgb = parseHexColor(right.color);
+    const r = Math.round(leftRgb.r + (rightRgb.r - leftRgb.r) * ratio);
+    const g = Math.round(leftRgb.g + (rightRgb.g - leftRgb.g) * ratio);
+    const b = Math.round(leftRgb.b + (rightRgb.b - leftRgb.b) * ratio);
+    const opacity = left.opacity + (right.opacity - left.opacity) * ratio;
+    return `rgba(${r}, ${g}, ${b}, ${Math.round(Math.max(0, Math.min(1, opacity / 100)) * 1000) / 1000})`;
+  }
+  return hexWithOpacity(normalized[0].color, normalized[0].opacity);
+}
+
+function gradientColorAtDirection(stops, angle, directionDeg, context = null) {
+  const gradRad = ((Number(angle) || 0) - 90) * Math.PI / 180;
+  const dirRad = directionDeg * Math.PI / 180;
+  const projection = Math.cos(dirRad) * Math.cos(gradRad) + Math.sin(dirRad) * Math.sin(gradRad);
+  const offset = 50 + projection * 50;
+  return sampleGradientColor(stops, context || { stops, angle }, offset);
+}
+
+function applyLayerOpacityToColor(color, layerOpacity = 100) {
+  const opacity = Math.max(0, Math.min(100, Number(layerOpacity) || 0));
+  if (opacity >= 100) return color;
+  const rgbaMatch = String(color).match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/);
+  if (rgbaMatch) {
+    const alpha = Number(rgbaMatch[4]) * opacity / 100;
+    return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${Math.round(alpha * 1000) / 1000})`;
+  }
+  const hexMatch = String(color).match(/^#?([0-9a-f]{6})$/i);
+  if (hexMatch) return hexWithOpacity(`#${hexMatch[1]}`, opacity);
+  return color;
+}
+
+function resolveStrokeLayerColor(layer, directionDeg = 0) {
+  if (layer.colorMode === "gradient") {
+    return applyLayerOpacityToColor(
+      gradientColorAtDirection(layer.stops, layer.angle, directionDeg, layer),
+      layer.opacity
+    );
+  }
+  return hexWithOpacity(layer.color, layer.opacity);
+}
+
+function gradientStrokeShadows(width, layer) {
+  const shadows = [];
+  const radius = Math.max(1, Math.round(Number(width) || 1));
+  for (let step = 1; step <= radius; step++) {
+    for (let angle = 0; angle < 360; angle += 45) {
+      const color = layer.colorMode === "gradient"
+        ? resolveStrokeLayerColor(layer, angle)
+        : hexWithOpacity(layer.color, layer.opacity);
+      const rad = angle * Math.PI / 180;
+      shadows.push(`${(Math.cos(rad) * step).toFixed(1)}px ${(Math.sin(rad) * step).toFixed(1)}px 0 ${color}`);
+    }
+  }
+  return shadows;
+}
+
+function isStrokeLayer(layer) {
+  return Boolean(layer && ["stroke", "outerStroke", "innerStroke"].includes(layer.type));
+}
+
+function resolveStrokePosition(layer) {
+  if (layer.type === "innerStroke") return "inside";
+  if (layer.type === "outerStroke") return "outside";
+  if (layer.type === "stroke" && ["outside", "center", "inside"].includes(layer.position)) return layer.position;
+  return "outside";
+}
+
+function strokeOutlineShadows(width, color) {
+  return innerStrokeShadows(width, color);
+}
+
+function strokeLayerShadows(width, layer) {
+  if (layer.colorMode === "gradient") return gradientStrokeShadows(width, layer);
+  return innerStrokeShadows(width, hexWithOpacity(layer.color, layer.opacity));
 }
 
 function hexWithOpacity(hex, opacityPercent = 100) {
@@ -1234,10 +1530,6 @@ function hexWithOpacity(hex, opacityPercent = 100) {
   const alpha = Math.max(0, Math.min(100, Number(opacityPercent) || 0)) / 100;
   if (alpha >= 0.999) return `#${value.toLowerCase()}`;
   return `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
-}
-
-function resolvePreviewFillColor(style) {
-  return style?.fill?.color || CARD_PREVIEW_STYLE_DEFAULTS.fill.color;
 }
 
 function innerStrokeShadows(width, color) {
@@ -1254,29 +1546,76 @@ function innerStrokeShadows(width, color) {
 
 function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
   const normalized = normalizeCardPreviewStyle(style);
+  const fill = normalized.fill;
+  const fillEnabled = fill.enabled !== false;
+  const useGradientFill = fillEnabled && fill.mode === "gradient";
   const css = {
-    color: hexWithOpacity(resolvePreviewFillColor(normalized), normalized.fill.opacity),
+    color: "",
+    backgroundImage: "",
+    backgroundClip: "",
+    webkitBackgroundClip: "",
+    webkitTextFillColor: "",
     webkitTextStroke: "",
     textStroke: "",
     paintOrder: "",
-    textShadow: "none"
+    textShadow: "none",
+    backgroundSize: "",
+    backgroundRepeat: ""
   };
+  if (useGradientFill) {
+    css.backgroundImage = buildGradientCss(fill);
+    css.backgroundClip = "text";
+    css.webkitBackgroundClip = "text";
+    css.webkitTextFillColor = "transparent";
+    css.color = "transparent";
+    css.backgroundSize = "100% 100%";
+    css.backgroundRepeat = "no-repeat";
+  } else if (fillEnabled) {
+    css.color = hexWithOpacity(fill.color, fill.opacity);
+  } else {
+    css.color = "transparent";
+    css.webkitTextFillColor = "transparent";
+  }
   const shadows = [];
-  let outerStroke = null;
+  const strokeLayers = normalized.layers.filter(layer => layer.enabled && isStrokeLayer(layer));
   for (const layer of normalized.layers) {
     if (!layer.enabled) continue;
     if (layer.type === "dropShadow") {
       shadows.push(`${layer.offsetX}px ${layer.offsetY}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
-    } else if (layer.type === "outerStroke") {
-      outerStroke = layer;
-    } else if (layer.type === "innerStroke") {
-      shadows.unshift(...innerStrokeShadows(layer.width, hexWithOpacity(layer.color, layer.opacity)));
     }
   }
-  if (outerStroke) {
-    css.webkitTextStroke = `${outerStroke.width}px ${hexWithOpacity(outerStroke.color, outerStroke.opacity)}`;
+  let primaryWebkit = null;
+  strokeLayers.forEach(layer => {
+    const width = Number(layer.width) || 1;
+    const position = resolveStrokePosition(layer);
+    const useGradientStroke = layer.colorMode === "gradient";
+    if (useGradientFill || useGradientStroke) {
+      shadows.unshift(...strokeLayerShadows(width, layer));
+      return;
+    }
+    const color = hexWithOpacity(layer.color, layer.opacity);
+    if (position === "inside") {
+      shadows.unshift(...innerStrokeShadows(width, color));
+      return;
+    }
+    if (position === "center") {
+      if (!primaryWebkit) {
+        primaryWebkit = { width, color, paintOrder: "fill stroke" };
+      } else {
+        shadows.unshift(...strokeOutlineShadows(width, color));
+      }
+      return;
+    }
+    if (!primaryWebkit) {
+      primaryWebkit = { width: width * 2, color, paintOrder: "stroke fill" };
+    } else {
+      shadows.unshift(...strokeOutlineShadows(width, color));
+    }
+  });
+  if (primaryWebkit) {
+    css.webkitTextStroke = `${primaryWebkit.width}px ${primaryWebkit.color}`;
     css.textStroke = css.webkitTextStroke;
-    css.paintOrder = "stroke fill";
+    css.paintOrder = primaryWebkit.paintOrder;
   }
   if (shadows.length) css.textShadow = shadows.join(", ");
   return css;
@@ -1284,19 +1623,140 @@ function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
 
 function hasActiveCardPreviewStyle(style = state.cardPreviewStyle) {
   const normalized = normalizeCardPreviewStyle(style);
-  if (normalized.fill.color !== CARD_PREVIEW_STYLE_DEFAULTS.fill.color || normalized.fill.opacity !== 100) return true;
+  if (normalized.fill.enabled !== false) {
+    if (normalized.fill.mode === "gradient") return true;
+    if (normalized.fill.color !== CARD_PREVIEW_STYLE_DEFAULTS.fill.color || normalized.fill.opacity !== 100) return true;
+  }
   return normalized.layers.some(layer => layer.enabled);
+}
+
+function loadStoredCardPreviewStyle(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const normalized = normalizeCardPreviewStyle(raw);
+  return hasActiveCardPreviewStyle(normalized) ? normalized : null;
+}
+
+function nextPreviewStylePresetId() {
+  cardPreviewStylePresetCounter += 1;
+  return `style-preset-${cardPreviewStylePresetCounter}`;
+}
+
+function syncCardPreviewStylePresetCounter(presets) {
+  presets.forEach(item => {
+    if (item.id && /^style-preset-\d+$/.test(item.id)) {
+      const suffix = Number(item.id.split("-").pop());
+      if (suffix > cardPreviewStylePresetCounter) cardPreviewStylePresetCounter = suffix;
+    }
+  });
+}
+
+function normalizeCardPreviewStylePresets(raw) {
+  if (!Array.isArray(raw)) return [];
+  const presets = [];
+  raw.forEach(item => {
+    if (!item || typeof item !== "object" || typeof item.name !== "string" || !item.name.trim()) return;
+    presets.push({
+      id: String(item.id || nextPreviewStylePresetId()),
+      name: item.name.trim().slice(0, 48),
+      style: normalizeCardPreviewStyle(item.style),
+      updatedAt: Number(item.updatedAt) || Date.now()
+    });
+  });
+  syncCardPreviewStylePresetCounter(presets);
+  return presets;
+}
+
+function resolveActiveCardPreviewStylePresetId(rawId, presets) {
+  if (!rawId || !presets.some(item => item.id === rawId)) return null;
+  return rawId;
+}
+
+function findCardPreviewStylePreset(id) {
+  return state.cardPreviewStylePresets.find(item => item.id === id) || null;
+}
+
+function cardPreviewStylesEqual(a, b) {
+  return JSON.stringify(normalizeCardPreviewStyle(a)) === JSON.stringify(normalizeCardPreviewStyle(b));
+}
+
+function uniqueCardPreviewStylePresetName(base = "未命名方案", excludeId = null) {
+  const trimmed = base.trim().slice(0, 48) || "未命名方案";
+  const exists = name => state.cardPreviewStylePresets.some(item => item.name === name && item.id !== excludeId);
+  if (!exists(trimmed)) return trimmed;
+  let index = 2;
+  while (exists(`${trimmed} ${index}`)) index += 1;
+  return `${trimmed} ${index}`.slice(0, 48);
+}
+
+function createCardPreviewStylePreset(name, style) {
+  const preset = {
+    id: nextPreviewStylePresetId(),
+    name: uniqueCardPreviewStylePresetName(name),
+    style: cloneCardPreviewStyle(style),
+    updatedAt: Date.now()
+  };
+  state.cardPreviewStylePresets.push(preset);
+  return preset;
+}
+
+function updateCardPreviewStylePreset(id, style) {
+  const preset = findCardPreviewStylePreset(id);
+  if (!preset) return null;
+  preset.style = cloneCardPreviewStyle(style);
+  preset.updatedAt = Date.now();
+  return preset;
+}
+
+function renameCardPreviewStylePreset(id, name) {
+  const preset = findCardPreviewStylePreset(id);
+  if (!preset) return null;
+  const nextName = name.trim().slice(0, 48);
+  if (!nextName) return null;
+  preset.name = uniqueCardPreviewStylePresetName(nextName, id);
+  preset.updatedAt = Date.now();
+  return preset;
+}
+
+function deleteCardPreviewStylePreset(id) {
+  const index = state.cardPreviewStylePresets.findIndex(item => item.id === id);
+  if (index < 0) return false;
+  state.cardPreviewStylePresets.splice(index, 1);
+  if (state.activeCardPreviewStylePresetId === id) state.activeCardPreviewStylePresetId = null;
+  if (cardPreviewStyleDraftPresetId === id) cardPreviewStyleDraftPresetId = null;
+  return true;
+}
+
+function applyCardPreviewStyleToElement(element, style, { themeDefault = false } = {}) {
+  if (!element) return;
+  clearCardPreviewStyleOnElement(element);
+  if (!style || !hasActiveCardPreviewStyle(style)) {
+    if (themeDefault) element.style.color = "var(--ink)";
+    return;
+  }
+  const css = cardPreviewStyleToCss(style);
+  element.style.color = css.color;
+  element.style.backgroundImage = css.backgroundImage || "none";
+  element.style.backgroundClip = css.backgroundClip || "";
+  element.style.webkitBackgroundClip = css.webkitBackgroundClip || "";
+  element.style.webkitTextFillColor = css.webkitTextFillColor || "";
+  element.style.webkitTextStroke = css.webkitTextStroke;
+  element.style.textStroke = css.textStroke;
+  element.style.paintOrder = css.paintOrder;
+  element.style.textShadow = css.textShadow;
+  element.style.backgroundSize = css.backgroundSize || "";
+  element.style.backgroundRepeat = css.backgroundRepeat || "";
 }
 
 function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
   if (!sample) return;
-  const css = cardPreviewStyleToCss(style);
-  sample.style.color = css.color;
-  sample.style.webkitTextStroke = css.webkitTextStroke;
-  sample.style.textStroke = css.textStroke;
-  sample.style.paintOrder = css.paintOrder;
-  sample.style.textShadow = css.textShadow;
-  sample.closest(".font-card")?.classList.toggle("has-preview-style", hasActiveCardPreviewStyle(style));
+  const card = sample.closest(".font-card");
+  if (!style || !hasActiveCardPreviewStyle(style)) {
+    clearCardPreviewStyleOnElement(sample);
+    card?.classList.remove("has-preview-style");
+    return;
+  }
+  applyCardPreviewStyleToElement(sample, style);
+  card?.classList.toggle("has-preview-style", true);
 }
 
 function applyCardPreviewStyleToAllCards() {
@@ -1304,34 +1764,92 @@ function applyCardPreviewStyleToAllCards() {
   renderCardPreviewStyleModalPreview();
 }
 
-function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle }) {
+function clearCardPreviewStyleOnElement(element) {
+  element.style.color = "";
+  element.style.backgroundImage = "";
+  element.style.backgroundClip = "";
+  element.style.webkitBackgroundClip = "";
+  element.style.webkitTextFillColor = "";
+  element.style.webkitTextStroke = "";
+  element.style.textStroke = "";
+  element.style.paintOrder = "";
+  element.style.textShadow = "";
+  element.style.backgroundSize = "";
+  element.style.backgroundRepeat = "";
+}
+
+function applyCardPreviewStyleToMagnifierText(target, sampleStyle, style = state.cardPreviewStyle) {
+  clearCardPreviewStyleOnElement(target);
+  if (!style || !hasActiveCardPreviewStyle(style)) {
+    target.style.color = sampleStyle.color;
+    return;
+  }
+  const css = cardPreviewStyleToCss(style);
+  target.style.color = css.color;
+  target.style.backgroundImage = css.backgroundImage || "none";
+  target.style.backgroundClip = css.backgroundClip || "";
+  target.style.webkitBackgroundClip = css.webkitBackgroundClip || "";
+  target.style.webkitTextFillColor = css.webkitTextFillColor || "";
+  target.style.webkitTextStroke = css.webkitTextStroke;
+  target.style.textStroke = css.textStroke;
+  target.style.paintOrder = css.paintOrder;
+  target.style.textShadow = css.textShadow;
+  target.style.backgroundSize = css.backgroundSize || "";
+  target.style.backgroundRepeat = css.backgroundRepeat || "";
+}
+
+function previewStyleUnitsPerPx(upm, referenceFontSize = state.cardSampleSize) {
+  const fontSize = Math.max(1, Number(referenceFontSize) || 49);
+  return Math.max(0.01, Number(upm) || 1000) / fontSize;
+}
+
+function scalePreviewStylePx(value, unitsPerPx) {
+  return Number(value) * unitsPerPx;
+}
+
+function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle, unitsPerPx = 1 }) {
   const normalized = normalizeCardPreviewStyle(style);
-  const fillColor = hexWithOpacity(resolvePreviewFillColor(normalized), normalized.fill.opacity);
+  const defsParts = [];
+  const fillValue = buildPreviewFillValue(normalized.fill, defsParts);
   const enabledLayers = normalized.layers.filter(layer => layer.enabled);
-  const dropShadows = enabledLayers.filter(layer => layer.type === "dropShadow");
-  const outerStrokes = enabledLayers.filter(layer => layer.type === "outerStroke").sort((a, b) => b.width - a.width);
-  const innerStrokes = enabledLayers.filter(layer => layer.type === "innerStroke");
-  let defs = "";
   let filterAttr = "";
+  const dropShadows = enabledLayers.filter(layer => layer.type === "dropShadow");
   if (dropShadows.length) {
-    defs += `<filter id="preview-shadow" x="-50%" y="-50%" width="200%" height="200%">`;
+    let filterBody = "";
     dropShadows.forEach(layer => {
-      defs += `<feDropShadow dx="${formatOutlineNumber(layer.offsetX)}" dy="${formatOutlineNumber(layer.offsetY)}" stdDeviation="${formatOutlineNumber(layer.blur / 2)}" flood-color="${escapeXml(layer.color)}" flood-opacity="${formatOutlineNumber(layer.opacity / 100)}"/>`;
+      filterBody += `<feDropShadow dx="${formatOutlineNumber(scalePreviewStylePx(layer.offsetX, unitsPerPx))}" dy="${formatOutlineNumber(scalePreviewStylePx(layer.offsetY, unitsPerPx))}" stdDeviation="${formatOutlineNumber(scalePreviewStylePx(layer.blur / 2, unitsPerPx))}" flood-color="${escapeXml(layer.color)}" flood-opacity="${formatOutlineNumber(layer.opacity / 100)}"/>`;
     });
-    defs += `</filter>`;
+    defsParts.push(`<filter id="preview-shadow" x="-50%" y="-50%" width="200%" height="200%">${filterBody}</filter>`);
     filterAttr = ` filter="url(#preview-shadow)"`;
   }
   let body = "";
-  outerStrokes.forEach(layer => {
-    body += `<path fill="none" stroke="${escapeXml(hexWithOpacity(layer.color, layer.opacity))}" stroke-width="${formatOutlineNumber(layer.width * 2)}" d="${pathData}"/>`;
+  const outsideStrokes = [];
+  const centerStrokes = [];
+  const insideStrokes = [];
+  enabledLayers.forEach(layer => {
+    if (!isStrokeLayer(layer)) return;
+    const position = resolveStrokePosition(layer);
+    if (position === "outside") outsideStrokes.push(layer);
+    else if (position === "center") centerStrokes.push(layer);
+    else insideStrokes.push(layer);
   });
-  body += `<path fill="${escapeXml(fillColor)}" d="${pathData}"/>`;
-  innerStrokes.forEach((layer, index) => {
+  outsideStrokes.forEach((layer, index) => {
+    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * 2;
+    body += `<path fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `outside-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
+  });
+  body += `<path fill="${fillValue}" d="${pathData}"/>`;
+  centerStrokes.forEach((layer, index) => {
+    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx);
+    body += `<path fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `center-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
+  });
+  let innerIndex = 0;
+  insideStrokes.forEach((layer, index) => {
     const clipId = `preview-clip-${index}`;
-    defs += `<clipPath id="${clipId}"><path d="${pathData}"/></clipPath>`;
-    body += `<path clip-path="url(#${clipId})" fill="none" stroke="${escapeXml(hexWithOpacity(layer.color, layer.opacity))}" stroke-width="${formatOutlineNumber(layer.width * 2)}" d="${pathData}"/>`;
+    defsParts.push(`<clipPath id="${clipId}"><path d="${pathData}"/></clipPath>`);
+    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * 2;
+    body += `<path clip-path="url(#${clipId})" fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `inside-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
   });
-  const defsBlock = defs ? `<defs>${defs}</defs>` : "";
+  const defsBlock = defsParts.length ? `<defs>${defsParts.join("")}</defs>` : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n${defsBlock}\n  <g${filterAttr}>${body}</g>\n</svg>`;
 }
 
@@ -1362,78 +1880,607 @@ function renderCardPreviewStyleModalPreview() {
   const stage = $("#cardPreviewStyleStage");
   if (!sample || !stage) return;
   const font = getCardPreviewStyleModalFont();
-  const text = cardPreviewText();
-  sample.textContent = text || "字体有光";
+  const isManageTab = cardPreviewStyleModalTab === "manage";
+  const text = isManageTab ? MANAGE_PRESET_PREVIEW_CHAR : (cardPreviewText() || "字体有光");
+  sample.textContent = text;
   if (font) {
     registerFont(font);
     sample.style.fontFamily = cssName(font);
     ensureFontLoaded(font, text).then(() => {
       if (getCardPreviewStyleModalFont()?.id !== font.id) return;
       sample.style.fontFamily = cssName(font);
+      if (isManageTab) applyManagePresetIconStyles();
     });
   } else {
     sample.style.fontFamily = "";
   }
-  const css = cardPreviewStyleToCss(cardPreviewStyleDraft || state.cardPreviewStyle);
-  sample.style.color = css.color;
-  sample.style.webkitTextStroke = css.webkitTextStroke;
-  sample.style.textStroke = css.textStroke;
-  sample.style.paintOrder = css.paintOrder;
-  sample.style.textShadow = css.textShadow;
+  const style = isManageTab
+    ? resolveManagePreviewStyle()
+    : (cardPreviewStyleDraft || state.cardPreviewStyle);
+  applyCardPreviewStyleToElement(sample, style, { themeDefault: isManageTab || !style });
+}
+
+function getPreviewStyleLayerLabel(layer, layers) {
+  const base = PREVIEW_EFFECT_TYPES[layer.type]?.label || layer.type;
+  const index = layers.filter(item => item.type === layer.type).indexOf(layer);
+  return index > 0 ? `${base} ${index + 1}` : base;
+}
+
+function renderStyleRangeField(field, value, attrs = "") {
+  const min = Number(field.min);
+  const max = Number(field.max);
+  const progress = max === min ? 0 : ((Number(value) - min) / (max - min)) * 100;
+  return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><div class="preview-style-range-wrap"><input class="preview-style-range" type="range" style="--range-progress:${progress}%" ${attrs} min="${field.min}" max="${field.max}" step="${field.step}" value="${value}" /><span class="preview-style-range-value" data-range-value>${escapeHtml(String(value))}</span></div></label>`;
+}
+
+function syncStyleRangeProgress(range) {
+  if (!range || range.type !== "range") return;
+  const min = Number(range.min);
+  const max = Number(range.max);
+  const progress = max === min ? 0 : ((Number(range.value) - min) / (max - min)) * 100;
+  range.style.setProperty("--range-progress", `${progress}%`);
+  const valueEl = range.closest(".preview-style-range-wrap")?.querySelector("[data-range-value]");
+  if (valueEl) valueEl.textContent = range.value;
+}
+
+function syncAllStyleRanges(root = document) {
+  root.querySelectorAll(".preview-style-range").forEach(syncStyleRangeProgress);
+}
+
+function renderStyleSelectField(field, value, attrs = "") {
+  const options = field.options.map(option =>
+    `<option value="${escapeHtml(option.value)}"${option.value === value ? " selected" : ""}>${escapeHtml(option.label)}</option>`
+  ).join("");
+  return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><select class="preview-style-select" ${attrs}>${options}</select></label>`;
+}
+
+function buildGradientBarPreviewCss(stops, fill) {
+  const normalized = normalizeGradientStops(stops, fill);
+  const stopCss = normalized.map(stop => `${hexWithOpacity(stop.color, stop.opacity)} ${stop.offset}%`).join(", ");
+  return `linear-gradient(90deg, ${stopCss})`;
+}
+
+function gradientBarOffsetFromEvent(bar, clientX) {
+  const rect = bar.getBoundingClientRect();
+  if (!rect.width) return 0;
+  return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+}
+
+function interpolateGradientStopColor(stops, offset) {
+  const sorted = [...stops].sort((a, b) => a.offset - b.offset);
+  if (!sorted.length) return { color: "#888888", opacity: 100 };
+  if (offset <= sorted[0].offset) return { color: sorted[0].color, opacity: sorted[0].opacity };
+  if (offset >= sorted[sorted.length - 1].offset) {
+    const last = sorted[sorted.length - 1];
+    return { color: last.color, opacity: last.opacity };
+  }
+  for (let i = 1; i < sorted.length; i++) {
+    if (offset <= sorted[i].offset) {
+      const left = sorted[i - 1];
+      const right = sorted[i];
+      return (offset - left.offset) <= (right.offset - offset)
+        ? { color: left.color, opacity: left.opacity }
+        : { color: right.color, opacity: right.opacity };
+    }
+  }
+  return { color: sorted[0].color, opacity: sorted[0].opacity };
+}
+
+function getGradientEditTarget(scope) {
+  if (!cardPreviewStyleDraft) return null;
+  if (scope === "fill") return cardPreviewStyleDraft.fill;
+  if (scope === "layer") {
+    return cardPreviewStyleDraft.layers.find(layer => layer.id === cardPreviewStyleSelectedLayerId) || null;
+  }
+  return null;
+}
+
+function getActiveGradientScope() {
+  if (!cardPreviewStyleDraft) return null;
+  if (cardPreviewStyleSelectedLayerId == null) {
+    return cardPreviewStyleDraft.fill.mode === "gradient" ? "fill" : null;
+  }
+  const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
+  if (layer && isStrokeLayer(layer) && layer.colorMode === "gradient") return "layer";
+  return null;
+}
+
+function syncGradientLegacyColors(target, scope) {
+  if (scope === "fill") syncFillLegacyColors(target);
+  else syncStrokeLayerLegacyColors(target);
+}
+
+function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGradientScope()) {
+  const target = getGradientEditTarget(scope);
+  const panel = $("#cardPreviewStyleParams");
+  if (!target || !scope || !panel) return;
+  const stops = target.stops;
+  const bar = panel.querySelector(".preview-gradient-bar");
+  const track = panel.querySelector(".preview-gradient-stops-track");
+  if (!bar || !track) return;
+  bar.style.backgroundImage = buildGradientBarPreviewCss(stops, target);
+  track.querySelectorAll(".preview-gradient-stop-handle").forEach((handle, index) => {
+    const stop = stops[index];
+    if (!stop) return;
+    handle.style.left = `${stop.offset}%`;
+    handle.classList.toggle("active", index === cardPreviewStyleSelectedStopIndex);
+    handle.classList.toggle("dragging", index === draggingGradientStopIndex);
+    handle.style.setProperty("--stop-color", hexWithOpacity(stop.color, stop.opacity));
+  });
+}
+
+function selectGradientStop(index, scope = getActiveGradientScope()) {
+  const target = getGradientEditTarget(scope);
+  if (!target?.stops?.[index]) return;
+  cardPreviewStyleSelectedStopIndex = index;
+  renderCardPreviewStyleParams();
+}
+
+function addGradientStopAtOffset(offset, scope = getActiveGradientScope()) {
+  const target = getGradientEditTarget(scope);
+  if (!target) return;
+  const stops = normalizeGradientStops(target.stops, target);
+  if (stops.length >= 8) {
+    toast("最多 8 个色标");
+    return;
+  }
+  const clamped = Math.round(Math.max(0, Math.min(100, offset)));
+  const sample = interpolateGradientStopColor(stops, clamped);
+  stops.push({ color: sample.color, opacity: sample.opacity, offset: clamped });
+  target.stops = normalizeGradientStops(stops, target);
+  cardPreviewStyleSelectedStopIndex = target.stops.reduce((best, stop, idx, arr) =>
+    Math.abs(stop.offset - clamped) < Math.abs(arr[best].offset - clamped) ? idx : best, 0);
+  syncGradientLegacyColors(target, scope);
+  renderCardPreviewStyleParams();
+  renderCardPreviewStyleModalPreview();
+}
+
+function removeGradientStopAt(index, scope = getActiveGradientScope()) {
+  const target = getGradientEditTarget(scope);
+  if (!target) return;
+  const stops = normalizeGradientStops(target.stops, target);
+  if (stops.length <= 2 || !Number.isFinite(index) || index < 0 || index >= stops.length) return;
+  stops.splice(index, 1);
+  target.stops = normalizeGradientStops(stops, target);
+  cardPreviewStyleSelectedStopIndex = Math.min(cardPreviewStyleSelectedStopIndex, target.stops.length - 1);
+  syncGradientLegacyColors(target, scope);
+  renderCardPreviewStyleParams();
+  renderCardPreviewStyleModalPreview();
+}
+
+function finishGradientStopDrag(event) {
+  if (draggingGradientStopIndex === null || !cardPreviewStyleDraft) return;
+  const scope = draggingGradientScope || getActiveGradientScope();
+  const target = getGradientEditTarget(scope);
+  const panel = $("#cardPreviewStyleParams");
+  const handle = panel?.querySelector(".preview-gradient-stop-handle.dragging");
+  if (handle?.hasPointerCapture?.(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+  handle?.classList.remove("dragging");
+  if (!target) {
+    draggingGradientStopIndex = null;
+    draggingGradientScope = null;
+    return;
+  }
+  const finalOffset = target.stops[draggingGradientStopIndex]?.offset;
+  target.stops = normalizeGradientStops(target.stops, target);
+  if (finalOffset !== undefined) {
+    cardPreviewStyleSelectedStopIndex = target.stops.reduce((best, stop, idx, arr) =>
+      Math.abs(stop.offset - finalOffset) < Math.abs(arr[best].offset - finalOffset) ? idx : best, 0);
+  }
+  syncGradientLegacyColors(target, scope);
+  draggingGradientStopIndex = null;
+  draggingGradientScope = null;
+  renderCardPreviewStyleParams();
+  renderCardPreviewStyleModalPreview();
+}
+
+function handleGradientStopDrag(event) {
+  if (draggingGradientStopIndex === null || !cardPreviewStyleDraft) return;
+  const scope = draggingGradientScope || getActiveGradientScope();
+  const target = getGradientEditTarget(scope);
+  const bar = $("#cardPreviewStyleParams")?.querySelector(".preview-gradient-bar");
+  if (!target || !bar) return;
+  const offset = gradientBarOffsetFromEvent(bar, event.clientX);
+  const stop = target.stops[draggingGradientStopIndex];
+  if (!stop) return;
+  stop.offset = Math.round(offset);
+  refreshGradientBarVisuals(scope);
+  renderCardPreviewStyleModalPreview();
+}
+
+function renderGradientStopsEditor(target, scope) {
+  const stops = normalizeGradientStops(target.stops, target);
+  target.stops = stops;
+  if (cardPreviewStyleSelectedStopIndex >= stops.length) cardPreviewStyleSelectedStopIndex = stops.length - 1;
+  if (cardPreviewStyleSelectedStopIndex < 0) cardPreviewStyleSelectedStopIndex = 0;
+  const selected = stops[cardPreviewStyleSelectedStopIndex] || stops[0];
+  const barCss = buildGradientBarPreviewCss(stops, target);
+  const handles = stops.map((stop, index) => {
+    const active = index === cardPreviewStyleSelectedStopIndex ? " active" : "";
+    return `<button type="button" class="preview-gradient-stop-handle${active}" data-stop-index="${index}" data-gradient-scope="${scope}" style="left:${stop.offset}%;--stop-color:${escapeHtml(hexWithOpacity(stop.color, stop.opacity))}" aria-label="色标 ${index + 1}，${stop.offset}%">
+      <span class="preview-gradient-stop-handle-arrow"></span>
+    </button>`;
+  }).join("");
+  return `<div class="preview-gradient-editor">
+    <div class="preview-gradient-bar-wrap">
+      <div class="preview-gradient-bar" style="background-image:${escapeHtml(barCss)}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带"></div>
+      <div class="preview-gradient-stops-track">${handles}</div>
+    </div>
+    <div class="preview-gradient-stop-controls">
+      <label class="preview-style-field preview-gradient-stop-color"><span>色标颜色</span><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" value="${escapeHtml(selected.color)}" /></label>
+      ${renderStyleRangeField({ label: "色标不透明度", min: 0, max: 100, step: 1 }, selected.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" aria-label="色标不透明度"`)}
+    </div>
+    ${renderStyleRangeField({ label: "角度", min: 0, max: 360, step: 1 }, target.angle, `data-gradient-field="angle" data-gradient-scope="${scope}" aria-label="渐变角度"`)}
+    <p class="preview-gradient-hint">点击色带添加色标，拖动色标调整位置，双击色标删除（至少保留 2 个）</p>
+  </div>`;
+}
+
+function renderFillStyleParams() {
+  const fill = cardPreviewStyleDraft.fill;
+  syncFillLegacyColors(fill);
+  const isGradient = fill.mode === "gradient";
+  const gradientFields = isGradient ? renderGradientStopsEditor(fill, "fill") : "";
+  const solidFields = isGradient
+    ? ""
+    : `${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, fill.opacity, 'data-fill-field="opacity" aria-label="填充不透明度"')}`;
+  return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid"><label class="preview-style-field"><span>类型</span><select data-fill-field="mode" class="preview-style-select"><option value="solid"${!isGradient ? " selected" : ""}>纯色</option><option value="gradient"${isGradient ? " selected" : ""}>线性渐变</option></select></label>${isGradient ? "" : `<label class="preview-style-field"><span>颜色</span><input type="color" data-fill-field="color" value="${escapeHtml(resolvePreviewFillColor(cardPreviewStyleDraft))}" /></label>`}${solidFields}${gradientFields}</div>`;
 }
 
 function renderCardPreviewStyleLayerList() {
   const list = $("#cardPreviewStyleLayerList");
   if (!list || !cardPreviewStyleDraft) return;
-  if (!cardPreviewStyleDraft.layers.length) {
-    list.innerHTML = `<li class="preview-style-layer-empty">点击右侧 + 添加投影、外轮廓或内轮廓</li>`;
-    return;
-  }
-  list.innerHTML = cardPreviewStyleDraft.layers.map(layer => {
-    const label = PREVIEW_EFFECT_TYPES[layer.type]?.label || layer.type;
+  const fillActive = cardPreviewStyleSelectedLayerId == null ? " active" : "";
+  const fillEnabled = cardPreviewStyleDraft.fill.enabled !== false;
+  const fillDisabled = fillEnabled ? "" : " is-disabled";
+  let html = `<li class="preview-style-style-item is-fill${fillActive}${fillDisabled}" data-target="fill"><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span></li>`;
+  html += cardPreviewStyleDraft.layers.map(layer => {
+    const label = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
     const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
-    return `<li class="preview-style-layer-item${active}" data-layer-id="${escapeHtml(layer.id)}"><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="layer-name">${escapeHtml(label)}</span><button type="button" class="layer-remove" aria-label="删除${escapeHtml(label)}">×</button></li>`;
+    const disabled = layer.enabled ? "" : " is-disabled";
+    return `<li class="preview-style-style-item${active}${disabled}" data-layer-id="${escapeHtml(layer.id)}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}">+</button></li>`;
   }).join("");
+  list.innerHTML = html;
+}
+
+function renderStrokeStyleParams(layer) {
+  syncStrokeLayerLegacyColors(layer);
+  const isGradient = layer.colorMode === "gradient";
+  const meta = PREVIEW_EFFECT_TYPES.stroke;
+  const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
+  const modeField = `<label class="preview-style-field"><span>类型</span><select data-layer-field="colorMode" class="preview-style-select"><option value="solid"${!isGradient ? " selected" : ""}>纯色</option><option value="gradient"${isGradient ? " selected" : ""}>线性渐变</option></select></label>`;
+  const colorField = isGradient
+    ? ""
+    : `<label class="preview-style-field"><span>颜色</span><input type="color" data-layer-field="color" value="${escapeHtml(layer.color)}" /></label>`;
+  const opacityField = isGradient
+    ? ""
+    : renderStyleRangeField(meta.fields.find(field => field.key === "opacity"), layer.opacity, 'data-layer-field="opacity" aria-label="轮廓不透明度"');
+  const sizeFields = meta.fields.filter(field => field.key !== "color" && field.key !== "opacity").map(field => {
+    const value = layer[field.key];
+    if (field.type === "select") {
+      return renderStyleSelectField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
+    }
+    return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
+  }).join("");
+  const gradientFields = isGradient ? renderGradientStopsEditor(layer, "layer") : "";
+  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${modeField}${colorField}${opacityField}${sizeFields}${gradientFields}</div>`;
 }
 
 function renderCardPreviewStyleParams() {
   const panel = $("#cardPreviewStyleParams");
   if (!panel || !cardPreviewStyleDraft) return;
+  if (cardPreviewStyleSelectedLayerId == null) {
+    panel.innerHTML = renderFillStyleParams();
+    syncAllStyleRanges(panel);
+    return;
+  }
   const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
   if (!layer) {
-    panel.innerHTML = `<div class="preview-style-params-empty">选择左侧效果以编辑参数</div>`;
+    cardPreviewStyleSelectedLayerId = null;
+    panel.innerHTML = renderFillStyleParams();
+    syncAllStyleRanges(panel);
     return;
   }
   const meta = PREVIEW_EFFECT_TYPES[layer.type];
-  panel.innerHTML = `<div class="preview-style-params-grid">${meta.fields.map(field => {
+  if (layer.type === "stroke") {
+    panel.innerHTML = renderStrokeStyleParams(layer);
+    syncAllStyleRanges(panel);
+    return;
+  }
+  const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
+  panel.innerHTML = `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${meta.fields.map(field => {
     const value = layer[field.key];
     if (field.type === "color") {
       return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><input type="color" data-layer-field="${field.key}" value="${escapeHtml(value)}" /></label>`;
     }
-    return `<label class="preview-style-field preview-style-range"><span>${escapeHtml(field.label)} <output data-layer-output="${field.key}">${escapeHtml(String(value))}</output></span><input type="range" data-layer-field="${field.key}" min="${field.min}" max="${field.max}" step="${field.step}" value="${value}" /></label>`;
+    if (field.type === "select") {
+      return renderStyleSelectField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
+    }
+    return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
   }).join("")}</div>`;
+  syncAllStyleRanges(panel);
 }
 
-function syncCardPreviewStyleFillControls() {
-  if (!cardPreviewStyleDraft) return;
-  $("#cardPreviewStyleFillColor").value = resolvePreviewFillColor(cardPreviewStyleDraft);
-  $("#cardPreviewStyleFillOpacity").value = String(cardPreviewStyleDraft.fill.opacity);
-  $("#cardPreviewStyleFillOpacityOut").textContent = String(cardPreviewStyleDraft.fill.opacity);
+function resolveManagePreviewStyle() {
+  const presetId = cardPreviewStyleManageHoverPresetId !== null
+    ? cardPreviewStyleManageHoverPresetId
+    : cardPreviewStyleManagePresetId;
+  if (!presetId) return null;
+  const preset = findCardPreviewStylePreset(presetId);
+  return preset ? preset.style : null;
+}
+
+function resolveManagePresetStyle(presetId) {
+  if (!presetId) return null;
+  const preset = findCardPreviewStylePreset(presetId);
+  return preset ? preset.style : null;
+}
+
+function clearManagePresetHover() {
+  if (cardPreviewStyleManageHoverPresetId === null) return;
+  cardPreviewStyleManageHoverPresetId = null;
+  renderCardPreviewStyleModalPreview();
+}
+
+function applyManagePresetIconStyles() {
+  const list = $("#cardPreviewStylePresetList");
+  if (!list) return;
+  const font = getCardPreviewStyleModalFont();
+  list.querySelectorAll(".preview-style-preset-card").forEach(card => {
+    const glyph = card.querySelector(".preview-style-preset-glyph");
+    if (!glyph) return;
+    glyph.textContent = MANAGE_PRESET_PREVIEW_CHAR;
+    if (font) glyph.style.fontFamily = cssName(font);
+    else glyph.style.fontFamily = "";
+    applyCardPreviewStyleToElement(glyph, resolveManagePresetStyle(card.dataset.presetId || ""), { themeDefault: true });
+  });
+}
+
+function renderManagePresetIconCard(presetId, name, { selected = false, current = false } = {}) {
+  const active = (cardPreviewStyleManagePresetId || "") === (presetId || "");
+  return `<button type="button" class="preview-style-preset-card${active ? " active" : ""}${current ? " is-current" : ""}" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(name)}">
+    <span class="preview-style-preset-glyph" aria-hidden="true">${MANAGE_PRESET_PREVIEW_CHAR}</span>
+    <span class="preview-style-preset-label">${escapeHtml(name)}</span>
+    ${current ? '<span class="preview-style-preset-badge">使用中</span>' : ""}
+  </button>`;
+}
+
+function syncCardPreviewStyleFooter() {
+  const isEdit = cardPreviewStyleModalTab === "edit";
+  const saveDraftBtn = $("#cardPreviewStyleSaveDraft");
+  const confirmBtn = $("#cardPreviewStyleConfirm");
+  if (saveDraftBtn) {
+    saveDraftBtn.hidden = !isEdit;
+    saveDraftBtn.disabled = !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft);
+  }
+  if (confirmBtn) confirmBtn.textContent = isEdit ? "确定" : "应用";
+}
+
+function setCardPreviewStyleModalTab(tab) {
+  cardPreviewStyleModalTab = tab === "manage" ? "manage" : "edit";
+  cardPreviewStyleManageHoverPresetId = null;
+  const isEdit = cardPreviewStyleModalTab === "edit";
+  $("#cardPreviewStyleEditTab")?.classList.toggle("active", isEdit);
+  $("#cardPreviewStyleManageTab")?.classList.toggle("active", !isEdit);
+  $("#cardPreviewStyleEditTab")?.setAttribute("aria-selected", String(isEdit));
+  $("#cardPreviewStyleManageTab")?.setAttribute("aria-selected", String(!isEdit));
+  const editPanel = $("#cardPreviewStyleEditPanel");
+  const managePanel = $("#cardPreviewStyleManagePanel");
+  if (editPanel) editPanel.hidden = !isEdit;
+  if (managePanel) managePanel.hidden = isEdit;
+  hideCardPreviewStylePresetEditor();
+  if (isEdit) {
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleParams();
+  } else {
+    renderCardPreviewStyleManagePanel();
+  }
+  syncCardPreviewStyleFooter();
+  renderCardPreviewStyleModalPreview();
+}
+
+function renderCardPreviewStyleManagePanel() {
+  const list = $("#cardPreviewStylePresetList");
+  if (!list) return;
+  let html = renderManagePresetIconCard("", "默认", { current: !state.activeCardPreviewStylePresetId });
+  html += state.cardPreviewStylePresets.map(preset =>
+    renderManagePresetIconCard(preset.id, preset.name, { current: preset.id === state.activeCardPreviewStylePresetId })
+  ).join("");
+  list.innerHTML = html;
+  applyManagePresetIconStyles();
+  const font = getCardPreviewStyleModalFont();
+  if (font) {
+    ensureFontLoaded(font, MANAGE_PRESET_PREVIEW_CHAR).then(() => {
+      if (cardPreviewStyleModalTab !== "manage") return;
+      applyManagePresetIconStyles();
+    });
+  }
+  const hasPreset = Boolean(cardPreviewStyleManagePresetId);
+  const renameBtn = $("#cardPreviewStyleManageRename");
+  const deleteBtn = $("#cardPreviewStyleManageDelete");
+  if (renameBtn) renameBtn.disabled = !hasPreset;
+  if (deleteBtn) deleteBtn.disabled = !hasPreset;
+}
+
+function applyManageSelectedPreset() {
+  if (!cardPreviewStyleManagePresetId) {
+    state.cardPreviewStyle = null;
+    state.activeCardPreviewStylePresetId = null;
+    applyCardPreviewStyleToAllCards();
+    persistUiSettings();
+    renderCardPreviewStyleManagePanel();
+    toast("已恢复默认预览");
+    return;
+  }
+  const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
+  if (!preset) {
+    toast("方案不存在");
+    return;
+  }
+  state.cardPreviewStyle = hasActiveCardPreviewStyle(preset.style)
+    ? cloneCardPreviewStyle(preset.style)
+    : null;
+  state.activeCardPreviewStylePresetId = preset.id;
+  applyCardPreviewStyleToAllCards();
+  persistUiSettings();
+  renderCardPreviewStyleManagePanel();
+  toast(`已应用「${preset.name}」`);
+}
+
+function loadManagePresetToEdit() {
+  loadCardPreviewStylePresetDraft(cardPreviewStyleManagePresetId || null);
+  setCardPreviewStyleModalTab("edit");
+}
+
+function hideCardPreviewStylePresetEditor() {
+  cardPreviewStylePresetEditorMode = null;
+  const wrap = $("#cardPreviewStylePresetRenameWrap");
+  const input = $("#cardPreviewStylePresetRenameInput");
+  if (wrap) wrap.hidden = true;
+  if (input) input.value = "";
+}
+
+function showCardPreviewStylePresetEditor(mode, initialValue = "") {
+  cardPreviewStylePresetEditorMode = mode;
+  const wrap = $("#cardPreviewStylePresetRenameWrap");
+  const input = $("#cardPreviewStylePresetRenameInput");
+  if (!wrap || !input) return;
+  wrap.hidden = false;
+  input.value = initialValue;
+  input.placeholder = mode === "rename" ? "输入新名称" : "输入方案名称";
+  input.focus();
+  input.select();
+}
+
+function applyCardPreviewStylePresetEditor() {
+  const input = $("#cardPreviewStylePresetRenameInput");
+  const name = input?.value.trim();
+  if (cardPreviewStylePresetEditorMode === "rename") {
+    const presetId = cardPreviewStyleModalTab === "manage"
+      ? cardPreviewStyleManagePresetId
+      : cardPreviewStyleDraftPresetId;
+    if (!name || !presetId) {
+      toast("请输入方案名称");
+      return;
+    }
+    renameCardPreviewStylePreset(presetId, name);
+    persistUiSettings();
+    hideCardPreviewStylePresetEditor();
+    if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
+    toast("已重命名方案");
+    return;
+  }
+  if (!name || !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
+    toast("请输入方案名称");
+    return;
+  }
+  const preset = createCardPreviewStylePreset(name, cardPreviewStyleDraft);
+  cardPreviewStyleDraftPresetId = preset.id;
+  cardPreviewStyleManagePresetId = preset.id;
+  persistUiSettings();
+  hideCardPreviewStylePresetEditor();
+  if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
+  toast(`已保存方案「${preset.name}」`);
+}
+
+function saveCardPreviewStylePresetDraft() {
+  if (!cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
+    toast("当前没有可保存的样式");
+    return;
+  }
+  if (cardPreviewStyleDraftPresetId) {
+    const preset = updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
+    if (!preset) {
+      toast("方案不存在");
+      return;
+    }
+    cardPreviewStyleManagePresetId = preset.id;
+    persistUiSettings();
+    toast(`已更新「${preset.name}」`);
+    return;
+  }
+  showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名方案"));
+}
+
+function loadCardPreviewStylePresetDraft(presetId) {
+  cardPreviewStyleDraftPresetId = presetId || null;
+  cardPreviewStyleDraft = presetId
+    ? cloneCardPreviewStyle(findCardPreviewStylePreset(presetId)?.style || CARD_PREVIEW_STYLE_DEFAULTS)
+    : normalizeCardPreviewStyle(null);
+  cardPreviewStyleSelectedLayerId = null;
+  cardPreviewStyleDraft.layers.forEach(layer => {
+    if (layer.id && /^preview-layer-\d+$/.test(layer.id)) {
+      const suffix = Number(layer.id.split("-").pop());
+      if (suffix > cardPreviewStyleLayerCounter) cardPreviewStyleLayerCounter = suffix;
+    }
+  });
+  hideCardPreviewStylePresetEditor();
+  renderCardPreviewStyleModal();
+}
+
+function exportCardPreviewStylePresets() {
+  const data = {
+    type: "webfonts-card-preview-styles",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    presets: state.cardPreviewStylePresets
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `card-preview-styles-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`已导出 ${state.cardPreviewStylePresets.length} 个方案`);
+}
+
+async function importCardPreviewStylePresets(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    const items = Array.isArray(data?.presets) ? data.presets : Array.isArray(data) ? data : null;
+    if (!items?.length) throw new Error("JSON 中没有 presets 数组");
+    let imported = 0;
+    items.forEach(item => {
+      if (!item || typeof item !== "object" || typeof item.name !== "string" || !item.name.trim()) return;
+      if (!hasActiveCardPreviewStyle(normalizeCardPreviewStyle(item.style))) return;
+      createCardPreviewStylePreset(item.name, item.style);
+      imported += 1;
+    });
+    if (!imported) throw new Error("没有有效的样式方案");
+    persistUiSettings();
+    renderCardPreviewStyleManagePanel();
+    toast(`已导入 ${imported} 个方案`);
+  } catch (error) {
+    toast(error.message || "导入失败");
+  }
 }
 
 function renderCardPreviewStyleModal() {
   if (!cardPreviewStyleDraft) return;
   renderCardPreviewStyleFontOptions();
-  syncCardPreviewStyleFillControls();
-  renderCardPreviewStyleLayerList();
-  renderCardPreviewStyleParams();
+  if (cardPreviewStyleModalTab === "manage") {
+    renderCardPreviewStyleManagePanel();
+  } else {
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleParams();
+  }
+  syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
 }
 
 function openCardPreviewStyleModal() {
   if (!state.fonts.length) return toast("请先加载字体");
-  cardPreviewStyleDraft = cloneCardPreviewStyle(state.cardPreviewStyle);
-  cardPreviewStyleSelectedLayerId = cardPreviewStyleDraft.layers[0]?.id || null;
+  cardPreviewStyleDraftPresetId = state.activeCardPreviewStylePresetId;
+  if (cardPreviewStyleDraftPresetId && findCardPreviewStylePreset(cardPreviewStyleDraftPresetId)) {
+    cardPreviewStyleDraft = normalizeCardPreviewStyle(findCardPreviewStylePreset(cardPreviewStyleDraftPresetId).style);
+  } else {
+    cardPreviewStyleDraftPresetId = null;
+    cardPreviewStyleDraft = normalizeCardPreviewStyle(state.cardPreviewStyle);
+  }
+  cardPreviewStyleSelectedLayerId = null;
+  cardPreviewStyleModalTab = "edit";
+  cardPreviewStyleManagePresetId = state.activeCardPreviewStylePresetId || "";
+  hideCardPreviewStylePresetEditor();
   cardPreviewStylePreviewFontId = state.selected?.id || state.previewed?.id || state.filtered[0]?.id || state.fonts[0]?.id || null;
   cardPreviewStyleDraft.layers.forEach(layer => {
     if (layer.id && /^preview-layer-\d+$/.test(layer.id)) {
@@ -1442,26 +2489,59 @@ function openCardPreviewStyleModal() {
     }
   });
   renderCardPreviewStyleModal();
+  setCardPreviewStyleModalTab("edit");
   $("#cardPreviewStyleModal").hidden = false;
-  $("#cardPreviewStyleAddMenu").hidden = true;
 }
 
 function closeCardPreviewStyleModal(apply = false) {
-  if (apply && cardPreviewStyleDraft) {
-    state.cardPreviewStyle = cloneCardPreviewStyle(cardPreviewStyleDraft);
-    applyCardPreviewStyleToAllCards();
-    persistUiSettings();
-    toast("已应用卡片预览样式");
+  if (apply) {
+    if (cardPreviewStyleModalTab === "manage") {
+      applyManageSelectedPreset();
+    } else if (cardPreviewStyleDraft) {
+      state.cardPreviewStyle = hasActiveCardPreviewStyle(cardPreviewStyleDraft)
+        ? cloneCardPreviewStyle(cardPreviewStyleDraft)
+        : null;
+      const preset = cardPreviewStyleDraftPresetId ? findCardPreviewStylePreset(cardPreviewStyleDraftPresetId) : null;
+      state.activeCardPreviewStylePresetId = preset && cardPreviewStylesEqual(cardPreviewStyleDraft, preset.style)
+        ? cardPreviewStyleDraftPresetId
+        : null;
+      applyCardPreviewStyleToAllCards();
+      persistUiSettings();
+      if (state.activeCardPreviewStylePresetId) {
+        toast(`已应用「${findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)?.name || "方案"}」`);
+      } else {
+        toast(state.cardPreviewStyle ? "已应用卡片预览样式" : "已恢复默认预览");
+      }
+    }
   }
   cardPreviewStyleDraft = null;
+  cardPreviewStyleDraftPresetId = null;
   cardPreviewStyleSelectedLayerId = null;
+  cardPreviewStyleModalTab = "edit";
+  cardPreviewStyleManagePresetId = "";
+  cardPreviewStyleManageHoverPresetId = null;
+  draggingPreviewStyleLayerId = null;
+  hideCardPreviewStylePresetEditor();
   $("#cardPreviewStyleModal").hidden = true;
-  $("#cardPreviewStyleAddMenu").hidden = true;
+}
+
+function handlePreviewStyleWheel(event) {
+  const modal = $("#cardPreviewStyleModal");
+  if (modal?.hidden) return;
+  const target = event.target;
+  const range = target instanceof HTMLInputElement && target.classList.contains("preview-style-range")
+    ? target
+    : target.closest?.(".preview-style-range-wrap")?.querySelector("input.preview-style-range");
+  if (!range || !modal.contains(range)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
 }
 
 function wireCardPreviewStyleModal() {
   const modal = $("#cardPreviewStyleModal");
   if (!modal) return;
+  modal.querySelector(".preview-style-modal")?.addEventListener("wheel", handlePreviewStyleWheel, { passive: false });
   $("#cardPreviewStyleButton")?.addEventListener("click", openCardPreviewStyleModal);
   $("#cardPreviewStyleClose")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
   $("#cardPreviewStyleCancel")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
@@ -1475,82 +2555,262 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleFont")?.addEventListener("change", event => {
     cardPreviewStylePreviewFontId = Number(event.target.value);
     renderCardPreviewStyleModalPreview();
+    if (cardPreviewStyleModalTab === "manage") applyManagePresetIconStyles();
   });
-  $("#cardPreviewStyleFillColor")?.addEventListener("input", event => {
-    if (!cardPreviewStyleDraft) return;
-    cardPreviewStyleDraft.fill.color = event.target.value;
+  $("#cardPreviewStyleEditTab")?.addEventListener("click", () => setCardPreviewStyleModalTab("edit"));
+  $("#cardPreviewStyleManageTab")?.addEventListener("click", () => setCardPreviewStyleModalTab("manage"));
+  $("#cardPreviewStyleSaveDraft")?.addEventListener("click", saveCardPreviewStylePresetDraft);
+  const presetList = $("#cardPreviewStylePresetList");
+  presetList?.addEventListener("click", event => {
+    const item = event.target.closest(".preview-style-preset-card");
+    if (!item) return;
+    cardPreviewStyleManagePresetId = item.dataset.presetId || "";
+    cardPreviewStyleManageHoverPresetId = null;
+    renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleModalPreview();
   });
-  $("#cardPreviewStyleFillOpacity")?.addEventListener("input", event => {
-    if (!cardPreviewStyleDraft) return;
-    cardPreviewStyleDraft.fill.opacity = Number(event.target.value);
-    $("#cardPreviewStyleFillOpacityOut").textContent = String(cardPreviewStyleDraft.fill.opacity);
+  presetList?.addEventListener("mouseover", event => {
+    const item = event.target.closest(".preview-style-preset-card");
+    if (!item || !presetList.contains(item)) return;
+    const presetId = item.dataset.presetId || "";
+    if (cardPreviewStyleManageHoverPresetId === presetId) return;
+    cardPreviewStyleManageHoverPresetId = presetId;
     renderCardPreviewStyleModalPreview();
   });
-  $("#cardPreviewStyleAdd")?.addEventListener("click", event => {
-    event.stopPropagation();
-    const menu = $("#cardPreviewStyleAddMenu");
-    menu.hidden = !menu.hidden;
+  presetList?.addEventListener("mouseleave", event => {
+    if (event.relatedTarget && presetList.contains(event.relatedTarget)) return;
+    clearManagePresetHover();
   });
-  $("#cardPreviewStyleAddMenu")?.addEventListener("click", event => {
-    const button = event.target.closest("[data-effect-type]");
-    if (!button || !cardPreviewStyleDraft) return;
-    const layer = createPreviewStyleLayer(button.dataset.effectType);
-    if (!layer) return;
-    cardPreviewStyleDraft.layers.push(layer);
-    cardPreviewStyleSelectedLayerId = layer.id;
-    $("#cardPreviewStyleAddMenu").hidden = true;
-    renderCardPreviewStyleModal();
+  $("#cardPreviewStyleManageEdit")?.addEventListener("click", loadManagePresetToEdit);
+  $("#cardPreviewStyleManageRename")?.addEventListener("click", () => {
+    if (!cardPreviewStyleManagePresetId) return;
+    showCardPreviewStylePresetEditor("rename", findCardPreviewStylePreset(cardPreviewStyleManagePresetId)?.name || "");
   });
-  document.addEventListener("pointerdown", event => {
-    const menu = $("#cardPreviewStyleAddMenu");
-    const addButton = $("#cardPreviewStyleAdd");
-    if (!menu || menu.hidden) return;
-    if (menu.contains(event.target) || addButton?.contains(event.target)) return;
-    menu.hidden = true;
+  $("#cardPreviewStyleManageDelete")?.addEventListener("click", () => {
+    if (!cardPreviewStyleManagePresetId) return;
+    const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
+    if (!preset) return;
+    if (!window.confirm(`删除方案「${preset.name}」？`)) return;
+    deleteCardPreviewStylePreset(cardPreviewStyleManagePresetId);
+    cardPreviewStyleManagePresetId = "";
+    persistUiSettings();
+    renderCardPreviewStyleManagePanel();
+    renderCardPreviewStyleModalPreview();
+    toast("已删除方案");
   });
-  $("#cardPreviewStyleLayerList")?.addEventListener("click", event => {
+  $("#cardPreviewStylePresetRenameConfirm")?.addEventListener("click", applyCardPreviewStylePresetEditor);
+  $("#cardPreviewStylePresetRenameCancel")?.addEventListener("click", hideCardPreviewStylePresetEditor);
+  $("#cardPreviewStylePresetRenameInput")?.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyCardPreviewStylePresetEditor();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      hideCardPreviewStylePresetEditor();
+    }
+  });
+  $("#cardPreviewStylePresetExport")?.addEventListener("click", exportCardPreviewStylePresets);
+  $("#cardPreviewStylePresetImport")?.addEventListener("click", () => $("#cardPreviewStylePresetFile")?.click());
+  $("#cardPreviewStylePresetFile")?.addEventListener("change", event => {
+    const file = event.target.files?.[0];
+    if (file) importCardPreviewStylePresets(file);
+    event.target.value = "";
+  });
+  const layerList = $("#cardPreviewStyleLayerList");
+  layerList?.addEventListener("dragstart", event => {
+    const row = event.target.closest("[data-layer-id]");
+    if (!row) return;
+    draggingPreviewStyleLayerId = row.dataset.layerId;
+    row.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggingPreviewStyleLayerId);
+  });
+  layerList?.addEventListener("dragover", event => {
+    const row = event.target.closest("[data-layer-id]");
+    if (!row || !draggingPreviewStyleLayerId || row.dataset.layerId === draggingPreviewStyleLayerId) return;
+    event.preventDefault();
+    const rect = row.getBoundingClientRect();
+    row.dataset.dropPos = event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    layerList.querySelectorAll(".drop-before, .drop-after").forEach(item => item.classList.remove("drop-before", "drop-after"));
+    row.classList.add(row.dataset.dropPos === "before" ? "drop-before" : "drop-after");
+  });
+  layerList?.addEventListener("dragleave", event => {
+    const row = event.target.closest("[data-layer-id]");
+    row?.classList.remove("drop-before", "drop-after");
+  });
+  layerList?.addEventListener("drop", event => {
+    const row = event.target.closest("[data-layer-id]");
+    if (!row || !draggingPreviewStyleLayerId) return;
+    event.preventDefault();
+    movePreviewStyleLayer(draggingPreviewStyleLayerId, row.dataset.layerId, row.dataset.dropPos !== "after");
+    draggingPreviewStyleLayerId = null;
+    layerList.querySelectorAll(".dragging, .drop-before, .drop-after").forEach(item => item.classList.remove("dragging", "drop-before", "drop-after"));
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleModalPreview();
+  });
+  layerList?.addEventListener("dragend", () => {
+    draggingPreviewStyleLayerId = null;
+    layerList.querySelectorAll(".dragging, .drop-before, .drop-after").forEach(item => item.classList.remove("dragging", "drop-before", "drop-after"));
+  });
+  layerList?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
-    const removeButton = event.target.closest(".layer-remove");
-    if (removeButton) {
+    if (event.target.closest(".layer-duplicate")) {
       event.stopPropagation();
-      const item = removeButton.closest("[data-layer-id]");
-      const layerId = item?.dataset.layerId;
-      cardPreviewStyleDraft.layers = cardPreviewStyleDraft.layers.filter(layer => layer.id !== layerId);
-      if (cardPreviewStyleSelectedLayerId === layerId) {
-        cardPreviewStyleSelectedLayerId = cardPreviewStyleDraft.layers[0]?.id || null;
-      }
+      const layerId = event.target.closest("[data-layer-id]")?.dataset.layerId;
+      if (!layerId) return;
+      const newId = duplicatePreviewStyleLayer(layerId);
+      if (newId) cardPreviewStyleSelectedLayerId = newId;
       renderCardPreviewStyleModal();
       return;
     }
+    if (event.target.closest('[data-target="fill"]')) {
+      cardPreviewStyleSelectedLayerId = null;
+      cardPreviewStyleSelectedStopIndex = 0;
+      renderCardPreviewStyleLayerList();
+      renderCardPreviewStyleParams();
+      return;
+    }
     const item = event.target.closest("[data-layer-id]");
-    if (!item) return;
+    if (!item || event.target.matches('input[type="checkbox"]') || event.target.closest(".layer-duplicate")) return;
     cardPreviewStyleSelectedLayerId = item.dataset.layerId;
+    cardPreviewStyleSelectedStopIndex = 0;
     renderCardPreviewStyleLayerList();
     renderCardPreviewStyleParams();
   });
-  $("#cardPreviewStyleLayerList")?.addEventListener("change", event => {
+  layerList?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft || !event.target.matches('input[type="checkbox"]')) return;
+    const fillItem = event.target.closest('[data-target="fill"]');
+    if (fillItem) {
+      cardPreviewStyleDraft.fill.enabled = event.target.checked;
+      renderCardPreviewStyleLayerList();
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
     const item = event.target.closest("[data-layer-id]");
     const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === item?.dataset.layerId);
     if (!layer) return;
     layer.enabled = event.target.checked;
+    renderCardPreviewStyleLayerList();
     renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("change", event => {
+    if (!cardPreviewStyleDraft) return;
+    const fillField = event.target.dataset.fillField;
+    if (fillField === "mode") {
+      cardPreviewStyleDraft.fill.mode = event.target.value === "gradient" ? "gradient" : "solid";
+      if (cardPreviewStyleDraft.fill.mode === "gradient") cardPreviewStyleDraft.fill.enabled = true;
+      syncFillLegacyColors(cardPreviewStyleDraft.fill);
+      if (cardPreviewStyleDraft.fill.mode === "gradient") cardPreviewStyleSelectedStopIndex = 0;
+      renderCardPreviewStyleParams();
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
+    const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
+    const field = event.target.dataset.layerField;
+    if (layer && field === "colorMode" && event.target.tagName === "SELECT") {
+      layer.colorMode = event.target.value === "gradient" ? "gradient" : "solid";
+      syncStrokeLayerLegacyColors(layer);
+      if (layer.colorMode === "gradient") cardPreviewStyleSelectedStopIndex = 0;
+      renderCardPreviewStyleParams();
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
+    if (layer && field && event.target.tagName === "SELECT") {
+      layer[field] = event.target.value;
+      renderCardPreviewStyleModalPreview();
+    }
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("click", event => {
+    if (!cardPreviewStyleDraft) return;
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (handle) {
+      selectGradientStop(Number(handle.dataset.stopIndex), handle.dataset.gradientScope);
+      return;
+    }
+    if (event.target.dataset.gradientAction === "bar-click") {
+      addGradientStopAtOffset(gradientBarOffsetFromEvent(event.target, event.clientX), event.target.dataset.gradientScope);
+    }
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("dblclick", event => {
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (!handle || !cardPreviewStyleDraft) return;
+    event.preventDefault();
+    removeGradientStopAt(Number(handle.dataset.stopIndex), handle.dataset.gradientScope);
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointerdown", event => {
+    const handle = event.target.closest(".preview-gradient-stop-handle");
+    if (!handle || !cardPreviewStyleDraft) return;
+    event.preventDefault();
+    draggingGradientStopIndex = Number(handle.dataset.stopIndex);
+    draggingGradientScope = handle.dataset.gradientScope || getActiveGradientScope();
+    cardPreviewStyleSelectedStopIndex = draggingGradientStopIndex;
+    handle.classList.add("dragging");
+    handle.setPointerCapture(event.pointerId);
+    refreshGradientBarVisuals(draggingGradientScope);
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {
+    if (draggingGradientStopIndex === null) return;
+    handleGradientStopDrag(event);
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointerup", event => {
+    if (draggingGradientStopIndex === null) return;
+    finishGradientStopDrag(event);
+  });
+  $("#cardPreviewStyleParams")?.addEventListener("pointercancel", event => {
+    if (draggingGradientStopIndex === null) return;
+    finishGradientStopDrag(event);
   });
   $("#cardPreviewStyleParams")?.addEventListener("input", event => {
     if (!cardPreviewStyleDraft) return;
+    const gradientScope = event.target.dataset.gradientScope;
+    const gradientStopField = event.target.dataset.gradientStopField;
+    const gradientField = event.target.dataset.gradientField;
+    const stopIndex = Number(event.target.dataset.stopIndex);
+    if (gradientStopField && gradientScope && Number.isFinite(stopIndex)) {
+      const target = getGradientEditTarget(gradientScope);
+      if (!target) return;
+      const stops = normalizeGradientStops(target.stops, target);
+      const stop = stops[stopIndex];
+      if (!stop) return;
+      stop[gradientStopField] = gradientStopField === "color" ? event.target.value : Number(event.target.value);
+      target.stops = normalizeGradientStops(stops, target);
+      syncGradientLegacyColors(target, gradientScope);
+      if (gradientStopField !== "color") syncStyleRangeProgress(event.target);
+      refreshGradientBarVisuals(gradientScope);
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
+    if (gradientField === "angle" && gradientScope) {
+      const target = getGradientEditTarget(gradientScope);
+      if (!target) return;
+      target.angle = Number(event.target.value);
+      syncStyleRangeProgress(event.target);
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
+    const fillField = event.target.dataset.fillField;
+    if (fillField) {
+      if (fillField === "mode") return;
+      cardPreviewStyleDraft.fill[fillField] = fillField === "color" || fillField === "color2"
+        ? event.target.value
+        : Number(event.target.value);
+      syncFillLegacyColors(cardPreviewStyleDraft.fill);
+      if (fillField !== "color" && fillField !== "color2") syncStyleRangeProgress(event.target);
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
     const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
     const field = event.target.dataset.layerField;
     if (!layer || !field) return;
     layer[field] = event.target.type === "range" ? Number(event.target.value) : event.target.value;
-    const output = panelOutput(event.target);
-    if (output) output.textContent = String(layer[field]);
+    if (event.target.type === "range") syncStyleRangeProgress(event.target);
+    syncCardPreviewStyleFooter();
     renderCardPreviewStyleModalPreview();
   });
 }
 
 function panelOutput(input) {
-  return input?.closest(".preview-style-field")?.querySelector(`[data-layer-output="${input.dataset.layerField}"]`);
+  return input?.closest(".preview-style-range-wrap")?.querySelector("[data-range-value]");
 }
 
 async function copySvgValue(svg) {
@@ -1887,7 +3147,11 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   const normalizedCommands = translateSvgPathCommands(svgCommands, -originX, -originY);
   const pathData = pathCommandsToSvgData(normalizedCommands);
   const label = escapeXml(font.displayName || font.family || "font");
-  return buildStyledOutlineSvgMarkup({ pathData, width, height, label, style: state.cardPreviewStyle });
+  if (!state.cardPreviewStyle || !hasActiveCardPreviewStyle(state.cardPreviewStyle)) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="#181816" d="${pathData}"/>\n</svg>`;
+  }
+  const unitsPerPx = previewStyleUnitsPerPx(upm);
+  return buildStyledOutlineSvgMarkup({ pathData, width, height, label, style: state.cardPreviewStyle, unitsPerPx });
 }
 
 async function copyFontSvg(font) {
@@ -3635,6 +4899,7 @@ ui.list.addEventListener("wheel", handleFontListWheel, { passive: false });
 ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 $("#themeButton").addEventListener("click", () => {
   document.body.classList.toggle("dark");
+  applyCardPreviewStyleToAllCards();
   persistUiSettings();
 });
 $("#previewTabButton").addEventListener("click", () => setDetailTab("preview"));
@@ -3750,7 +5015,7 @@ ui.list.addEventListener("pointermove", event => {
   enlarged.style.fontWeight = sampleStyle.fontWeight;
   enlarged.style.lineHeight = sampleStyle.lineHeight;
   enlarged.style.letterSpacing = sampleStyle.letterSpacing;
-  enlarged.style.color = sampleStyle.color;
+  applyCardPreviewStyleToMagnifierText(enlarged, sampleStyle);
   enlarged.style.padding = sampleStyle.padding;
   enlarged.style.boxSizing = "border-box";
   enlarged.style.display = sampleStyle.display;
