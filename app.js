@@ -1576,7 +1576,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   gradientAngle: "按住拖拽调整渐变角度",
   gradientColor: "调整当前色标颜色",
   gradientOpacity: "调整当前色标不透明度",
-  layerList: "拖动调整图层顺序，勾选启用或禁用",
+  layerList: "拖动调整图层顺序，列表越靠上越在前，勾选启用或禁用",
   layerDuplicate: "复制图层",
   strokePosition: "选择轮廓相对文字的位置",
   previewFont: "切换预览字体",
@@ -1830,7 +1830,7 @@ function cardPreviewStyleToEffectCssForLayer(layerId, style = state.cardPreviewS
     ...item,
     enabled: item.id === layerId && item.enabled
   }));
-  const css = cardPreviewStyleToEffectCss(isolated);
+  const css = cardPreviewStyleToEffectCss(isolated, { isolatedStackLayer: true });
   if (layer?.type === "dropShadow") {
     css.color = "transparent";
     css.webkitTextFillColor = "transparent";
@@ -1872,7 +1872,7 @@ function cardPreviewStyleToFillCss(style = state.cardPreviewStyle) {
   return css;
 }
 
-function cardPreviewStyleToEffectCss(style = state.cardPreviewStyle) {
+function cardPreviewStyleToEffectCss(style = state.cardPreviewStyle, { isolatedStackLayer = false } = {}) {
   const normalized = normalizeCardPreviewStyle(style);
   const css = {
     color: "transparent",
@@ -1907,6 +1907,14 @@ function cardPreviewStyleToEffectCss(style = state.cardPreviewStyle) {
     const color = hexWithOpacity(layer.color, layer.opacity);
     if (position === "inside") {
       shadows.unshift(...innerStrokeShadows(width, color));
+      return;
+    }
+    if (isolatedStackLayer) {
+      if (position === "center") {
+        primaryWebkit = { width, color, paintOrder: "fill stroke" };
+      } else {
+        primaryWebkit = { width: width * 2, color, paintOrder: "stroke fill" };
+      }
       return;
     }
     if (position === "center") {
@@ -2233,13 +2241,18 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
     return;
   }
   const bleed = computePreviewStyleVisualBleed(style);
-  if (bleed > 0) element.style.setProperty("--preview-style-bleed", `${bleed}px`);
-  else element.style.removeProperty("--preview-style-bleed");
+  element.style.removeProperty("--preview-style-bleed");
   const order = getEnabledStyleLayerOrder(style);
   if (text != null && order.length <= 1 && !resolvePreviewStyleStackRoot(element)) {
     element.textContent = text;
   }
   const stack = ensurePreviewStyleLayerStack(element, text, order);
+  if (stack.root?.classList?.contains("preview-style-text-stack")) {
+    if (bleed > 0) stack.root.style.setProperty("--preview-style-bleed", `${bleed}px`);
+    else stack.root.style.removeProperty("--preview-style-bleed");
+  } else if (bleed > 0) {
+    element.style.setProperty("--preview-style-bleed", `${bleed}px`);
+  }
   if (order.length === 1) {
     const key = order[0];
     const css = key === PREVIEW_STYLE_FILL_LAYER_ID
@@ -2251,7 +2264,8 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
   order.forEach((key, index) => {
     const layerEl = stack.layers[index];
     if (!layerEl) return;
-    layerEl.style.zIndex = String(index + 1);
+    // 图层面板越靠上越在前：首项 z-index 最高
+    layerEl.style.zIndex = String(order.length - index);
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       applyPreviewStyleCssToElement(layerEl, cardPreviewStyleToFillCss(style));
     } else {

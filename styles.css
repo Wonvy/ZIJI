@@ -1197,8 +1197,6 @@ body.header-card-preview-focus .preview-input-history {
 }
 .card-grid .font-card.has-preview-style .sample {
   overflow: visible;
-  margin-block: calc(4px - var(--preview-style-bleed, 0px)) 0;
-  padding: var(--preview-style-bleed, 0px);
 }
 .font-card.font-pending .sample, .font-card:not(.font-ready) .sample { color: var(--muted) !important; opacity: .32; }
 .font-card.font-loading .sample { opacity: .48; }
@@ -1336,7 +1334,7 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 28px;
   white-space: nowrap;
 }
-.list-view .font-card.has-preview-style .sample { overflow: visible; padding: var(--preview-style-bleed, 0px); }
+.list-view .font-card.has-preview-style .sample { overflow: visible; }
 .list-view .font-card small { position: static; text-align: right; }
 .font-list.single-view {
   --single-card-size: 82px;
@@ -1405,8 +1403,6 @@ body.header-card-preview-focus .preview-input-history {
 }
 .focus-view .font-card.has-preview-style .sample {
   overflow: visible;
-  padding: var(--preview-style-bleed, 0px);
-  margin-block: calc(0px - var(--preview-style-bleed, 0px));
 }
 .focus-view .font-card:hover > strong,
 .focus-view .font-card:hover > .card-family-switch,
@@ -1906,7 +1902,6 @@ body.header-card-preview-focus .preview-input-history {
   justify-content: center;
   min-height: 72px;
   overflow: visible;
-  padding: var(--preview-style-bleed, 0px);
   border-radius: 4px;
   color: var(--ink);
   background: var(--stage);
@@ -2054,7 +2049,6 @@ body.header-card-preview-focus .preview-input-history {
   justify-content: center;
   max-width: 100%;
   overflow: visible;
-  padding: var(--preview-style-bleed, 0px);
   font-size: 52px;
   line-height: 1.1;
   text-align: center;
@@ -2085,6 +2079,8 @@ body.header-card-preview-focus .preview-input-history {
   line-height: inherit;
   white-space: inherit;
   text-align: inherit;
+  padding: var(--preview-style-bleed, 0px);
+  box-sizing: content-box;
 }
 .preview-style-text-stack .preview-style-text-size {
   position: relative;
@@ -2100,8 +2096,8 @@ body.header-card-preview-focus .preview-input-history {
 .preview-style-text-stack .preview-style-text-stroke,
 .preview-style-text-stack .preview-style-text-layer {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: var(--preview-style-bleed, 0px);
+  left: var(--preview-style-bleed, 0px);
   display: inline-block;
   pointer-events: none;
   line-height: inherit;
