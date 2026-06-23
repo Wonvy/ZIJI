@@ -49,13 +49,81 @@ const SORT_LABELS = {
   narrow: "瘦→宽",
   wide: "宽→瘦"
 };
+const CARD_GRID_GAP = 14;
+const CARD_GRID_MIN_HEIGHT = 178;
+const CARD_GRID_ROW_HEIGHT = CARD_GRID_MIN_HEIGHT + CARD_GRID_GAP;
+const CARD_COLUMNS_MIN = 3;
+const CARD_COLUMNS_MAX = 12;
+const CARD_COLUMNS_DEFAULT = 7;
+
+function clampCardColumns(value) {
+  return Math.max(CARD_COLUMNS_MIN, Math.min(CARD_COLUMNS_MAX, Math.round(Number(value) || CARD_COLUMNS_DEFAULT)));
+}
+
+function deriveCardColumnsFromWidth(cardWidth, containerWidth = 1100) {
+  return clampCardColumns(Math.floor((containerWidth + CARD_GRID_GAP) / (Number(cardWidth) + CARD_GRID_GAP)));
+}
+
+function resolveCardColumns(settings = {}) {
+  if (Number.isFinite(Number(settings.cardColumns))) return clampCardColumns(settings.cardColumns);
+  if (Number.isFinite(Number(settings.cardWidth))) return deriveCardColumnsFromWidth(settings.cardWidth);
+  return CARD_COLUMNS_DEFAULT;
+}
+
+function measureCardGridRowPitch() {
+  const sampleCard = ui.list?.querySelector(".font-card");
+  if (!sampleCard) return CARD_GRID_ROW_HEIGHT;
+  const cardHeight = Math.max(CARD_GRID_MIN_HEIGHT, Math.ceil(sampleCard.getBoundingClientRect().height));
+  return cardHeight + CARD_GRID_GAP;
+}
+
+function getFontGridViewportSize() {
+  const pageArea = ui.list?.closest(".font-page-area");
+  const listStyles = ui.list ? getComputedStyle(ui.list) : null;
+  const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 72;
+  const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 64;
+  let viewportWidth = ui.list?.clientWidth || 800;
+  let viewportHeight = 500;
+  if (pageArea) {
+    const rect = pageArea.getBoundingClientRect();
+    if (rect.width > 0) viewportWidth = rect.width;
+    if (rect.height > 0) viewportHeight = rect.height;
+  } else if (ui.list?.parentElement?.clientHeight) {
+    viewportHeight = ui.list.parentElement.clientHeight;
+    viewportWidth = ui.list.parentElement.clientWidth || viewportWidth;
+  }
+  return {
+    width: Math.max(320, viewportWidth - padX),
+    height: Math.max(CARD_GRID_ROW_HEIGHT, viewportHeight - padY)
+  };
+}
+
+function getCardGridLayout(options = {}) {
+  const { width, height } = getFontGridViewportSize();
+  const columns = clampCardColumns(state.cardColumns);
+  const cardWidth = Math.max(140, Math.floor((width - (columns - 1) * CARD_GRID_GAP) / columns));
+  const rowPitch = options.rowPitch || measureCardGridRowPitch();
+  const rows = Math.max(1, Math.floor((height + CARD_GRID_GAP) / rowPitch));
+  return { width, height, columns, cardWidth, rows, rowPitch };
+}
+
+function syncCardColumnsControl() {
+  const input = $("#cardColumns");
+  const output = $("#cardColumnsOutput");
+  if (!input) return;
+  const disabled = !["grid", "focus"].includes(state.view);
+  input.disabled = disabled;
+  input.value = String(clampCardColumns(state.cardColumns));
+  if (output) output.textContent = input.value;
+}
+
 function sortLabel(sort) {
   return SORT_LABELS[sort] || "名称";
 }
 const UI_SETTINGS_DEFAULTS = {
   theme: "light",
   view: "grid",
-  cardWidth: 245,
+  cardColumns: 7,
   singleCardSize: 82,
   cardSampleSize: 49,
   sort: "name",
@@ -269,7 +337,7 @@ function collectUiSettings() {
     version: UI_SETTINGS_VERSION,
     theme: document.body.classList.contains("dark") ? "dark" : "light",
     view: state.view,
-    cardWidth: state.cardWidth,
+    cardColumns: state.cardColumns,
     singleCardSize: state.singleCardSize,
     cardSampleSize: state.cardSampleSize,
     sort: state.sort,
@@ -322,7 +390,8 @@ function applyStoredUiSettings(settings) {
   ui.lineHeight.value = settings.previewLineHeight;
   ui.bg.value = settings.previewBackground;
   ui.color.value = settings.previewTextColor;
-  $("#cardDensity").value = settings.cardWidth;
+  state.cardColumns = resolveCardColumns(settings);
+  syncCardColumnsControl();
   syncMagnifierControl();
   const detailPanel = $("#detailPanel");
   const cardArea = $(".card-area");
@@ -347,7 +416,7 @@ document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: uiSettings.view, sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
@@ -2302,19 +2371,24 @@ function renderCardPreviewStyleManagePanel() {
 }
 
 function applyManageSelectedPreset() {
-  if (!cardPreviewStyleManagePresetId) {
+  applyCardPreviewStylePresetById(cardPreviewStyleManagePresetId || null);
+}
+
+function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
+  if (!presetId) {
     state.cardPreviewStyle = null;
     state.activeCardPreviewStylePresetId = null;
     applyCardPreviewStyleToAllCards();
     persistUiSettings();
-    renderCardPreviewStyleManagePanel();
-    toast("已恢复默认预览");
-    return;
+    renderCardPreviewStyleQuickMenu();
+    if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
+    if (showToast) toast("已恢复默认预览");
+    return true;
   }
-  const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
+  const preset = findCardPreviewStylePreset(presetId);
   if (!preset) {
-    toast("方案不存在");
-    return;
+    if (showToast) toast("方案不存在");
+    return false;
   }
   state.cardPreviewStyle = hasActiveCardPreviewStyle(preset.style)
     ? cloneCardPreviewStyle(preset.style)
@@ -2322,8 +2396,87 @@ function applyManageSelectedPreset() {
   state.activeCardPreviewStylePresetId = preset.id;
   applyCardPreviewStyleToAllCards();
   persistUiSettings();
-  renderCardPreviewStyleManagePanel();
-  toast(`已应用「${preset.name}」`);
+  renderCardPreviewStyleQuickMenu();
+  if (cardPreviewStyleModalTab === "manage") {
+    cardPreviewStyleManagePresetId = preset.id;
+    renderCardPreviewStyleManagePanel();
+  }
+  if (showToast) toast(`已应用「${preset.name}」`);
+  return true;
+}
+
+function syncCardPreviewStyleButtonLabel() {
+  const button = $("#cardPreviewStyleButton");
+  if (!button) return;
+  const preset = state.activeCardPreviewStylePresetId
+    ? findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)
+    : null;
+  const label = preset ? `卡片预览样式：${preset.name}` : "卡片预览样式";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+}
+
+function renderCardPreviewStyleQuickMenu() {
+  const menu = $("#cardPreviewStylePresetMenu");
+  const toggle = $("#cardPreviewStyleMenuToggle");
+  if (!menu) return;
+  const activeId = state.activeCardPreviewStylePresetId || "";
+  let html = `<button type="button" class="card-preview-style-preset-item${activeId ? "" : " active"}" role="menuitem" data-preset-id="">
+    <span class="preset-name">默认</span>
+    ${activeId ? "" : '<span class="preset-badge">使用中</span>'}
+  </button>`;
+  html += state.cardPreviewStylePresets.map(preset => {
+    const active = preset.id === activeId ? " active" : "";
+    return `<button type="button" class="card-preview-style-preset-item${active}" role="menuitem" data-preset-id="${escapeHtml(preset.id)}">
+      <span class="preset-name">${escapeHtml(preset.name)}</span>
+      ${active ? '<span class="preset-badge">使用中</span>' : ""}
+    </button>`;
+  }).join("");
+  html += `<div class="card-preview-style-preset-divider" aria-hidden="true"></div>
+    <button type="button" class="card-preview-style-preset-item card-preview-style-preset-action" role="menuitem" data-preset-action="manage">管理方案…</button>`;
+  menu.innerHTML = html;
+  syncCardPreviewStyleButtonLabel();
+  if (toggle) toggle.disabled = false;
+}
+
+function setCardPreviewStyleQuickMenuOpen(open) {
+  const wrap = $("#cardPreviewStyleMenuWrap");
+  const toggle = $("#cardPreviewStyleMenuToggle");
+  if (!wrap || !toggle) return;
+  wrap.classList.toggle("is-open", open);
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function wireCardPreviewStyleQuickMenu() {
+  const wrap = $("#cardPreviewStyleMenuWrap");
+  const menu = $("#cardPreviewStylePresetMenu");
+  const toggle = $("#cardPreviewStyleMenuToggle");
+  if (!wrap || !menu || !toggle) return;
+  renderCardPreviewStyleQuickMenu();
+  toggle.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    setCardPreviewStyleQuickMenuOpen(!wrap.classList.contains("is-open"));
+  });
+  menu.addEventListener("click", event => {
+    const actionBtn = event.target.closest("[data-preset-action]");
+    if (actionBtn?.dataset.presetAction === "manage") {
+      setCardPreviewStyleQuickMenuOpen(false);
+      openCardPreviewStyleModal();
+      setCardPreviewStyleModalTab("manage");
+      return;
+    }
+    const item = event.target.closest("[data-preset-id]");
+    if (!item) return;
+    applyCardPreviewStylePresetById(item.dataset.presetId || null);
+    setCardPreviewStyleQuickMenuOpen(false);
+  });
+  document.addEventListener("click", event => {
+    if (!wrap.contains(event.target)) setCardPreviewStyleQuickMenuOpen(false);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") setCardPreviewStyleQuickMenuOpen(false);
+  });
 }
 
 function loadManagePresetToEdit() {
@@ -2366,6 +2519,7 @@ function applyCardPreviewStylePresetEditor() {
     persistUiSettings();
     hideCardPreviewStylePresetEditor();
     if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
+    renderCardPreviewStyleQuickMenu();
     toast("已重命名方案");
     return;
   }
@@ -2379,6 +2533,7 @@ function applyCardPreviewStylePresetEditor() {
   persistUiSettings();
   hideCardPreviewStylePresetEditor();
   if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
+  renderCardPreviewStyleQuickMenu();
   toast(`已保存方案「${preset.name}」`);
 }
 
@@ -2395,6 +2550,7 @@ function saveCardPreviewStylePresetDraft() {
     }
     cardPreviewStyleManagePresetId = preset.id;
     persistUiSettings();
+    renderCardPreviewStyleQuickMenu();
     toast(`已更新「${preset.name}」`);
     return;
   }
@@ -2449,6 +2605,7 @@ async function importCardPreviewStylePresets(file) {
     if (!imported) throw new Error("没有有效的样式方案");
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
+    renderCardPreviewStyleQuickMenu();
     toast(`已导入 ${imported} 个方案`);
   } catch (error) {
     toast(error.message || "导入失败");
@@ -2523,6 +2680,7 @@ function closeCardPreviewStyleModal(apply = false) {
   draggingPreviewStyleLayerId = null;
   hideCardPreviewStylePresetEditor();
   $("#cardPreviewStyleModal").hidden = true;
+  if (apply) renderCardPreviewStyleQuickMenu();
 }
 
 function handlePreviewStyleWheel(event) {
@@ -2595,6 +2753,7 @@ function wireCardPreviewStyleModal() {
     cardPreviewStyleManagePresetId = "";
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
+    renderCardPreviewStyleQuickMenu();
     renderCardPreviewStyleModalPreview();
     toast("已删除方案");
   });
@@ -3309,7 +3468,7 @@ function createFontCard(font) {
   return card;
 }
 
-function renderFontList({ deferFonts = false } = {}) {
+function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   closeAllFamilyMenus();
   const renderToken = ++state.renderVersion;
   fontObserver?.disconnect();
@@ -3325,7 +3484,9 @@ function renderFontList({ deferFonts = false } = {}) {
   ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
-  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view) ? `repeat(auto-fill, minmax(${state.cardWidth}px, ${state.cardWidth}px))` : "";
+  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view)
+    ? `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`
+    : "";
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   ui.count.textContent = `${state.filtered.length} 款字体`;
   ui.empty.hidden = state.filtered.length > 0;
@@ -3346,8 +3507,19 @@ function renderFontList({ deferFonts = false } = {}) {
       if (pendingFont) selectFont(pendingFont);
     }
   };
-  if (deferFonts) requestAnimationFrame(() => requestAnimationFrame(hydratePage));
-  else hydratePage();
+  const finishRender = () => {
+    if (renderToken !== state.renderVersion) return;
+    if (remeasure && ["grid", "focus"].includes(state.view)) {
+      const nextPageSize = calculatePageSize();
+      if (nextPageSize !== state.pageSize) {
+        renderFontList({ deferFonts, remeasure: false });
+        return;
+      }
+    }
+    hydratePage();
+  };
+  if (deferFonts) requestAnimationFrame(() => requestAnimationFrame(finishRender));
+  else requestAnimationFrame(finishRender);
 }
 
 function updateFontStatus(font) {
@@ -3368,20 +3540,14 @@ function updateFontStatus(font) {
 }
 
 function calculatePageSize() {
-  const listStyles = ui.list ? getComputedStyle(ui.list) : null;
-  const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 0;
-  const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 0;
-  const width = Math.max(320, (ui.list?.clientWidth || 800) - padX);
-  const height = Math.max(160, (ui.list?.clientHeight || 500) - padY);
+  const layout = getCardGridLayout();
   if (state.view === "single") {
-    const columns = Math.max(1, Math.floor(width / state.singleCardSize));
-    const rows = Math.max(1, Math.floor(height / state.singleCardSize));
+    const columns = Math.max(1, Math.floor(layout.width / state.singleCardSize));
+    const rows = Math.max(1, Math.floor(layout.height / state.singleCardSize));
     return columns * rows;
   }
-  if (state.view === "list") return Math.max(1, Math.floor(height / 102));
-  const columns = Math.max(1, Math.floor((width + 14) / (state.cardWidth + 14)));
-  const rows = Math.max(1, Math.floor((height + 14) / 192));
-  return columns * rows;
+  if (state.view === "list") return Math.max(1, Math.floor(layout.height / 102));
+  return layout.columns * layout.rows;
 }
 
 function goToPage(page) {
@@ -4792,8 +4958,9 @@ $("#singleViewButton").addEventListener("click", () => setView("single"));
 $("#focusViewToggle")?.addEventListener("change", event => {
   setView(event.target.checked ? "focus" : "grid");
 });
-$("#cardDensity").addEventListener("input", event => {
-  state.cardWidth = Number(event.target.value);
+$("#cardColumns")?.addEventListener("input", event => {
+  state.cardColumns = clampCardColumns(event.target.value);
+  syncCardColumnsControl();
   if (["grid", "focus"].includes(state.view)) {
     state.page = 0;
     renderFontList();
@@ -4855,7 +5022,7 @@ function setView(view) {
   const focusViewToggle = $("#focusViewToggle");
   if (focusViewToggle) focusViewToggle.checked = view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
-  $("#cardDensity").disabled = !["grid", "focus"].includes(view);
+  syncCardColumnsControl();
   updateCardSampleSizeControl();
   renderFontList();
   persistUiSettings();
@@ -4871,11 +5038,11 @@ ui.list.addEventListener("wheel", event => {
     toast(`单字卡片 ${state.singleCardSize} × ${state.singleCardSize}`);
     persistUiSettings();
   } else {
-    state.cardWidth = Math.max(160, Math.min(480, state.cardWidth + direction * 10));
-    $("#cardDensity").value = Math.max(Number($("#cardDensity").min), Math.min(Number($("#cardDensity").max), state.cardWidth));
+    state.cardColumns = clampCardColumns(state.cardColumns + direction);
+    syncCardColumnsControl();
     state.page = 0;
     renderFontList();
-    toast(`卡片宽度 ${state.cardWidth}`);
+    toast(`每行 ${state.cardColumns} 个`);
     persistUiSettings();
   }
 }, { passive: false });
@@ -5045,13 +5212,19 @@ ui.list.addEventListener("dragstart", event => {
   hideMagnifier(ui.cardMagnifier);
 });
 ui.list.addEventListener("dragend", () => { state.draggingFontId = null; clearCategoryDropStates(); });
-if ("ResizeObserver" in window) new ResizeObserver(() => {
-  scheduleCardFit();
-  clearTimeout(ui.list.pageResizeTimer);
-  ui.list.pageResizeTimer = setTimeout(() => {
-    if (calculatePageSize() !== state.pageSize) renderFontList();
-  }, 120);
-}).observe(ui.list);
+if ("ResizeObserver" in window) {
+  const pageArea = ui.list?.closest(".font-page-area");
+  const handleGridViewportResize = () => {
+    scheduleCardFit();
+    clearTimeout(ui.list.pageResizeTimer);
+    ui.list.pageResizeTimer = setTimeout(() => {
+      if (calculatePageSize() !== state.pageSize) renderFontList();
+    }, 120);
+  };
+  const gridResizeObserver = new ResizeObserver(handleGridViewportResize);
+  if (pageArea) gridResizeObserver.observe(pageArea);
+  else new ResizeObserver(handleGridViewportResize).observe(ui.list);
+}
 
 renderCategoryUI();
 renderSearchSuggestions();
@@ -5061,4 +5234,5 @@ updatePreview();
 syncDetailPreviewStage();
 updateCardSampleSizeControl();
 wireCardPreviewStyleModal();
+wireCardPreviewStyleQuickMenu();
 if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";

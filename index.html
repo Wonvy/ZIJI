@@ -125,7 +125,7 @@
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
-                <label class="density-control" title="卡片大小">密度 <input id="cardDensity" type="range" min="160" max="480" step="10" value="245" /></label>
+                <label class="columns-control" title="每行显示数量">数量 <input id="cardColumns" type="range" min="3" max="12" step="1" value="7" aria-label="每行显示数量" /><output id="cardColumnsOutput">7</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
@@ -172,9 +172,15 @@
                   <button id="cardSampleSizeIncrease" class="step-button" type="button" aria-label="增大字号">+</button>
                   <output id="cardSampleSizeOutput">49</output>
                 </label>
-                <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
-                </button>
+                <div class="card-preview-style-menu">
+                  <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                  </button>
+                  <div id="cardPreviewStyleMenuWrap" class="card-preview-style-menu-arrow-wrap">
+                    <button id="cardPreviewStyleMenuToggle" class="card-preview-style-menu-arrow" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="cardPreviewStylePresetMenu" title="切换预览样式方案" aria-label="切换预览样式方案">▴</button>
+                    <div id="cardPreviewStylePresetMenu" class="card-preview-style-preset-menu ps-scroll" role="menu" aria-label="预览样式方案"></div>
+                  </div>
+                </div>
               </div>
             </footer>
             <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" title="折叠字体库" aria-label="折叠字体库">‹</button>
