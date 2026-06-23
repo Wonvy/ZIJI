@@ -980,10 +980,6 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 15px;
 }
 #gridViewButton { font-size: 13px; }
-.view-controls .card-preview-style-menu {
-  margin-right: 6px;
-  margin-left: 0;
-}
 .view-button.active { z-index: 1; color: var(--panel); border-color: var(--ink); background: var(--ink); }
 .grid-layout-control,
 .columns-control {
@@ -1632,16 +1628,19 @@ body.header-card-preview-focus .preview-input-history {
   align-items: stretch;
   flex: none;
 }
+.toolbar-filters .card-preview-style-menu { flex: none; }
 .card-preview-style-preset-dropdown {
   position: relative;
   flex: none;
   height: var(--toolbar-control-height);
 }
-.card-preview-style-preset-dropdown summary svg.card-preview-style-icon {
+.card-preview-style-preset-dropdown summary .card-preview-style-icon {
+  display: none;
   width: 16px;
   height: 16px;
+  flex: none;
 }
-.card-preview-style-preset-dropdown summary svg.card-preview-style-icon circle {
+.card-preview-style-preset-dropdown summary .card-preview-style-icon circle {
   fill: currentColor;
 }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary,
@@ -1650,14 +1649,12 @@ body.header-card-preview-focus .preview-input-history {
   border-color: var(--accent);
   background: var(--accent);
 }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary b,
+.card-preview-style-preset-dropdown[open] summary b { color: white; }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary::after,
+.card-preview-style-preset-dropdown[open] summary::after { color: rgba(255,255,255,.82); }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary svg,
 .card-preview-style-preset-dropdown[open] summary svg { stroke: white; }
-.card-preview-style-preset-dropdown.filter-menu-icon[open] summary {
-  color: white;
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.card-preview-style-preset-dropdown.filter-menu-icon[open] summary svg { stroke: white; }
 .card-preview-style-preset-popover {
   top: calc(100% + 4px);
   left: 0;
@@ -2919,6 +2916,21 @@ body.dark .preview-style-stage { background: #1a1917; }
 }
 
 @container card-toolbar (max-width: 980px) {
+  .card-preview-style-preset-dropdown summary .filter-menu-label,
+  .card-preview-style-preset-dropdown summary b,
+  .card-preview-style-preset-dropdown summary::after {
+    display: none;
+  }
+  .card-preview-style-preset-dropdown summary {
+    width: var(--toolbar-control-height);
+    min-width: var(--toolbar-control-height);
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .card-preview-style-preset-dropdown summary .card-preview-style-icon {
+    display: block;
+  }
   .card-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
@@ -2995,7 +3007,6 @@ body.dark .preview-style-stage { background: #1a1917; }
   .toolbar-filters .filter-menu summary { padding: 0 5px; }
   .toolbar-filters .filter-menu summary b { font-size: 8px; }
   .toolbar-search input { font-size: 12px; }
-  .card-preview-style-menu { margin-right: 4px; }
 }
 
 @media (max-width: 1100px) {

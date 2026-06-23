@@ -988,10 +988,6 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 15px;
 }
 #gridViewButton { font-size: 13px; }
-.view-controls .card-preview-style-menu {
-  margin-right: 6px;
-  margin-left: 0;
-}
 .view-button.active { z-index: 1; color: var(--panel); border-color: var(--ink); background: var(--ink); }
 .grid-layout-control,
 .columns-control {
@@ -1640,16 +1636,19 @@ body.header-card-preview-focus .preview-input-history {
   align-items: stretch;
   flex: none;
 }
+.toolbar-filters .card-preview-style-menu { flex: none; }
 .card-preview-style-preset-dropdown {
   position: relative;
   flex: none;
   height: var(--toolbar-control-height);
 }
-.card-preview-style-preset-dropdown summary svg.card-preview-style-icon {
+.card-preview-style-preset-dropdown summary .card-preview-style-icon {
+  display: none;
   width: 16px;
   height: 16px;
+  flex: none;
 }
-.card-preview-style-preset-dropdown summary svg.card-preview-style-icon circle {
+.card-preview-style-preset-dropdown summary .card-preview-style-icon circle {
   fill: currentColor;
 }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary,
@@ -1658,14 +1657,12 @@ body.header-card-preview-focus .preview-input-history {
   border-color: var(--accent);
   background: var(--accent);
 }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary b,
+.card-preview-style-preset-dropdown[open] summary b { color: white; }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary::after,
+.card-preview-style-preset-dropdown[open] summary::after { color: rgba(255,255,255,.82); }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary svg,
 .card-preview-style-preset-dropdown[open] summary svg { stroke: white; }
-.card-preview-style-preset-dropdown.filter-menu-icon[open] summary {
-  color: white;
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.card-preview-style-preset-dropdown.filter-menu-icon[open] summary svg { stroke: white; }
 .card-preview-style-preset-popover {
   top: calc(100% + 4px);
   left: 0;
@@ -2927,6 +2924,21 @@ body.dark .preview-style-stage { background: #1a1917; }
 }
 
 @container card-toolbar (max-width: 980px) {
+  .card-preview-style-preset-dropdown summary .filter-menu-label,
+  .card-preview-style-preset-dropdown summary b,
+  .card-preview-style-preset-dropdown summary::after {
+    display: none;
+  }
+  .card-preview-style-preset-dropdown summary {
+    width: var(--toolbar-control-height);
+    min-width: var(--toolbar-control-height);
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .card-preview-style-preset-dropdown summary .card-preview-style-icon {
+    display: block;
+  }
   .card-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
@@ -3003,7 +3015,6 @@ body.dark .preview-style-stage { background: #1a1917; }
   .toolbar-filters .filter-menu summary { padding: 0 5px; }
   .toolbar-filters .filter-menu summary b { font-size: 8px; }
   .toolbar-search input { font-size: 12px; }
-  .card-preview-style-menu { margin-right: 4px; }
 }
 
 @media (max-width: 1100px) {
@@ -3212,18 +3223,20 @@ body.dark .preview-style-stage { background: #1a1917; }
                       <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
                     </div>
                   </details>
+                  <div class="card-preview-style-menu">
+                    <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
+                      <summary aria-label="预览样式" title="预览样式">
+                        <span class="filter-menu-label">样式</span>
+                        <b id="cardPreviewStyleBadge">默认</b>
+                        <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                      </summary>
+                      <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
+                    </details>
+                  </div>
                 </div>
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
-                <div class="card-preview-style-menu">
-                  <details class="filter-menu filter-menu-icon card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                    <summary aria-label="预览样式" title="预览样式">
-                      <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
-                    </summary>
-                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
-                  </details>
-                </div>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <label class="grid-layout-control" title="每行显示列数">列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /><output id="cardColumnsOutput">7</output></label>
@@ -6741,11 +6754,14 @@ function applyQuickPresetMenuStyles() {
 
 function syncCardPreviewStyleMenuLabel() {
   const summary = $("#cardPreviewStylePresetDropdown")?.querySelector("summary");
+  const badge = $("#cardPreviewStyleBadge");
   if (!summary) return;
   const preset = state.activeCardPreviewStylePresetId
     ? findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)
     : null;
-  const label = preset ? `预览样式：${preset.name}` : "预览样式";
+  const name = preset?.name || "默认";
+  const label = preset ? `预览样式：${name}` : "预览样式";
+  if (badge) badge.textContent = name;
   summary.title = label;
   summary.setAttribute("aria-label", label);
 }

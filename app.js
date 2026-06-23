@@ -3297,11 +3297,14 @@ function applyQuickPresetMenuStyles() {
 
 function syncCardPreviewStyleMenuLabel() {
   const summary = $("#cardPreviewStylePresetDropdown")?.querySelector("summary");
+  const badge = $("#cardPreviewStyleBadge");
   if (!summary) return;
   const preset = state.activeCardPreviewStylePresetId
     ? findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)
     : null;
-  const label = preset ? `预览样式：${preset.name}` : "预览样式";
+  const name = preset?.name || "默认";
+  const label = preset ? `预览样式：${name}` : "预览样式";
+  if (badge) badge.textContent = name;
   summary.title = label;
   summary.setAttribute("aria-label", label);
 }
