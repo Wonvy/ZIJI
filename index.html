@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light" />
-  <title>字观 · 本地字体预览</title>
+  <title>字己 · 本地字体预览</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-row topbar-main">
-        <a class="brand" href="#" aria-label="字观首页">
+        <a class="brand" href="#" aria-label="字己首页">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 48 48" focusable="false">
               <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
@@ -22,10 +22,10 @@
           </span>
           <span class="brand-copy">
             <span class="brand-title-row">
-              <strong>字观</strong>
+              <strong>字己</strong>
               <span class="version-badge" title="当前版本">v1.0.24</span>
             </span>
-            <small>LOCAL TYPE VIEWER</small>
+            <small>ZIJI · YOUR FONTS, YOUR VIEW.</small>
           </span>
         </a>
         <div class="header-preview">
@@ -47,8 +47,8 @@
     <main>
       <section id="welcome" class="welcome">
         <div class="welcome-inner">
-          <div class="eyebrow">系统字体浏览器</div>
-          <h1>看见你电脑里的<br><span class="welcome-accent">每一种字</span></h1>
+          <div class="eyebrow">本地字体浏览器</div>
+          <h1>阅字如阅己<br><span class="welcome-accent">每一种字</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
           <div id="loadProgress" class="load-progress" hidden aria-live="polite">
@@ -125,6 +125,15 @@
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
                 <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <div class="card-preview-style-menu">
+                  <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                  </button>
+                  <div id="cardPreviewStyleMenuWrap" class="card-preview-style-menu-arrow-wrap">
+                    <button id="cardPreviewStyleMenuToggle" class="card-preview-style-menu-arrow" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="cardPreviewStylePresetMenu" title="切换预览样式方案" aria-label="切换预览样式方案">▴</button>
+                    <div id="cardPreviewStylePresetMenu" class="card-preview-style-preset-menu ps-scroll" role="menu" aria-label="预览样式方案"></div>
+                  </div>
+                </div>
                 <label class="columns-control" title="每行显示数量">数量 <input id="cardColumns" type="range" min="3" max="12" step="1" value="7" aria-label="每行显示数量" /><output id="cardColumnsOutput">7</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
@@ -172,15 +181,6 @@
                   <button id="cardSampleSizeIncrease" class="step-button" type="button" aria-label="增大字号">+</button>
                   <output id="cardSampleSizeOutput">49</output>
                 </label>
-                <div class="card-preview-style-menu">
-                  <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
-                  </button>
-                  <div id="cardPreviewStyleMenuWrap" class="card-preview-style-menu-arrow-wrap">
-                    <button id="cardPreviewStyleMenuToggle" class="card-preview-style-menu-arrow" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="cardPreviewStylePresetMenu" title="切换预览样式方案" aria-label="切换预览样式方案">▴</button>
-                    <div id="cardPreviewStylePresetMenu" class="card-preview-style-preset-menu ps-scroll" role="menu" aria-label="预览样式方案"></div>
-                  </div>
-                </div>
               </div>
             </footer>
             <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" title="折叠字体库" aria-label="折叠字体库">‹</button>
@@ -293,51 +293,57 @@
         <button id="cardPreviewStyleEditTab" class="preview-style-tab active" type="button" role="tab" aria-selected="true" aria-controls="cardPreviewStyleEditPanel">编辑样式</button>
         <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">方案管理</button>
       </div>
-      <div class="preview-style-preview-top">
-        <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
-        <div id="cardPreviewStyleStage" class="preview-style-stage">
-          <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
-        </div>
-      </div>
-      <div id="cardPreviewStyleEditPanel" class="preview-style-tab-panel" role="tabpanel">
-        <div class="preview-style-workspace">
-          <aside class="preview-style-sidebar ps-scroll">
-            <div class="preview-style-sidebar-head">样式</div>
-            <ul id="cardPreviewStyleLayerList" class="preview-style-style-list"></ul>
-          </aside>
-          <div class="preview-style-main ps-scroll">
-            <div id="cardPreviewStyleParams" class="preview-style-params"></div>
+      <div class="preview-style-body">
+        <div class="preview-style-preview-top">
+          <label class="preview-style-font-field" data-preview-status-hint="切换预览字体">
+            <span class="preview-style-field-label">预览字体</span>
+            <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
+          </label>
+          <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
+            <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
           </div>
         </div>
-      </div>
-      <div id="cardPreviewStyleManagePanel" class="preview-style-tab-panel" role="tabpanel" hidden>
-        <div class="preview-style-manage-layout ps-scroll">
-          <p class="preview-style-manage-hint">悬停图标可在上方临时预览，点击选中方案。应用后写入全部卡片，「编辑此方案」会切到编辑样式页。</p>
-          <div id="cardPreviewStylePresetList" class="preview-style-preset-grid"></div>
-          <div class="preview-style-manage-actions">
-            <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button">编辑此方案</button>
-            <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button">重命名</button>
-            <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button">删除</button>
-            <span class="preview-style-preset-divider" aria-hidden="true"></span>
-            <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button">导出 JSON</button>
-            <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button">导入 JSON</button>
-            <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
+        <div id="cardPreviewStyleEditPanel" class="preview-style-tab-panel" role="tabpanel">
+          <div class="preview-style-workspace">
+            <aside class="preview-style-sidebar ps-scroll">
+              <div class="preview-style-sidebar-head">图层</div>
+              <ul id="cardPreviewStyleLayerList" class="preview-style-style-list"></ul>
+            </aside>
+            <div class="preview-style-main ps-scroll">
+              <div id="cardPreviewStyleParams" class="preview-style-params"></div>
+            </div>
           </div>
         </div>
-      </div>
-      <div id="cardPreviewStylePresetRenameWrap" class="preview-style-preset-rename" hidden>
-        <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="方案名称" />
-        <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button">确定</button>
-        <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button">取消</button>
-      </div>
-      <div id="cardPreviewStyleStatusBar" class="preview-style-statusbar" role="status" aria-live="polite"></div>
-      <div class="modal-footer preview-style-footer">
-        <div class="preview-style-footer-left">
-          <button id="cardPreviewStyleSaveDraft" class="text-button" type="button">保存为方案</button>
+        <div id="cardPreviewStyleManagePanel" class="preview-style-tab-panel" role="tabpanel" hidden>
+          <div class="preview-style-manage-layout ps-scroll">
+            <div id="cardPreviewStylePresetList" class="preview-style-preset-grid" data-preview-status-hint="悬停预览效果，点击选中方案"></div>
+            <div class="preview-style-manage-actions">
+              <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的方案">编辑此方案</button>
+              <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名方案">重命名</button>
+              <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除方案">删除</button>
+              <span class="preview-style-preset-divider" aria-hidden="true"></span>
+              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出方案 JSON">导出 JSON</button>
+              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入方案 JSON">导入 JSON</button>
+              <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
+            </div>
+          </div>
         </div>
-        <div class="preview-style-footer-right">
-          <button id="cardPreviewStyleCancel" class="text-button" type="button">取消</button>
-          <button id="cardPreviewStyleConfirm" class="primary-small-button preview-style-confirm" type="button">确定</button>
+        <div id="cardPreviewStylePresetRenameWrap" class="preview-style-preset-rename" hidden>
+          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="方案名称" />
+          <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button">确定</button>
+          <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button">取消</button>
+        </div>
+      </div>
+      <div class="preview-style-bottom">
+        <div id="cardPreviewStyleStatusBar" class="preview-style-statusbar" role="status" aria-live="polite"><span class="preview-style-statusbar-text"></span></div>
+        <div class="modal-footer preview-style-footer">
+          <div class="preview-style-footer-left">
+            <button id="cardPreviewStyleSaveDraft" class="text-button" type="button" data-preview-status-hint="将当前编辑保存为新方案">保存为方案</button>
+          </div>
+          <div class="preview-style-footer-right">
+            <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>
+            <button id="cardPreviewStyleConfirm" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="应用样式到全部卡片">确定</button>
+          </div>
         </div>
       </div>
     </div>

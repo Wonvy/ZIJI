@@ -25,5 +25,5 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`字观已启动：http://localhost:${port}`);
+  console.log(`字己已启动：http://localhost:${port}`);
 });

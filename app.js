@@ -185,6 +185,10 @@ const STROKE_POSITION_OPTIONS = [
   { value: "center", label: "居中" },
   { value: "inside", label: "向内" }
 ];
+const COLOR_MODE_OPTIONS = [
+  { value: "solid", label: "纯色" },
+  { value: "gradient", label: "线性渐变" }
+];
 const PREVIEW_STYLE_FILL_LAYER_ID = "__fill__";
 const MANAGE_PRESET_PREVIEW_CHAR = "永";
 const PREVIEW_EFFECT_TYPES = {
@@ -1449,8 +1453,31 @@ let cardPreviewStyleSelectedStopIndex = 0;
 let cardPreviewStyleHoverStopIndex = null;
 let draggingGradientStopIndex = null;
 const PREVIEW_STYLE_GRADIENT_STATUS_HINT = "点击色带添加色标，左右拖动调整位置，向上拖出色带删除（至少保留 2 个）";
+const PREVIEW_STYLE_STATUS_HINTS = {
+  gradientBar: PREVIEW_STYLE_GRADIENT_STATUS_HINT,
+  gradientStop: "单击选中色标，双击修改颜色，左右拖动调整位置",
+  gradientStopDelete: "松开鼠标删除该色标（至少保留 2 个）",
+  gradientAngle: "按住拖拽调整渐变角度",
+  gradientColor: "调整当前色标颜色",
+  gradientOpacity: "调整当前色标不透明度",
+  layerList: "拖动调整图层顺序，勾选启用或禁用",
+  layerDuplicate: "复制图层",
+  strokePosition: "选择轮廓相对文字的位置",
+  previewFont: "切换预览字体",
+  previewStage: "实时预览当前样式效果",
+  managePreset: "悬停预览效果，点击选中方案",
+  manageEdit: "编辑当前选中的方案",
+  manageRename: "重命名方案",
+  manageDelete: "删除方案",
+  manageExport: "导出方案 JSON",
+  manageImport: "导入方案 JSON",
+  saveDraft: "将当前编辑保存为新方案",
+  confirm: "应用样式到全部卡片",
+  cancel: "放弃更改并关闭"
+};
 let draggingGradientScope = null;
 let draggingGradientDeleteIntent = false;
+let draggingGradientAngleScope = null;
 let draggingPreviewStyleLayerId = null;
 
 function createPreviewStyleLayer(type, enabled = false, overrides = {}) {
@@ -2330,10 +2357,47 @@ function syncAllStyleRanges(root = document) {
 }
 
 function renderStyleSelectField(field, value, attrs = "") {
-  const options = field.options.map(option =>
-    `<option value="${escapeHtml(option.value)}"${option.value === value ? " selected" : ""}>${escapeHtml(option.label)}</option>`
-  ).join("");
-  return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><select class="preview-style-select" ${attrs}>${options}</select></label>`;
+  const current = String(value);
+  const buttons = field.options.map(option => {
+    const active = option.value === current ? " active" : "";
+    return `<button type="button" class="preview-style-radio-btn${active}" ${attrs} data-radio-value="${escapeHtml(option.value)}" aria-pressed="${option.value === current ? "true" : "false"}">${escapeHtml(option.label)}</button>`;
+  }).join("");
+  return `<div class="preview-style-field preview-style-radio-field"><span>${escapeHtml(field.label)}</span><div class="preview-style-radio-group" role="group" aria-label="${escapeHtml(field.label)}">${buttons}</div></div>`;
+}
+
+function renderColorModeField(value, fieldAttr, fieldKey) {
+  const current = value === "gradient" ? "gradient" : "solid";
+  const buttons = COLOR_MODE_OPTIONS.map(option => {
+    const active = option.value === current ? " active" : "";
+    return `<button type="button" class="preview-color-mode-btn${active}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}" aria-pressed="${option.value === current ? "true" : "false"}">${escapeHtml(option.label)}</button>`;
+  }).join("");
+  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="group" aria-label="颜色类型">${buttons}</div></div>`;
+}
+
+function applyPreviewColorModeChange(trigger) {
+  if (!cardPreviewStyleDraft || !trigger) return false;
+  const modeValue = trigger.dataset.modeValue === "gradient" ? "gradient" : "solid";
+  if (trigger.dataset.fillField === "mode") {
+    if (cardPreviewStyleDraft.fill.mode === modeValue) return true;
+    cardPreviewStyleDraft.fill.mode = modeValue;
+    if (modeValue === "gradient") cardPreviewStyleDraft.fill.enabled = true;
+    syncFillLegacyColors(cardPreviewStyleDraft.fill);
+    if (modeValue === "gradient") cardPreviewStyleSelectedStopIndex = 0;
+    renderCardPreviewStyleParams();
+    renderCardPreviewStyleModalPreview();
+    return true;
+  }
+  const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
+  if (layer && trigger.dataset.layerField === "colorMode") {
+    if (layer.colorMode === modeValue) return true;
+    layer.colorMode = modeValue;
+    syncStrokeLayerLegacyColors(layer);
+    if (modeValue === "gradient") cardPreviewStyleSelectedStopIndex = 0;
+    renderCardPreviewStyleParams();
+    renderCardPreviewStyleModalPreview();
+    return true;
+  }
+  return false;
 }
 
 function renderStrokePositionField(value) {
@@ -2346,7 +2410,77 @@ function renderStrokePositionField(value) {
     const active = option.value === value ? " active" : "";
     return `<button type="button" class="preview-stroke-position-btn${active}" data-layer-field="position" data-position-value="${option.value}" aria-label="${escapeHtml(option.label)}" aria-pressed="${option.value === value ? "true" : "false"}" title="${escapeHtml(option.label)}">${icons[option.value] || ""}</button>`;
   }).join("");
-  return `<div class="preview-style-field preview-stroke-position-field"><span>位置</span><div class="preview-stroke-position-group" role="group" aria-label="轮廓位置">${buttons}</div></div>`;
+  return `<div class="preview-style-field preview-stroke-position-field" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.strokePosition)}"><span>位置</span><div class="preview-stroke-position-group" role="group" aria-label="轮廓位置">${buttons}</div></div>`;
+}
+
+function gradientStopsHaveTransparency(stops) {
+  return (stops || []).some(stop => Number(stop.opacity) < 100);
+}
+
+function gradientAngleDialPoint(angle, radius = 14, center = 20) {
+  const rad = (Number(angle) || 0) * Math.PI / 180;
+  return {
+    x: center + radius * Math.sin(rad),
+    y: center - radius * Math.cos(rad)
+  };
+}
+
+function gradientAngleFromPointer(dial, clientX, clientY) {
+  const rect = dial.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  let angle = Math.round(Math.atan2(dx, -dy) * 180 / Math.PI);
+  if (angle < 0) angle += 360;
+  return angle;
+}
+
+function renderGradientAngleDial(angle, scope) {
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = gradientAngleDialPoint(value);
+  return `<div class="preview-gradient-angle-field preview-style-field">
+    <span>角度</span>
+    <div class="preview-gradient-angle-control">
+      <button type="button" class="preview-gradient-angle-dial" data-gradient-field="angle" data-gradient-scope="${scope}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientAngle)}" aria-label="渐变角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
+        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
+          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
+        </svg>
+      </button>
+      <span class="preview-gradient-angle-value" data-gradient-angle-value="${scope}">${value}°</span>
+    </div>
+  </div>`;
+}
+
+function refreshGradientAngleDial(scope, angle) {
+  const panel = $("#cardPreviewStyleParams");
+  const dial = panel?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${scope}"]`);
+  if (!dial) return;
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = gradientAngleDialPoint(value);
+  dial.setAttribute("aria-valuenow", String(value));
+  const line = dial.querySelector("line");
+  const knob = dial.querySelector("circle:last-of-type");
+  if (line) {
+    line.setAttribute("x2", tip.x.toFixed(2));
+    line.setAttribute("y2", tip.y.toFixed(2));
+  }
+  if (knob) {
+    knob.setAttribute("cx", tip.x.toFixed(2));
+    knob.setAttribute("cy", tip.y.toFixed(2));
+  }
+  panel.querySelector(`[data-gradient-angle-value="${scope}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
+}
+
+function applyGradientAngleChange(scope, angle) {
+  const target = getGradientEditTarget(scope);
+  if (!target) return;
+  target.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  refreshGradientBarVisuals(scope);
+  refreshGradientAngleDial(scope, target.angle);
+  renderCardPreviewStyleModalPreview();
 }
 
 function buildGradientBarPreviewCss(stops, fill) {
@@ -2393,6 +2527,9 @@ function updateGradientStopDragFeedback(event, scope = draggingGradientScope) {
   draggingGradientDeleteIntent = canDelete && event.clientY < barRect.top;
   wrap.classList.toggle("is-stop-delete-ready", draggingGradientDeleteIntent);
   wrap.classList.toggle("is-stop-dragging", draggingGradientStopIndex !== null);
+  if (draggingGradientDeleteIntent) {
+    setPreviewStyleStatusHint(PREVIEW_STYLE_STATUS_HINTS.gradientStopDelete);
+  }
   wrap.querySelector(".preview-gradient-stop-handle.dragging")
     ?.classList.toggle("is-delete-intent", draggingGradientDeleteIntent);
 }
@@ -2470,17 +2607,32 @@ function updateGradientStopControls(scope, index) {
   }
 }
 
-function updatePreviewStyleStatusBar() {
+function setPreviewStyleStatusHint(text) {
   const bar = $("#cardPreviewStyleStatusBar");
-  if (!bar) return;
-  if (cardPreviewStyleModalTab !== "edit" || !cardPreviewStyleDraft) {
-    bar.textContent = "";
-    return;
-  }
-  const fillGradient = cardPreviewStyleSelectedLayerId == null && cardPreviewStyleDraft.fill.mode === "gradient";
-  const layer = cardPreviewStyleDraft.layers.find(item => item.id === cardPreviewStyleSelectedLayerId);
-  const layerGradient = layer && isStrokeLayer(layer) && layer.colorMode === "gradient";
-  bar.textContent = fillGradient || layerGradient ? PREVIEW_STYLE_GRADIENT_STATUS_HINT : "";
+  const textEl = bar?.querySelector(".preview-style-statusbar-text");
+  if (textEl) textEl.textContent = text || "";
+  else if (bar) bar.textContent = text || "";
+}
+
+function updatePreviewStyleStatusBar() {
+  setPreviewStyleStatusHint("");
+}
+
+function bindPreviewStyleStatusHints() {
+  const modal = $("#cardPreviewStyleModal");
+  if (!modal || modal.dataset.statusHintsBound) return;
+  modal.dataset.statusHintsBound = "1";
+  modal.addEventListener("pointerover", event => {
+    const hintEl = event.target.closest("[data-preview-status-hint]");
+    if (!hintEl || !modal.contains(hintEl)) return;
+    setPreviewStyleStatusHint(hintEl.dataset.previewStatusHint || "");
+  });
+  modal.addEventListener("pointerout", event => {
+    if (!event.target.closest("[data-preview-status-hint]")) return;
+    const related = event.relatedTarget;
+    if (related && modal.contains(related) && related.closest("[data-preview-status-hint]")) return;
+    setPreviewStyleStatusHint("");
+  });
 }
 
 function syncGradientLegacyColors(target, scope) {
@@ -2544,7 +2696,12 @@ function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGra
   const bar = wrap?.querySelector(".preview-gradient-bar") || panel.querySelector(".preview-gradient-bar");
   const track = wrap?.querySelector(".preview-gradient-stops-track") || panel.querySelector(".preview-gradient-stops-track");
   if (!bar || !track) return;
-  bar.style.backgroundImage = buildGradientBarPreviewCss(stops, target);
+  const barCss = buildGradientBarPreviewCss(stops, target);
+  const hasAlpha = gradientStopsHaveTransparency(stops);
+  bar.classList.toggle("has-alpha", hasAlpha);
+  const gradientLayer = bar.querySelector(".preview-gradient-bar-gradient");
+  if (gradientLayer) gradientLayer.style.backgroundImage = barCss;
+  else bar.style.backgroundImage = barCss;
   track.querySelectorAll(".preview-gradient-stop-handle").forEach((handle, index) => {
     const stop = stops[index];
     if (!stop) return;
@@ -2661,18 +2818,21 @@ function renderGradientStopsEditor(target, scope) {
   if (cardPreviewStyleSelectedStopIndex < 0) cardPreviewStyleSelectedStopIndex = 0;
   const selected = stops[cardPreviewStyleSelectedStopIndex] || stops[0];
   const barCss = buildGradientBarPreviewCss(stops, target);
+  const hasAlpha = gradientStopsHaveTransparency(stops);
   const handles = stops.map((stop, index) => {
     const active = index === cardPreviewStyleSelectedStopIndex ? " active" : "";
     const hover = index === cardPreviewStyleHoverStopIndex && index !== cardPreviewStyleSelectedStopIndex ? " is-hover" : "";
-    return `<button type="button" class="preview-gradient-stop-handle${active}${hover}" data-stop-index="${index}" data-gradient-scope="${scope}" style="left:${stop.offset}%;--stop-color:${escapeHtml(hexWithOpacity(stop.color, stop.opacity))}" aria-label="色标 ${index + 1}，${stop.offset}%">
+    return `<button type="button" class="preview-gradient-stop-handle${active}${hover}" data-stop-index="${index}" data-gradient-scope="${scope}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientStop)}" style="left:${stop.offset}%;--stop-color:${escapeHtml(hexWithOpacity(stop.color, stop.opacity))}" aria-label="色标 ${index + 1}，${stop.offset}%">
       <span class="preview-gradient-stop-handle-arrow"></span>
     </button>`;
   }).join("");
   const controlIndex = getEffectiveGradientStopIndex(scope);
   const controlStop = stops[controlIndex] || selected;
   return `<div class="preview-gradient-editor">
-    <div class="preview-gradient-bar-wrap">
-      <div class="preview-gradient-bar" style="background-image:${escapeHtml(barCss)}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带，点击添加色标"></div>
+    <div class="preview-gradient-bar-wrap" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientBar)}">
+      <div class="preview-gradient-bar${hasAlpha ? " has-alpha" : ""}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带，点击添加色标">
+        <span class="preview-gradient-bar-gradient" style="background-image:${escapeHtml(barCss)}"></span>
+      </div>
       <div class="preview-gradient-position-indicator" hidden aria-hidden="true">
         <span class="preview-gradient-position-line"></span>
         <span class="preview-gradient-position-tick"></span>
@@ -2680,11 +2840,13 @@ function renderGradientStopsEditor(target, scope) {
       </div>
       <div class="preview-gradient-stops-track">${handles}</div>
     </div>
-    <div class="preview-gradient-stop-controls preview-gradient-stop-controls-inline">
-      <label class="preview-gradient-stop-color-inline"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
-      ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" aria-label="不透明度"`)}
+    <div class="preview-gradient-controls-row">
+      <div class="preview-gradient-stop-controls preview-gradient-stop-controls-inline">
+        <label class="preview-gradient-stop-color-inline" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientColor)}"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
+        ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientOpacity)}" aria-label="不透明度"`)}
+      </div>
+      ${renderGradientAngleDial(target.angle, scope)}
     </div>
-    ${renderStyleRangeField({ label: "角度", min: 0, max: 360, step: 1 }, target.angle, `data-gradient-field="angle" data-gradient-scope="${scope}" aria-label="渐变角度"`)}
   </div>`;
 }
 
@@ -2696,7 +2858,7 @@ function renderFillStyleParams() {
   const solidFields = isGradient
     ? ""
     : `${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, fill.opacity, 'data-fill-field="opacity" aria-label="填充不透明度"')}`;
-  return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid"><label class="preview-style-field"><span>类型</span><select data-fill-field="mode" class="preview-style-select"><option value="solid"${!isGradient ? " selected" : ""}>纯色</option><option value="gradient"${isGradient ? " selected" : ""}>线性渐变</option></select></label>${isGradient ? "" : `<label class="preview-style-field"><span>颜色</span><input type="color" data-fill-field="color" value="${escapeHtml(resolvePreviewFillColor(cardPreviewStyleDraft))}" /></label>`}${solidFields}${gradientFields}</div>`;
+  return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid">${renderColorModeField(fill.mode, "data-fill-field", "mode")}${isGradient ? "" : `<label class="preview-style-field"><span>颜色</span><input type="color" data-fill-field="color" value="${escapeHtml(resolvePreviewFillColor(cardPreviewStyleDraft))}" /></label>`}${solidFields}${gradientFields}</div>`;
 }
 
 function renderCardPreviewStyleLayerList() {
@@ -2708,14 +2870,14 @@ function renderCardPreviewStyleLayerList() {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       const fillActive = cardPreviewStyleSelectedLayerId == null ? " active" : "";
       const fillDisabled = fillEnabled ? "" : " is-disabled";
-      return `<li class="preview-style-style-item${fillActive}${fillDisabled}" data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span><span class="layer-spacer" aria-hidden="true"></span></li>`;
+      return `<li class="preview-style-style-item${fillActive}${fillDisabled}" data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span><span class="layer-spacer" aria-hidden="true"></span></li>`;
     }
     const layer = cardPreviewStyleDraft.layers.find(item => item.id === key);
     if (!layer) return "";
     const label = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
     const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
     const disabled = layer.enabled ? "" : " is-disabled";
-    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}">+</button></li>`;
+    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerDuplicate)}">+</button></li>`;
   }).join("");
   list.innerHTML = html;
 }
@@ -2725,7 +2887,7 @@ function renderStrokeStyleParams(layer) {
   const isGradient = layer.colorMode === "gradient";
   const meta = PREVIEW_EFFECT_TYPES.stroke;
   const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
-  const modeField = `<label class="preview-style-field"><span>类型</span><select data-layer-field="colorMode" class="preview-style-select"><option value="solid"${!isGradient ? " selected" : ""}>纯色</option><option value="gradient"${isGradient ? " selected" : ""}>线性渐变</option></select></label>`;
+  const modeField = renderColorModeField(layer.colorMode, "data-layer-field", "colorMode");
   const colorField = isGradient
     ? ""
     : `<label class="preview-style-field"><span>颜色</span><input type="color" data-layer-field="color" value="${escapeHtml(layer.color)}" /></label>`;
@@ -3265,6 +3427,7 @@ function handlePreviewStyleWheel(event) {
 function wireCardPreviewStyleModal() {
   const modal = $("#cardPreviewStyleModal");
   if (!modal) return;
+  bindPreviewStyleStatusHints();
   modal.querySelector(".preview-style-modal")?.addEventListener("wheel", handlePreviewStyleWheel, { passive: false });
   $("#cardPreviewStyleButton")?.addEventListener("click", openCardPreviewStyleModal);
   $("#cardPreviewStyleClose")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
@@ -3421,34 +3584,25 @@ function wireCardPreviewStyleModal() {
   });
   $("#cardPreviewStyleParams")?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft) return;
-    if (applyGradientStopFieldChange(event.target)) return;
-    const fillField = event.target.dataset.fillField;
-    if (fillField === "mode") {
-      cardPreviewStyleDraft.fill.mode = event.target.value === "gradient" ? "gradient" : "solid";
-      if (cardPreviewStyleDraft.fill.mode === "gradient") cardPreviewStyleDraft.fill.enabled = true;
-      syncFillLegacyColors(cardPreviewStyleDraft.fill);
-      if (cardPreviewStyleDraft.fill.mode === "gradient") cardPreviewStyleSelectedStopIndex = 0;
-      renderCardPreviewStyleParams();
-      renderCardPreviewStyleModalPreview();
-      return;
-    }
-    const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
-    const field = event.target.dataset.layerField;
-    if (layer && field === "colorMode" && event.target.tagName === "SELECT") {
-      layer.colorMode = event.target.value === "gradient" ? "gradient" : "solid";
-      syncStrokeLayerLegacyColors(layer);
-      if (layer.colorMode === "gradient") cardPreviewStyleSelectedStopIndex = 0;
-      renderCardPreviewStyleParams();
-      renderCardPreviewStyleModalPreview();
-      return;
-    }
-    if (layer && field && event.target.tagName === "SELECT") {
-      layer[field] = event.target.value;
-      renderCardPreviewStyleModalPreview();
-    }
+    applyGradientStopFieldChange(event.target);
   });
   $("#cardPreviewStyleParams")?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
+    const colorModeBtn = event.target.closest(".preview-color-mode-btn");
+    if (colorModeBtn) {
+      applyPreviewColorModeChange(colorModeBtn);
+      return;
+    }
+    const radioBtn = event.target.closest(".preview-style-radio-btn");
+    if (radioBtn?.dataset.layerField && radioBtn.dataset.radioValue) {
+      const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
+      if (layer) {
+        layer[radioBtn.dataset.layerField] = radioBtn.dataset.radioValue;
+        renderCardPreviewStyleParams();
+        renderCardPreviewStyleModalPreview();
+      }
+      return;
+    }
     const positionBtn = event.target.closest(".preview-stroke-position-btn");
     if (positionBtn) {
       const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
@@ -3499,6 +3653,15 @@ function wireCardPreviewStyleModal() {
     refreshGradientBarVisuals(scope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerdown", event => {
+    const dial = event.target.closest(".preview-gradient-angle-dial");
+    if (dial && cardPreviewStyleDraft) {
+      event.preventDefault();
+      draggingGradientAngleScope = dial.dataset.gradientScope || getActiveGradientScope();
+      dial.classList.add("is-dragging");
+      dial.setPointerCapture(event.pointerId);
+      applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
+      return;
+    }
     const handle = event.target.closest(".preview-gradient-stop-handle");
     if (!handle || !cardPreviewStyleDraft) return;
     event.preventDefault();
@@ -3513,14 +3676,33 @@ function wireCardPreviewStyleModal() {
     refreshGradientBarVisuals(draggingGradientScope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {
+    if (draggingGradientAngleScope) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
+      if (dial) applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
+      return;
+    }
     if (draggingGradientStopIndex === null) return;
     handleGradientStopDrag(event);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerup", event => {
+    if (draggingGradientAngleScope) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingGradientAngleScope = null;
+      return;
+    }
     if (draggingGradientStopIndex === null) return;
     finishGradientStopDrag(event);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointercancel", event => {
+    if (draggingGradientAngleScope) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingGradientAngleScope = null;
+      return;
+    }
     if (draggingGradientStopIndex === null) return;
     finishGradientStopDrag(event);
   });
@@ -3532,9 +3714,7 @@ function wireCardPreviewStyleModal() {
     if (gradientField === "angle" && gradientScope) {
       const target = getGradientEditTarget(gradientScope);
       if (!target) return;
-      target.angle = Number(event.target.value);
-      syncStyleRangeProgress(event.target);
-      renderCardPreviewStyleModalPreview();
+      applyGradientAngleChange(gradientScope, event.target.value);
       return;
     }
     const fillField = event.target.dataset.fillField;
