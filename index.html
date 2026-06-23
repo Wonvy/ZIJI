@@ -25,7 +25,6 @@
               <strong>字己</strong>
               <span class="version-badge" title="当前版本">v1.0.24</span>
             </span>
-            <small>ZIJI · YOUR FONTS, YOUR VIEW.</small>
           </span>
         </a>
         <div class="header-preview">
@@ -37,9 +36,8 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
           </button>
         </div>
-        <div class="header-actions">
-          <span class="privacy"><i></i> 字体仅在本机处理</span>
-          <button id="themeButton" class="icon-button" title="切换主题" aria-label="切换主题">◐</button>
+        <div class="header-actions workspace-header-actions">
+          <button id="themeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
         </div>
       </div>
     </header>
@@ -47,15 +45,18 @@
     <main>
       <section id="welcome" class="welcome">
         <div class="welcome-inner">
-          <div class="eyebrow">本地字体浏览器</div>
-          <h1>阅字如阅己<br><span class="welcome-accent">每一种字</span></h1>
+          <h1>字己<span class="welcome-accent">找字也找自己</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
+          <div class="welcome-actions">
+            <span class="privacy"><i></i> 字体仅在本机处理</span>
+            <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
+          </div>
           <div id="loadProgress" class="load-progress" hidden aria-live="polite">
             <div class="progress-track"><i id="progressBar"></i></div>
             <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
-          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge，通过 localhost 访问</p>
+          <p id="supportNote" class="support-note">推荐使用最新版 Chrome 或 Edge</p>
         </div>
       </section>
 
@@ -65,8 +66,10 @@
             <div class="card-toolbar">
               <div class="toolbar-section toolbar-meta">
                 <span class="eyebrow">字体库</span>
-                <strong id="fontCount">0 款字体</strong>
-                <button id="reloadButton" class="text-button" type="button">刷新</button>
+                <strong id="fontCount"><span class="font-count-value">0</span> 款字体</strong>
+                <button id="reloadButton" class="toolbar-icon-button" type="button" title="刷新字体" aria-label="刷新字体">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v4h-4"></path><path d="M4 17v-4h4"></path><path d="M18.4 7.6A7 7 0 0 0 6.5 6.5L4 9"></path><path d="M5.6 16.4A7 7 0 0 0 17.5 17.5L20 15"></path></svg>
+                </button>
               </div>
 
               <div class="toolbar-section toolbar-center">
@@ -78,7 +81,6 @@
                     <label class="search-box toolbar-search">
                       <span>⌕</span>
                       <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                      <kbd>⌘ K</kbd>
                     </label>
                     <div id="searchSuggestions" class="search-suggestions" hidden>
                       <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
@@ -129,12 +131,15 @@
                   <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
                   </button>
-                  <div id="cardPreviewStyleMenuWrap" class="card-preview-style-menu-arrow-wrap">
-                    <button id="cardPreviewStyleMenuToggle" class="card-preview-style-menu-arrow" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="cardPreviewStylePresetMenu" title="切换预览样式方案" aria-label="切换预览样式方案">▴</button>
-                    <div id="cardPreviewStylePresetMenu" class="card-preview-style-preset-menu ps-scroll" role="menu" aria-label="预览样式方案"></div>
-                  </div>
+                  <details class="filter-menu filter-menu-icon card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
+                    <summary aria-label="切换预览样式方案" title="切换预览样式方案">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+                    </summary>
+                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式方案"></div>
+                  </details>
                 </div>
-                <label class="columns-control" title="每行显示数量">数量 <input id="cardColumns" type="range" min="3" max="12" step="1" value="7" aria-label="每行显示数量" /><output id="cardColumnsOutput">7</output></label>
+                <label class="grid-layout-control" title="每行显示列数">列 <input id="cardColumns" type="range" min="3" max="12" step="1" value="7" aria-label="每行显示列数" /><output id="cardColumnsOutput">7</output></label>
+                <label class="grid-layout-control" title="每页显示行数">行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /><output id="cardRowsOutput">4</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
@@ -155,8 +160,8 @@
                 <div class="favorite-sidebar-header"><span>收藏分类</span><button id="addCategoryButton" type="button" title="新建分类">＋</button></div>
                 <div id="favoriteCategoryList" class="favorite-category-list"></div>
                 <div class="favorite-sidebar-data">
-                  <button id="exportFavorites" class="data-button" type="button">导出 JSON</button>
-                  <button id="importFavorites" class="data-button" type="button">导入 JSON</button>
+                  <button id="exportFavorites" class="data-button" type="button">导出</button>
+                  <button id="importFavorites" class="data-button" type="button">导入</button>
                   <input id="favoritesFile" type="file" accept="application/json,.json" hidden />
                 </div>
               </aside>
@@ -173,7 +178,7 @@
                 <button id="nextPage" class="page-button page-button-icon" type="button" title="下一页" aria-label="下一页">›</button>
               </nav>
               <div class="view-status-wrap">
-                <div id="viewStatus" class="view-status">网格视图</div>
+                <div id="viewStatus" class="view-status">本页 0 / 0 款</div>
                 <label class="card-sample-size-control" title="卡片预览字号">
                   <span>字号</span>
                   <button id="cardSampleSizeDecrease" class="step-button" type="button" aria-label="减小字号">−</button>

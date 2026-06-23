@@ -52,22 +52,35 @@ const SORT_LABELS = {
 const CARD_GRID_GAP = 14;
 const CARD_GRID_PADDING_BLOCK = 24;
 const CARD_GRID_META_HEIGHT = 39;
+const CARD_MIN_WIDTH = 140;
 const CARD_COLUMNS_MIN = 3;
 const CARD_COLUMNS_MAX = 12;
 const CARD_COLUMNS_DEFAULT = 7;
+const CARD_ROWS_MIN = 1;
+const CARD_ROWS_MAX = 12;
+const CARD_ROWS_DEFAULT = 4;
 
-function clampCardColumns(value) {
-  return Math.max(CARD_COLUMNS_MIN, Math.min(CARD_COLUMNS_MAX, Math.round(Number(value) || CARD_COLUMNS_DEFAULT)));
+function clampCardColumns(value, max = CARD_COLUMNS_MAX) {
+  return Math.max(CARD_COLUMNS_MIN, Math.min(max, Math.round(Number(value) || CARD_COLUMNS_DEFAULT)));
+}
+
+function clampCardRows(value, max = CARD_ROWS_MAX) {
+  return Math.max(CARD_ROWS_MIN, Math.min(max, Math.round(Number(value) || CARD_ROWS_DEFAULT)));
 }
 
 function deriveCardColumnsFromWidth(cardWidth, containerWidth = 1100) {
   return clampCardColumns(Math.floor((containerWidth + CARD_GRID_GAP) / (Number(cardWidth) + CARD_GRID_GAP)));
 }
 
-function resolveCardColumns(settings = {}) {
-  if (Number.isFinite(Number(settings.cardColumns))) return clampCardColumns(settings.cardColumns);
+function resolveCardColumns(settings = {}, max = CARD_COLUMNS_MAX) {
+  if (Number.isFinite(Number(settings.cardColumns))) return clampCardColumns(settings.cardColumns, max);
   if (Number.isFinite(Number(settings.cardWidth))) return deriveCardColumnsFromWidth(settings.cardWidth);
-  return CARD_COLUMNS_DEFAULT;
+  return clampCardColumns(CARD_COLUMNS_DEFAULT, max);
+}
+
+function resolveCardRows(settings = {}, max = CARD_ROWS_MAX) {
+  if (Number.isFinite(Number(settings.cardRows))) return clampCardRows(settings.cardRows, max);
+  return clampCardRows(Math.min(CARD_ROWS_DEFAULT, max), max);
 }
 
 function getCardGridSampleHeight() {
@@ -93,21 +106,18 @@ function syncCardGridLayoutVars() {
 }
 
 function getFontGridViewportSize() {
-  const viewShell = ui.list?.closest(".font-view-shell");
   const pageArea = ui.list?.closest(".font-page-area");
   const listStyles = ui.list ? getComputedStyle(ui.list) : null;
   const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 72;
   const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 64;
-  let viewportWidth = ui.list?.clientWidth || 800;
-  let viewportHeight = 500;
-  const measureEl = viewShell || pageArea;
-  if (measureEl) {
-    const rect = measureEl.getBoundingClientRect();
-    if (rect.width > 0) viewportWidth = rect.width;
-    if (rect.height > 0) viewportHeight = rect.height;
-  } else if (ui.list?.parentElement?.clientHeight) {
-    viewportHeight = ui.list.parentElement.clientHeight;
-    viewportWidth = ui.list.parentElement.clientWidth || viewportWidth;
+  let viewportWidth = ui.list?.clientWidth || pageArea?.clientWidth || 800;
+  let viewportHeight = pageArea?.clientHeight || ui.list?.parentElement?.clientHeight || 500;
+  if (!viewportHeight) {
+    const measureEl = ui.list?.closest(".font-view-shell");
+    if (measureEl) {
+      const rect = measureEl.getBoundingClientRect();
+      if (rect.height > 0) viewportHeight = rect.height;
+    }
   }
   return {
     width: Math.max(320, viewportWidth - padX),
@@ -115,23 +125,45 @@ function getFontGridViewportSize() {
   };
 }
 
-function getCardGridLayout() {
+function getCardGridCapacity() {
   const { width, height } = getFontGridViewportSize();
-  const columns = clampCardColumns(state.cardColumns);
-  const cardWidth = Math.max(140, Math.floor((width - (columns - 1) * CARD_GRID_GAP) / columns));
   const rowPitch = getCardGridRowPitch();
-  const rows = Math.max(1, Math.floor((height + CARD_GRID_GAP) / rowPitch));
-  return { width, height, columns, cardWidth, rows, rowPitch };
+  const maxColumns = Math.max(CARD_COLUMNS_MIN, Math.floor((width + CARD_GRID_GAP) / (CARD_MIN_WIDTH + CARD_GRID_GAP)));
+  const maxRows = Math.max(CARD_ROWS_MIN, Math.floor((height + CARD_GRID_GAP) / rowPitch));
+  return { width, height, maxColumns, maxRows, rowPitch };
 }
 
-function syncCardColumnsControl() {
-  const input = $("#cardColumns");
-  const output = $("#cardColumnsOutput");
-  if (!input) return;
+function getCardGridLayout() {
+  const capacity = getCardGridCapacity();
+  const columns = clampCardColumns(state.cardColumns, capacity.maxColumns);
+  const rows = clampCardRows(state.cardRows, capacity.maxRows);
+  const cardWidth = Math.max(CARD_MIN_WIDTH, Math.floor((capacity.width - (columns - 1) * CARD_GRID_GAP) / columns));
+  return { ...capacity, columns, rows, cardWidth };
+}
+
+function syncCardGridControls() {
+  const capacity = getCardGridCapacity();
   const disabled = !["grid", "focus"].includes(state.view);
-  input.disabled = disabled;
-  input.value = String(clampCardColumns(state.cardColumns));
-  if (output) output.textContent = input.value;
+  state.cardColumns = clampCardColumns(state.cardColumns, capacity.maxColumns);
+  state.cardRows = clampCardRows(state.cardRows, capacity.maxRows);
+  const colInput = $("#cardColumns");
+  const rowInput = $("#cardRows");
+  const colOutput = $("#cardColumnsOutput");
+  const rowOutput = $("#cardRowsOutput");
+  if (colInput) {
+    colInput.disabled = disabled;
+    colInput.min = String(CARD_COLUMNS_MIN);
+    colInput.max = String(capacity.maxColumns);
+    colInput.value = String(state.cardColumns);
+  }
+  if (rowInput) {
+    rowInput.disabled = disabled;
+    rowInput.min = String(CARD_ROWS_MIN);
+    rowInput.max = String(capacity.maxRows);
+    rowInput.value = String(state.cardRows);
+  }
+  if (colOutput) colOutput.textContent = String(state.cardColumns);
+  if (rowOutput) rowOutput.textContent = String(state.cardRows);
 }
 
 function sortLabel(sort) {
@@ -141,6 +173,7 @@ const UI_SETTINGS_DEFAULTS = {
   theme: "light",
   view: "grid",
   cardColumns: 7,
+  cardRows: 4,
   singleCardSize: 82,
   cardSampleSize: 49,
   sort: "name",
@@ -380,6 +413,7 @@ function collectUiSettings() {
     theme: document.body.classList.contains("dark") ? "dark" : "light",
     view: state.view,
     cardColumns: state.cardColumns,
+    cardRows: state.cardRows,
     singleCardSize: state.singleCardSize,
     cardSampleSize: state.cardSampleSize,
     sort: state.sort,
@@ -433,7 +467,8 @@ function applyStoredUiSettings(settings) {
   ui.bg.value = settings.previewBackground;
   ui.color.value = settings.previewTextColor;
   state.cardColumns = resolveCardColumns(settings);
-  syncCardColumnsControl();
+  state.cardRows = resolveCardRows(settings);
+  syncCardGridControls();
   syncMagnifierControl();
   const detailPanel = $("#detailPanel");
   const cardArea = $(".card-area");
@@ -458,7 +493,7 @@ document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: uiSettings.view, sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
@@ -3083,53 +3118,6 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   return true;
 }
 
-function resolveQuickPresetStyle(presetId) {
-  if (!presetId) return null;
-  const preset = findCardPreviewStylePreset(presetId);
-  return preset ? preset.style : null;
-}
-
-function getQuickMenuPreviewFont() {
-  return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
-}
-
-function getQuickMenuPreviewChar() {
-  const text = cardPreviewText().trim();
-  return [...text][0] || MANAGE_PRESET_PREVIEW_CHAR;
-}
-
-function renderQuickPresetMenuItem(presetId, { active = false, ariaLabel = "默认" } = {}) {
-  return `<button type="button" class="card-preview-style-preset-item card-preview-style-preset-preview${active ? " active is-current" : ""}" role="menuitem" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(ariaLabel)}">
-    <span class="preview-style-preset-glyph" aria-hidden="true">${escapeHtml(getQuickMenuPreviewChar())}</span>
-  </button>`;
-}
-
-function applyQuickPresetMenuStyles() {
-  const menu = $("#cardPreviewStylePresetMenu");
-  if (!menu) return;
-  const font = getQuickMenuPreviewFont();
-  const previewChar = getQuickMenuPreviewChar();
-  menu.querySelectorAll(".card-preview-style-preset-preview").forEach(item => {
-    const glyph = item.querySelector(".preview-style-preset-glyph");
-    if (!glyph) return;
-    glyph.textContent = previewChar;
-    if (font) {
-      registerFont(font);
-      glyph.style.fontFamily = cssName(font);
-    } else {
-      glyph.style.fontFamily = "";
-    }
-    applyCardPreviewStyleToElement(glyph, resolveQuickPresetStyle(item.dataset.presetId || ""), { themeDefault: true });
-  });
-  if (!font) return;
-  ensureFontLoaded(font, previewChar).then(() => {
-    if (!menu.isConnected) return;
-    menu.querySelectorAll(".card-preview-style-preset-preview .preview-style-preset-glyph").forEach(glyph => {
-      glyph.style.fontFamily = cssName(font);
-    });
-  });
-}
-
 function syncCardPreviewStyleButtonLabel() {
   const button = $("#cardPreviewStyleButton");
   if (!button) return;
@@ -3143,62 +3131,35 @@ function syncCardPreviewStyleButtonLabel() {
 
 function renderCardPreviewStyleQuickMenu() {
   const menu = $("#cardPreviewStylePresetMenu");
-  const toggle = $("#cardPreviewStyleMenuToggle");
   if (!menu) return;
   const activeId = state.activeCardPreviewStylePresetId || "";
-  let html = `<div class="card-preview-style-preset-grid" role="presentation">`;
-  html += renderQuickPresetMenuItem("", { active: !activeId, ariaLabel: "默认样式" });
+  let html = `<label><input type="radio" name="card-preview-preset" value="" ${!activeId ? "checked" : ""}> 默认</label>`;
   html += state.cardPreviewStylePresets.map(preset =>
-    renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, ariaLabel: preset.name })
+    `<label><input type="radio" name="card-preview-preset" value="${escapeHtml(preset.id)}" ${preset.id === activeId ? "checked" : ""}> ${escapeHtml(preset.name)}</label>`
   ).join("");
-  html += `</div><div class="card-preview-style-preset-divider" aria-hidden="true"></div>
-    <button type="button" class="card-preview-style-preset-item card-preview-style-preset-action" role="menuitem" data-preset-action="manage">管理方案…</button>`;
+  html += `<span class="popover-divider"></span>
+    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理方案…</button>`;
   menu.innerHTML = html;
-  applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
-  if (toggle) toggle.disabled = false;
-}
-
-function setCardPreviewStyleQuickMenuOpen(open) {
-  const wrap = $("#cardPreviewStyleMenuWrap");
-  const toggle = $("#cardPreviewStyleMenuToggle");
-  if (!wrap || !toggle) return;
-  wrap.classList.toggle("is-open", open);
-  toggle.setAttribute("aria-expanded", open ? "true" : "false");
 }
 
 function wireCardPreviewStyleQuickMenu() {
-  const wrap = $("#cardPreviewStyleMenuWrap");
+  const dropdown = $("#cardPreviewStylePresetDropdown");
   const menu = $("#cardPreviewStylePresetMenu");
-  const toggle = $("#cardPreviewStyleMenuToggle");
-  if (!wrap || !menu || !toggle) return;
+  if (!dropdown || !menu) return;
   renderCardPreviewStyleQuickMenu();
-  wrap.addEventListener("mouseenter", () => applyQuickPresetMenuStyles());
-  toggle.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    const opening = !wrap.classList.contains("is-open");
-    setCardPreviewStyleQuickMenuOpen(opening);
-    if (opening) applyQuickPresetMenuStyles();
+  menu.addEventListener("change", event => {
+    if (event.target.name !== "card-preview-preset") return;
+    applyCardPreviewStylePresetById(event.target.value || null);
+    dropdown.removeAttribute("open");
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
     if (actionBtn?.dataset.presetAction === "manage") {
-      setCardPreviewStyleQuickMenuOpen(false);
+      dropdown.removeAttribute("open");
       openCardPreviewStyleModal();
       setCardPreviewStyleModalTab("manage");
-      return;
     }
-    const item = event.target.closest("[data-preset-id]");
-    if (!item) return;
-    applyCardPreviewStylePresetById(item.dataset.presetId || null);
-    setCardPreviewStyleQuickMenuOpen(false);
-  });
-  document.addEventListener("click", event => {
-    if (!wrap.contains(event.target)) setCardPreviewStyleQuickMenuOpen(false);
-  });
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape") setCardPreviewStyleQuickMenuOpen(false);
   });
 }
 
@@ -4257,18 +4218,18 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
   syncCardGridLayoutVars();
+  if (["grid", "focus"].includes(state.view)) syncCardGridControls();
   ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view)
     ? `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`
     : "";
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
-  ui.count.textContent = `${state.filtered.length} 款字体`;
+  ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span> 款字体`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  const viewName = ({ grid: "网格视图", list: "列表视图", single: "单字视图", focus: "无干扰视图" })[state.view] || "字体视图";
-  ui.viewStatus.textContent = `${viewName} · 本页 ${pageFonts.length} / ${state.filtered.length} 款`;
+  ui.viewStatus.textContent = `本页 ${pageFonts.length} / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -5754,8 +5715,17 @@ $("#focusViewToggle")?.addEventListener("change", event => {
   setView(event.target.checked ? "focus" : "grid");
 });
 $("#cardColumns")?.addEventListener("input", event => {
-  state.cardColumns = clampCardColumns(event.target.value);
-  syncCardColumnsControl();
+  state.cardColumns = clampCardColumns(event.target.value, getCardGridCapacity().maxColumns);
+  syncCardGridControls();
+  if (["grid", "focus"].includes(state.view)) {
+    state.page = 0;
+    renderFontList();
+  }
+  persistUiSettings();
+});
+$("#cardRows")?.addEventListener("input", event => {
+  state.cardRows = clampCardRows(event.target.value, getCardGridCapacity().maxRows);
+  syncCardGridControls();
   if (["grid", "focus"].includes(state.view)) {
     state.page = 0;
     renderFontList();
@@ -5817,7 +5787,7 @@ function setView(view) {
   const focusViewToggle = $("#focusViewToggle");
   if (focusViewToggle) focusViewToggle.checked = view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
-  syncCardColumnsControl();
+  syncCardGridControls();
   updateCardSampleSizeControl();
   renderFontList();
   persistUiSettings();
@@ -5833,11 +5803,12 @@ ui.list.addEventListener("wheel", event => {
     toast(`单字卡片 ${state.singleCardSize} × ${state.singleCardSize}`);
     persistUiSettings();
   } else {
-    state.cardColumns = clampCardColumns(state.cardColumns + direction);
-    syncCardColumnsControl();
+    const capacity = getCardGridCapacity();
+    state.cardColumns = clampCardColumns(state.cardColumns + direction, capacity.maxColumns);
+    syncCardGridControls();
     state.page = 0;
     renderFontList();
-    toast(`每行 ${state.cardColumns} 个`);
+    toast(`${state.cardRows} 行 × ${state.cardColumns} 列`);
     persistUiSettings();
   }
 }, { passive: false });
@@ -5859,11 +5830,13 @@ document.addEventListener("keydown", event => {
 });
 ui.list.addEventListener("wheel", handleFontListWheel, { passive: false });
 ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
-$("#themeButton").addEventListener("click", () => {
+function toggleTheme() {
   document.body.classList.toggle("dark");
   applyCardPreviewStyleToAllCards();
   persistUiSettings();
-});
+}
+$("#themeButton")?.addEventListener("click", toggleTheme);
+$("#welcomeThemeButton")?.addEventListener("click", toggleTheme);
 $("#previewTabButton").addEventListener("click", () => setDetailTab("preview"));
 $("#infoTabButton").addEventListener("click", () => setDetailTab("info"));
 $("#detailToggle").addEventListener("click", () => {
@@ -6014,6 +5987,7 @@ if ("ResizeObserver" in window) {
     scheduleCardFit();
     clearTimeout(ui.list.pageResizeTimer);
     ui.list.pageResizeTimer = setTimeout(() => {
+      if (["grid", "focus"].includes(state.view)) syncCardGridControls();
       if (calculatePageSize() !== state.pageSize) renderFontList();
     }, 120);
   };
