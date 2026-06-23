@@ -250,6 +250,10 @@ const COLOR_MODE_OPTIONS = [
   { value: "solid", label: "纯色" },
   { value: "gradient", label: "线性渐变" }
 ];
+const DEFAULT_LINEAR_GRADIENT_STOPS = [
+  { color: "#000000", opacity: 100, offset: 0 },
+  { color: "#ffffff", opacity: 100, offset: 100 }
+];
 const PREVIEW_STYLE_FILL_LAYER_ID = "__fill__";
 const MANAGE_PRESET_PREVIEW_CHAR = "永";
 const PREVIEW_EFFECT_TYPES = {
@@ -346,6 +350,13 @@ function normalizeGradientStops(rawStops, fill) {
     { color: fallbackColor, opacity: fallbackOpacity, offset: 0 },
     { color: fallbackColor2, opacity: fallbackOpacity, offset: 100 }
   ];
+}
+
+function applyInitialLinearGradientStops(target) {
+  target.stops = DEFAULT_LINEAR_GRADIENT_STOPS.map(stop => ({ ...stop }));
+  target.color = target.stops[0].color;
+  target.color2 = target.stops[target.stops.length - 1].color;
+  if (!Number.isFinite(Number(target.angle))) target.angle = 90;
 }
 
 function syncFillLegacyColors(fill) {
@@ -1540,8 +1551,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   manageDelete: "删除样式",
   manageExport: "导出样式 JSON",
   manageImport: "导入样式 JSON",
-  saveDraft: "将当前编辑保存为新样式",
-  confirm: "应用样式到全部卡片",
+  saveDraft: "保存样式并应用到全部卡片",
   cancel: "放弃更改并关闭"
 };
 let draggingGradientScope = null;
@@ -2449,9 +2459,15 @@ function applyPreviewColorModeChange(trigger) {
   const modeValue = trigger.dataset.modeValue === "gradient" ? "gradient" : "solid";
   if (trigger.dataset.fillField === "mode") {
     if (cardPreviewStyleDraft.fill.mode === modeValue) return true;
+    const wasSolid = cardPreviewStyleDraft.fill.mode !== "gradient";
     cardPreviewStyleDraft.fill.mode = modeValue;
-    if (modeValue === "gradient") cardPreviewStyleDraft.fill.enabled = true;
-    syncFillLegacyColors(cardPreviewStyleDraft.fill);
+    if (modeValue === "gradient") {
+      cardPreviewStyleDraft.fill.enabled = true;
+      if (wasSolid) applyInitialLinearGradientStops(cardPreviewStyleDraft.fill);
+      else syncFillLegacyColors(cardPreviewStyleDraft.fill);
+    } else {
+      syncFillLegacyColors(cardPreviewStyleDraft.fill);
+    }
     if (modeValue === "gradient") cardPreviewStyleSelectedStopIndex = 0;
     renderCardPreviewStyleParams();
     renderCardPreviewStyleModalPreview();
@@ -2460,8 +2476,14 @@ function applyPreviewColorModeChange(trigger) {
   const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
   if (layer && trigger.dataset.layerField === "colorMode") {
     if (layer.colorMode === modeValue) return true;
+    const wasSolid = layer.colorMode !== "gradient";
     layer.colorMode = modeValue;
-    syncStrokeLayerLegacyColors(layer);
+    if (modeValue === "gradient") {
+      if (wasSolid) applyInitialLinearGradientStops(layer);
+      else syncStrokeLayerLegacyColors(layer);
+    } else {
+      syncStrokeLayerLegacyColors(layer);
+    }
     if (modeValue === "gradient") cardPreviewStyleSelectedStopIndex = 0;
     renderCardPreviewStyleParams();
     renderCardPreviewStyleModalPreview();
@@ -2915,6 +2937,8 @@ function renderGradientStopsEditor(target, scope) {
         <label class="preview-gradient-stop-color-inline" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientColor)}"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
         ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientOpacity)}" aria-label="不透明度"`)}
       </div>
+    </div>
+    <div class="preview-gradient-angle-row">
       ${renderGradientAngleDial(target.angle, scope)}
     </div>
   </div>`;
@@ -3069,13 +3093,17 @@ function renderManagePresetIconCard(presetId, name, { selected = false, current 
 
 function syncCardPreviewStyleFooter() {
   const isEdit = cardPreviewStyleModalTab === "edit";
+  const bottom = $(".preview-style-bottom");
+  const editFooter = $("#cardPreviewStyleFooterEdit");
+  const manageFooter = $("#cardPreviewStyleFooterManage");
   const saveDraftBtn = $("#cardPreviewStyleSaveDraft");
-  const confirmBtn = $("#cardPreviewStyleConfirm");
+  if (bottom) bottom.dataset.tab = isEdit ? "edit" : "manage";
+  if (editFooter) editFooter.hidden = !isEdit;
+  if (manageFooter) manageFooter.hidden = isEdit;
   if (saveDraftBtn) {
-    saveDraftBtn.hidden = !isEdit;
-    saveDraftBtn.disabled = !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft);
+    saveDraftBtn.disabled = !cardPreviewStyleDraft;
   }
-  if (confirmBtn) confirmBtn.textContent = isEdit ? "确定" : "应用";
+  syncCardPreviewStylePresetEditorVisibility();
 }
 
 function setCardPreviewStyleModalTab(tab) {
@@ -3201,15 +3229,15 @@ function applyQuickPresetMenuStyles() {
   });
 }
 
-function syncCardPreviewStyleButtonLabel() {
-  const button = $("#cardPreviewStyleButton");
-  if (!button) return;
+function syncCardPreviewStyleMenuLabel() {
+  const summary = $("#cardPreviewStylePresetDropdown")?.querySelector("summary");
+  if (!summary) return;
   const preset = state.activeCardPreviewStylePresetId
     ? findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)
     : null;
-  const label = preset ? `卡片预览样式：${preset.name}` : "卡片预览样式";
-  button.title = label;
-  button.setAttribute("aria-label", label);
+  const label = preset ? `预览样式：${preset.name}` : "预览样式";
+  summary.title = label;
+  summary.setAttribute("aria-label", label);
 }
 
 function renderCardPreviewStyleQuickMenu() {
@@ -3225,7 +3253,7 @@ function renderCardPreviewStyleQuickMenu() {
     <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式…</button>`;
   menu.innerHTML = html;
   applyQuickPresetMenuStyles();
-  syncCardPreviewStyleButtonLabel();
+  syncCardPreviewStyleMenuLabel();
 }
 
 function handleGridLayoutControlWheel(event) {
@@ -3303,12 +3331,22 @@ function loadManagePresetToEdit() {
   setCardPreviewStyleModalTab("edit");
 }
 
+function syncCardPreviewStylePresetEditorVisibility() {
+  const wrap = $("#cardPreviewStylePresetRenameWrap");
+  const editFooter = $("#cardPreviewStyleFooterEdit");
+  const showing = wrap && !wrap.hidden;
+  if (editFooter && cardPreviewStyleModalTab === "edit") {
+    editFooter.hidden = showing;
+  }
+}
+
 function hideCardPreviewStylePresetEditor() {
   cardPreviewStylePresetEditorMode = null;
   const wrap = $("#cardPreviewStylePresetRenameWrap");
   const input = $("#cardPreviewStylePresetRenameInput");
   if (wrap) wrap.hidden = true;
   if (input) input.value = "";
+  syncCardPreviewStylePresetEditorVisibility();
 }
 
 function showCardPreviewStylePresetEditor(mode, initialValue = "") {
@@ -3319,6 +3357,7 @@ function showCardPreviewStylePresetEditor(mode, initialValue = "") {
   wrap.hidden = false;
   input.value = initialValue;
   input.placeholder = mode === "rename" ? "输入新名称" : "输入样式名称";
+  syncCardPreviewStylePresetEditorVisibility();
   input.focus();
   input.select();
 }
@@ -3342,8 +3381,12 @@ function applyCardPreviewStylePresetEditor() {
     toast("已重命名样式");
     return;
   }
-  if (!name || !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
+  if (!name) {
     toast("请输入样式名称");
+    return;
+  }
+  if (!cardPreviewStyleDraft) {
+    toast("当前没有可保存的样式");
     return;
   }
   const preset = createCardPreviewStylePreset(name, cardPreviewStyleDraft);
@@ -3351,26 +3394,19 @@ function applyCardPreviewStylePresetEditor() {
   cardPreviewStyleManagePresetId = preset.id;
   persistUiSettings();
   hideCardPreviewStylePresetEditor();
-  if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
-  renderCardPreviewStyleQuickMenu();
-  toast(`已保存样式「${preset.name}」`);
+  closeCardPreviewStyleModal(true);
+  return;
 }
 
 function saveCardPreviewStylePresetDraft() {
-  if (!cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
+  if (!cardPreviewStyleDraft) {
     toast("当前没有可保存的样式");
     return;
   }
-  if (cardPreviewStyleDraftPresetId) {
-    const preset = updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
-    if (!preset) {
-      toast("样式不存在");
-      return;
-    }
-    cardPreviewStyleManagePresetId = preset.id;
+  if (cardPreviewStyleDraftPresetId && findCardPreviewStylePreset(cardPreviewStyleDraftPresetId)) {
+    updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
     persistUiSettings();
-    renderCardPreviewStyleQuickMenu();
-    toast(`已更新「${preset.name}」`);
+    closeCardPreviewStyleModal(true);
     return;
   }
   showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名样式"));
@@ -3465,12 +3501,7 @@ function openCardPreviewStyleModal() {
     }
   });
   renderCardPreviewStyleModal();
-  $("#cardPreviewStyleEditTab")?.classList.add("active");
-  $("#cardPreviewStyleManageTab")?.classList.remove("active");
-  $("#cardPreviewStyleEditTab")?.setAttribute("aria-selected", "true");
-  $("#cardPreviewStyleManageTab")?.setAttribute("aria-selected", "false");
-  $("#cardPreviewStyleEditPanel")?.removeAttribute("hidden");
-  $("#cardPreviewStyleManagePanel")?.setAttribute("hidden", "");
+  setCardPreviewStyleModalTab("edit");
   $("#cardPreviewStyleModal").hidden = false;
 }
 
@@ -3525,10 +3556,8 @@ function wireCardPreviewStyleModal() {
   if (!modal) return;
   bindPreviewStyleStatusHints();
   modal.querySelector(".preview-style-modal")?.addEventListener("wheel", handlePreviewStyleWheel, { passive: false });
-  $("#cardPreviewStyleButton")?.addEventListener("click", openCardPreviewStyleModal);
   $("#cardPreviewStyleClose")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
   $("#cardPreviewStyleCancel")?.addEventListener("click", () => closeCardPreviewStyleModal(false));
-  $("#cardPreviewStyleConfirm")?.addEventListener("click", () => closeCardPreviewStyleModal(true));
   modal.addEventListener("click", event => {
     if (event.target === modal) closeCardPreviewStyleModal(false);
   });
@@ -4355,7 +4384,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
     ? `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`
     : "";
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
-  ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span> 款字体`;
+  ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span><span class="font-count-suffix"> 款字体</span>`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
@@ -5306,6 +5335,7 @@ function updateVisualSettings() {
     el.style.color = ui.color.value;
   });
   ui.stage.style.backgroundColor = ui.bg.value;
+  if ($("#previewTabPanel")) $("#previewTabPanel").style.backgroundColor = ui.bg.value;
   ui.magnifier.style.backgroundColor = resolveMagnifierBackground(ui.bg.value, "--stage");
   const mark = $(".stage-color-mark");
   if (mark) mark.style.color = colorSwatchMarkColor(ui.color.value);
