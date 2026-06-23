@@ -38,9 +38,125 @@ function loadFavoriteData() {
   }
 }
 const cachedFavoriteData = loadFavoriteData();
+const UI_SETTINGS_KEY = "webfonts-ui-settings";
+const UI_SETTINGS_VERSION = 1;
+const UI_SETTINGS_DEFAULTS = {
+  theme: "light",
+  view: "grid",
+  cardWidth: 245,
+  singleCardSize: 82,
+  cardSampleSize: 49,
+  sort: "name",
+  magnifier: true,
+  filters: [],
+  languageFilter: "all",
+  weightFilters: [],
+  previewFontSize: 28,
+  previewLetterSpacing: 0,
+  previewLineHeight: 1.2,
+  previewBackground: "#f3efe7",
+  previewTextColor: "#171714",
+  detailTab: "preview",
+  detailPanelCollapsed: false,
+  cardAreaCollapsed: false,
+  detailPanelWidth: null,
+  favoriteCategoryView: "all"
+};
+function loadUiSettings() {
+  try {
+    const raw = localStorage.getItem(UI_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const settings = { ...UI_SETTINGS_DEFAULTS, ...parsed };
+    if (!raw) {
+      const legacyCardSize = localStorage.getItem("card-sample-size");
+      if (legacyCardSize !== null) settings.cardSampleSize = Number(legacyCardSize) || settings.cardSampleSize;
+    }
+    return settings;
+  } catch {
+    return { ...UI_SETTINGS_DEFAULTS };
+  }
+}
+function collectUiSettings() {
+  const detailPanel = $("#detailPanel");
+  return {
+    version: UI_SETTINGS_VERSION,
+    theme: document.body.classList.contains("dark") ? "dark" : "light",
+    view: state.view,
+    cardWidth: state.cardWidth,
+    singleCardSize: state.singleCardSize,
+    cardSampleSize: state.cardSampleSize,
+    sort: state.sort,
+    magnifier: state.magnifier,
+    filters: [...state.filters],
+    languageFilter: state.languageFilters.values().next().value || "all",
+    weightFilters: [...state.weightFilters],
+    previewFontSize: Number(ui.size.value),
+    previewLetterSpacing: Number(ui.spacing.value),
+    previewLineHeight: Number(ui.lineHeight.value),
+    previewBackground: ui.bg.value,
+    previewTextColor: ui.color.value,
+    detailTab: $("#infoTabPanel").classList.contains("active") ? "info" : "preview",
+    detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
+    cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
+    detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
+    favoriteCategoryView: state.favoriteCategoryView
+  };
+}
+let persistUiSettingsTimer;
+function persistUiSettings() {
+  clearTimeout(persistUiSettingsTimer);
+  persistUiSettingsTimer = setTimeout(() => {
+    localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(collectUiSettings()));
+    localStorage.setItem("card-sample-size", String(state.cardSampleSize));
+  }, 180);
+}
+function syncMagnifierControl() {
+  ui.magnifierButton.classList.toggle("active", state.magnifier);
+  ui.magnifierButton.title = state.magnifier ? "关闭放大镜" : "开启放大镜";
+  ui.magnifierButton.setAttribute("aria-label", ui.magnifierButton.title);
+  ui.magnifierButton.setAttribute("aria-pressed", String(state.magnifier));
+}
+function syncDetailPanelToggle(collapsed) {
+  $("#detailToggle").title = collapsed ? "展开详情" : "折叠详情";
+  $("#detailToggle").setAttribute("aria-label", collapsed ? "展开详情" : "折叠详情");
+}
+function syncCardAreaToggle(collapsed) {
+  $("#cardAreaToggle").title = collapsed ? "展开字体库" : "折叠字体库";
+  $("#cardAreaToggle").setAttribute("aria-label", collapsed ? "展开字体库" : "折叠字体库");
+}
+function applyStoredUiSettings(settings) {
+  document.body.classList.toggle("dark", settings.theme === "dark");
+  ui.size.value = settings.previewFontSize;
+  ui.spacing.value = settings.previewLetterSpacing;
+  ui.lineHeight.value = settings.previewLineHeight;
+  ui.bg.value = settings.previewBackground;
+  ui.color.value = settings.previewTextColor;
+  $("#cardDensity").value = settings.cardWidth;
+  $("#sortSelect").value = settings.sort;
+  syncMagnifierControl();
+  const detailPanel = $("#detailPanel");
+  const cardArea = $(".card-area");
+  if (settings.detailPanelCollapsed) {
+    detailPanel.classList.add("collapsed");
+    detailPanel.style.width = "";
+    detailPanel.style.minWidth = "";
+  } else if (settings.detailPanelWidth) {
+    detailPanel.dataset.openWidth = String(settings.detailPanelWidth);
+    detailPanel.style.width = `${settings.detailPanelWidth}px`;
+    detailPanel.style.minWidth = `${settings.detailPanelWidth}px`;
+  }
+  cardArea.classList.toggle("collapsed", settings.cardAreaCollapsed);
+  syncDetailPanelToggle(settings.detailPanelCollapsed);
+  syncCardAreaToggle(settings.cardAreaCollapsed);
+  setDetailTab(settings.detailTab);
+  updateFilterControls();
+  setView(settings.view);
+}
+const uiSettings = loadUiSettings();
+document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const state = {
-  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
-  view: "grid", sort: "name", cardWidth: 245, cardSampleSize: Number(localStorage.getItem("card-sample-size")) || 49, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
+  view: uiSettings.view, sort: uiSettings.sort, cardWidth: uiSettings.cardWidth, cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -241,6 +357,7 @@ function setDetailTab(tab) {
   $("#infoTabPanel").classList.toggle("active", !isPreview);
   $("#previewTabPanel").hidden = !isPreview;
   $("#infoTabPanel").hidden = isPreview;
+  persistUiSettings();
 }
 
 function setLoadProgress(text, value = null) {
@@ -566,13 +683,20 @@ function renderWeightFilterMenu() {
     return;
   }
   container.innerHTML = state.weightOptions.map(({ label, count }) => `
-    <label><span><input type="checkbox" data-weight-label="${escapeHtml(label)}"${state.weightFilters.has(label) ? " checked" : ""}> ${escapeHtml(label)}</span><small>${count}</small></label>
+    <label class="weight-filter-item">
+      <span class="weight-filter-name">
+        <input type="checkbox" data-weight-label="${escapeHtml(label)}"${state.weightFilters.has(label) ? " checked" : ""}>
+        <span class="weight-filter-label">${escapeHtml(label)}</span>
+        <small class="weight-filter-count">${count}</small>
+      </span>
+    </label>
   `).join("");
   container.querySelectorAll("[data-weight-label]").forEach(input => {
     input.addEventListener("change", () => {
       input.checked ? state.weightFilters.add(input.dataset.weightLabel) : state.weightFilters.delete(input.dataset.weightLabel);
       updateFilterControls();
       applyFilter();
+      persistUiSettings();
     });
   });
 }
@@ -900,7 +1024,7 @@ function scheduleCardSampleFit() {
 }
 
 function persistCardSampleSize() {
-  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
+  persistUiSettings();
 }
 
 function scheduleCardFit() {
@@ -1520,6 +1644,7 @@ function updateVisualSettings() {
   });
   ui.stage.style.backgroundColor = ui.bg.value;
   ui.magnifier.style.backgroundColor = ui.bg.value;
+  persistUiSettings();
 }
 
 function adjustRangeInput(input, direction) {
@@ -1635,6 +1760,7 @@ function renderFavoriteSidebar() {
   ui.favoriteCategoryList.querySelectorAll("[data-favorite-category]").forEach(button => button.addEventListener("click", () => {
     state.favoriteCategoryView = button.dataset.favoriteCategory;
     applyFilter();
+    persistUiSettings();
   }));
   ui.favoriteCategoryList.querySelectorAll("[data-category-action]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
@@ -1917,8 +2043,11 @@ async function importFavorites(file) {
 }
 
 function resetSettings() {
-  ui.size.value = 28; ui.spacing.value = 0; ui.lineHeight.value = 1.2;
-  ui.bg.value = "#f3efe7"; ui.color.value = "#171714";
+  ui.size.value = UI_SETTINGS_DEFAULTS.previewFontSize;
+  ui.spacing.value = UI_SETTINGS_DEFAULTS.previewLetterSpacing;
+  ui.lineHeight.value = UI_SETTINGS_DEFAULTS.previewLineHeight;
+  ui.bg.value = UI_SETTINGS_DEFAULTS.previewBackground;
+  ui.color.value = UI_SETTINGS_DEFAULTS.previewTextColor;
   updateVisualSettings();
   if (state.selected?.axes) renderAxes(state.selected.axes);
 }
@@ -1942,7 +2071,10 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
-ui.cardSampleSize.addEventListener("input", () => applyCardSampleSize());
+ui.cardSampleSize.addEventListener("input", () => {
+  applyCardSampleSize();
+  persistUiSettings();
+});
 ui.cardSampleSize.addEventListener("change", () => {
   applyCardSampleSize({ fit: true });
   persistCardSampleSize();
@@ -2015,11 +2147,9 @@ INFO_COPY_TARGETS.forEach(([element, label]) => {
 });
 ui.magnifierButton.addEventListener("click", () => {
   state.magnifier = !state.magnifier;
-  ui.magnifierButton.classList.toggle("active", state.magnifier);
-  ui.magnifierButton.title = state.magnifier ? "关闭放大镜" : "开启放大镜";
-  ui.magnifierButton.setAttribute("aria-label", ui.magnifierButton.title);
-  ui.magnifierButton.setAttribute("aria-pressed", String(state.magnifier));
+  syncMagnifierControl();
   if (!state.magnifier) { hideMagnifier(ui.magnifier); hideMagnifier(ui.cardMagnifier); }
+  persistUiSettings();
 });
 document.querySelectorAll(".chip").forEach(button => button.addEventListener("click", () => {
   const filter = button.dataset.filter;
@@ -2028,6 +2158,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
     document.querySelectorAll("[data-language], [data-weight-label], [data-capability]").forEach(input => input.checked = false);
     document.querySelector('[data-language="all"]').checked = true;
     updateFilterControls();
+    persistUiSettings();
     return applyFilter();
   }
   state.filters.has(filter) ? state.filters.delete(filter) : state.filters.add(filter);
@@ -2038,6 +2169,7 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
     ui.empty.hidden = true;
     detectVariableFonts();
   } else applyFilter();
+  persistUiSettings();
 }));
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#listViewButton").addEventListener("click", () => setView("list"));
@@ -2049,12 +2181,14 @@ $("#cardDensity").addEventListener("input", event => {
     state.page = 0;
     renderFontList();
   }
+  persistUiSettings();
 });
 $("#sortSelect").addEventListener("change", event => {
   state.sort = event.target.value;
   if (["square", "narrow", "wide"].includes(state.sort) && state.fonts.some(font => font.aspectRatio === undefined)) scanFontShapes();
   else if (["chinese-first", "latin-first"].includes(state.sort) && state.fonts.some(font => !font.details)) scanFontCapabilities();
   else applyFilter();
+  persistUiSettings();
 });
 document.querySelectorAll("[data-language]").forEach(input => input.addEventListener("change", () => {
   if (!input.checked) return;
@@ -2067,6 +2201,7 @@ document.querySelectorAll("[data-language]").forEach(input => input.addEventList
     ui.empty.hidden = true;
     scanFontCapabilities();
   } else applyFilter();
+  persistUiSettings();
 }));
 document.querySelectorAll("[data-capability]").forEach(input => input.addEventListener("change", () => {
   const capability = input.dataset.capability;
@@ -2078,6 +2213,7 @@ document.querySelectorAll("[data-capability]").forEach(input => input.addEventLi
     ui.empty.hidden = true;
     detectVariableFonts();
   } else applyFilter();
+  persistUiSettings();
 }));
 document.querySelectorAll(".filter-menu").forEach(menu => {
   menu.addEventListener("mouseenter", () => clearTimeout(menu.closeTimer));
@@ -2106,6 +2242,7 @@ function setView(view) {
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
   updateCardSampleSizeControl();
   renderFontList();
+  persistUiSettings();
 }
 ui.list.addEventListener("wheel", event => {
   if (!event.ctrlKey || state.view === "list") return;
@@ -2116,12 +2253,14 @@ ui.list.addEventListener("wheel", event => {
     state.page = 0;
     renderFontList();
     toast(`单字卡片 ${state.singleCardSize} × ${state.singleCardSize}`);
+    persistUiSettings();
   } else {
     state.cardWidth = Math.max(160, Math.min(480, state.cardWidth + direction * 10));
     $("#cardDensity").value = Math.max(Number($("#cardDensity").min), Math.min(Number($("#cardDensity").max), state.cardWidth));
     state.page = 0;
     renderFontList();
     toast(`卡片宽度 ${state.cardWidth}`);
+    persistUiSettings();
   }
 }, { passive: false });
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
@@ -2148,7 +2287,10 @@ ui.list.addEventListener("wheel", event => {
   ui.list.lastPageTurn = now;
   goToPage(state.page + (event.deltaY > 0 ? 1 : -1));
 }, { passive: false });
-$("#themeButton").addEventListener("click", () => document.body.classList.toggle("dark"));
+$("#themeButton").addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  persistUiSettings();
+});
 $("#previewTabButton").addEventListener("click", () => setDetailTab("preview"));
 $("#infoTabButton").addEventListener("click", () => setDetailTab("info"));
 $("#detailToggle").addEventListener("click", () => {
@@ -2162,14 +2304,14 @@ $("#detailToggle").addEventListener("click", () => {
     panel.style.width = `${panel.dataset.openWidth}px`;
     panel.style.minWidth = `${panel.dataset.openWidth}px`;
   }
-  $("#detailToggle").title = collapsed ? "展开详情" : "折叠详情";
-  $("#detailToggle").setAttribute("aria-label", collapsed ? "展开详情" : "折叠详情");
+  syncDetailPanelToggle(collapsed);
+  persistUiSettings();
 });
 $("#cardAreaToggle").addEventListener("click", () => {
   const area = $(".card-area");
   const collapsed = area.classList.toggle("collapsed");
-  $("#cardAreaToggle").title = collapsed ? "展开字体库" : "折叠字体库";
-  $("#cardAreaToggle").setAttribute("aria-label", collapsed ? "展开字体库" : "折叠字体库");
+  syncCardAreaToggle(collapsed);
+  persistUiSettings();
 });
 const resizeHandle = $("#resizeHandle");
 resizeHandle.addEventListener("pointerdown", event => {
@@ -2196,6 +2338,7 @@ resizeHandle.addEventListener("pointerup", event => {
   $("#detailPanel").classList.remove("resizing");
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
+  persistUiSettings();
 });
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); ui.search.focus(); }
@@ -2290,6 +2433,7 @@ if ("ResizeObserver" in window) new ResizeObserver(() => {
 
 renderCategoryUI();
 renderSearchSuggestions();
+applyStoredUiSettings(uiSettings);
 updateVisualSettings();
 updatePreview();
 syncDetailPreviewStage();
