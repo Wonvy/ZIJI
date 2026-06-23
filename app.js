@@ -1427,6 +1427,7 @@ let cardPreviewStyleManageHoverPresetId = null;
 let cardPreviewStyleSelectedStopIndex = 0;
 let draggingGradientStopIndex = null;
 let draggingGradientScope = null;
+let draggingGradientDeleteIntent = false;
 let draggingPreviewStyleLayerId = null;
 
 function createPreviewStyleLayer(type, enabled = false, overrides = {}) {
@@ -2032,6 +2033,61 @@ function gradientBarOffsetFromEvent(bar, clientX) {
   return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
 }
 
+function getGradientBarWrap(scope = draggingGradientScope || getActiveGradientScope()) {
+  const panel = $("#cardPreviewStyleParams");
+  if (!panel) return null;
+  const bars = panel.querySelectorAll(".preview-gradient-bar-wrap");
+  if (bars.length === 1) return bars[0];
+  const target = getGradientEditTarget(scope);
+  if (!target) return bars[0] || null;
+  for (const wrap of bars) {
+    const bar = wrap.querySelector(".preview-gradient-bar");
+    if (bar?.dataset.gradientScope === scope) return wrap;
+  }
+  return bars[0] || null;
+}
+
+function clearGradientStopDragFeedback(scope = draggingGradientScope) {
+  draggingGradientDeleteIntent = false;
+  const wrap = getGradientBarWrap(scope);
+  wrap?.classList.remove("is-stop-delete-ready", "is-stop-dragging");
+  wrap?.querySelector(".preview-gradient-stop-handle.dragging")?.classList.remove("is-delete-intent");
+  wrap?.querySelector(".preview-gradient-delete-zone")?.setAttribute("hidden", "");
+  wrap?.querySelector(".preview-gradient-position-indicator")?.setAttribute("hidden", "");
+}
+
+function updateGradientStopDragFeedback(event, scope = draggingGradientScope) {
+  const wrap = getGradientBarWrap(scope);
+  const target = getGradientEditTarget(scope);
+  const track = wrap?.querySelector(".preview-gradient-stops-track");
+  if (!wrap || !track || !target) return;
+  const trackRect = track.getBoundingClientRect();
+  const canDelete = target.stops.length > 2;
+  draggingGradientDeleteIntent = canDelete && event.clientY > trackRect.bottom + 18;
+  wrap.classList.toggle("is-stop-delete-ready", draggingGradientDeleteIntent);
+  wrap.classList.toggle("is-stop-dragging", draggingGradientStopIndex !== null);
+  const deleteZone = wrap.querySelector(".preview-gradient-delete-zone");
+  if (deleteZone) deleteZone.hidden = !(draggingGradientStopIndex !== null && canDelete);
+  wrap.querySelector(".preview-gradient-stop-handle.dragging")
+    ?.classList.toggle("is-delete-intent", draggingGradientDeleteIntent);
+}
+
+function refreshGradientPositionIndicator(scope, stops) {
+  const wrap = getGradientBarWrap(scope);
+  const indicator = wrap?.querySelector(".preview-gradient-position-indicator");
+  const tag = indicator?.querySelector(".preview-gradient-position-tag");
+  if (!indicator) return;
+  const show = draggingGradientStopIndex !== null && scope === draggingGradientScope;
+  const stop = show ? stops?.[draggingGradientStopIndex] : null;
+  if (stop) {
+    indicator.hidden = false;
+    indicator.style.left = `${stop.offset}%`;
+    if (tag) tag.textContent = `${stop.offset}%`;
+  } else {
+    indicator.hidden = true;
+  }
+}
+
 function interpolateGradientStopColor(stops, offset) {
   const sorted = [...stops].sort((a, b) => a.offset - b.offset);
   if (!sorted.length) return { color: "#888888", opacity: 100 };
@@ -2081,8 +2137,9 @@ function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGra
   const panel = $("#cardPreviewStyleParams");
   if (!target || !scope || !panel) return;
   const stops = target.stops;
-  const bar = panel.querySelector(".preview-gradient-bar");
-  const track = panel.querySelector(".preview-gradient-stops-track");
+  const wrap = getGradientBarWrap(scope);
+  const bar = wrap?.querySelector(".preview-gradient-bar") || panel.querySelector(".preview-gradient-bar");
+  const track = wrap?.querySelector(".preview-gradient-stops-track") || panel.querySelector(".preview-gradient-stops-track");
   if (!bar || !track) return;
   bar.style.backgroundImage = buildGradientBarPreviewCss(stops, target);
   track.querySelectorAll(".preview-gradient-stop-handle").forEach((handle, index) => {
@@ -2093,6 +2150,7 @@ function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGra
     handle.classList.toggle("dragging", index === draggingGradientStopIndex);
     handle.style.setProperty("--stop-color", hexWithOpacity(stop.color, stop.opacity));
   });
+  refreshGradientPositionIndicator(scope, stops);
 }
 
 function selectGradientStop(index, scope = getActiveGradientScope()) {
@@ -2138,24 +2196,32 @@ function finishGradientStopDrag(event) {
   if (draggingGradientStopIndex === null || !cardPreviewStyleDraft) return;
   const scope = draggingGradientScope || getActiveGradientScope();
   const target = getGradientEditTarget(scope);
-  const panel = $("#cardPreviewStyleParams");
-  const handle = panel?.querySelector(".preview-gradient-stop-handle.dragging");
+  const wrap = getGradientBarWrap(scope);
+  const handle = wrap?.querySelector(".preview-gradient-stop-handle.dragging");
   if (handle?.hasPointerCapture?.(event.pointerId)) handle.releasePointerCapture(event.pointerId);
-  handle?.classList.remove("dragging");
+  handle?.classList.remove("dragging", "is-delete-intent");
   if (!target) {
+    clearGradientStopDragFeedback(scope);
     draggingGradientStopIndex = null;
     draggingGradientScope = null;
     return;
   }
-  const finalOffset = target.stops[draggingGradientStopIndex]?.offset;
+  const draggedIndex = draggingGradientStopIndex;
+  const shouldDelete = draggingGradientDeleteIntent && target.stops.length > 2;
+  clearGradientStopDragFeedback(scope);
+  draggingGradientStopIndex = null;
+  draggingGradientScope = null;
+  if (shouldDelete) {
+    removeGradientStopAt(draggedIndex, scope);
+    return;
+  }
+  const finalOffset = target.stops[draggedIndex]?.offset;
   target.stops = normalizeGradientStops(target.stops, target);
   if (finalOffset !== undefined) {
     cardPreviewStyleSelectedStopIndex = target.stops.reduce((best, stop, idx, arr) =>
       Math.abs(stop.offset - finalOffset) < Math.abs(arr[best].offset - finalOffset) ? idx : best, 0);
   }
   syncGradientLegacyColors(target, scope);
-  draggingGradientStopIndex = null;
-  draggingGradientScope = null;
   renderCardPreviewStyleParams();
   renderCardPreviewStyleModalPreview();
 }
@@ -2164,8 +2230,14 @@ function handleGradientStopDrag(event) {
   if (draggingGradientStopIndex === null || !cardPreviewStyleDraft) return;
   const scope = draggingGradientScope || getActiveGradientScope();
   const target = getGradientEditTarget(scope);
-  const bar = $("#cardPreviewStyleParams")?.querySelector(".preview-gradient-bar");
+  const wrap = getGradientBarWrap(scope);
+  const bar = wrap?.querySelector(".preview-gradient-bar");
   if (!target || !bar) return;
+  updateGradientStopDragFeedback(event, scope);
+  if (draggingGradientDeleteIntent) {
+    refreshGradientBarVisuals(scope);
+    return;
+  }
   const offset = gradientBarOffsetFromEvent(bar, event.clientX);
   const stop = target.stops[draggingGradientStopIndex];
   if (!stop) return;
@@ -2189,15 +2261,21 @@ function renderGradientStopsEditor(target, scope) {
   }).join("");
   return `<div class="preview-gradient-editor">
     <div class="preview-gradient-bar-wrap">
-      <div class="preview-gradient-bar" style="background-image:${escapeHtml(barCss)}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带"></div>
+      <div class="preview-gradient-bar" style="background-image:${escapeHtml(barCss)}" data-gradient-action="bar-click" data-gradient-scope="${scope}" aria-label="渐变色带，点击添加色标"></div>
+      <div class="preview-gradient-position-indicator" hidden aria-hidden="true">
+        <span class="preview-gradient-position-line"></span>
+        <span class="preview-gradient-position-tick"></span>
+        <span class="preview-gradient-position-tag"></span>
+      </div>
       <div class="preview-gradient-stops-track">${handles}</div>
+      <div class="preview-gradient-delete-zone" hidden>拖到此处删除色标</div>
     </div>
     <div class="preview-gradient-stop-controls">
       <label class="preview-style-field preview-gradient-stop-color"><span>色标颜色</span><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" value="${escapeHtml(selected.color)}" /></label>
       ${renderStyleRangeField({ label: "色标不透明度", min: 0, max: 100, step: 1 }, selected.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${cardPreviewStyleSelectedStopIndex}" aria-label="色标不透明度"`)}
     </div>
     ${renderStyleRangeField({ label: "角度", min: 0, max: 360, step: 1 }, target.angle, `data-gradient-field="angle" data-gradient-scope="${scope}" aria-label="渐变角度"`)}
-    <p class="preview-gradient-hint">点击色带添加色标，拖动色标调整位置，双击色标删除（至少保留 2 个）</p>
+    <p class="preview-gradient-hint">点击色带添加色标，左右拖动调整位置，拖到下方删除（至少保留 2 个）</p>
   </div>`;
 }
 
@@ -2953,15 +3031,10 @@ function wireCardPreviewStyleModal() {
       selectGradientStop(Number(handle.dataset.stopIndex), handle.dataset.gradientScope);
       return;
     }
-    if (event.target.dataset.gradientAction === "bar-click") {
-      addGradientStopAtOffset(gradientBarOffsetFromEvent(event.target, event.clientX), event.target.dataset.gradientScope);
+    const bar = event.target.closest(".preview-gradient-bar[data-gradient-action='bar-click']");
+    if (bar) {
+      addGradientStopAtOffset(gradientBarOffsetFromEvent(bar, event.clientX), bar.dataset.gradientScope);
     }
-  });
-  $("#cardPreviewStyleParams")?.addEventListener("dblclick", event => {
-    const handle = event.target.closest(".preview-gradient-stop-handle");
-    if (!handle || !cardPreviewStyleDraft) return;
-    event.preventDefault();
-    removeGradientStopAt(Number(handle.dataset.stopIndex), handle.dataset.gradientScope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerdown", event => {
     const handle = event.target.closest(".preview-gradient-stop-handle");
@@ -2969,9 +3042,15 @@ function wireCardPreviewStyleModal() {
     event.preventDefault();
     draggingGradientStopIndex = Number(handle.dataset.stopIndex);
     draggingGradientScope = handle.dataset.gradientScope || getActiveGradientScope();
+    draggingGradientDeleteIntent = false;
     cardPreviewStyleSelectedStopIndex = draggingGradientStopIndex;
     handle.classList.add("dragging");
     handle.setPointerCapture(event.pointerId);
+    const wrap = getGradientBarWrap(draggingGradientScope);
+    wrap?.classList.add("is-stop-dragging");
+    const deleteZone = wrap?.querySelector(".preview-gradient-delete-zone");
+    const target = getGradientEditTarget(draggingGradientScope);
+    if (deleteZone) deleteZone.hidden = !(target && target.stops.length > 2);
     refreshGradientBarVisuals(draggingGradientScope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {
