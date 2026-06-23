@@ -15,7 +15,7 @@
   --accent: #e85832;
   --stage: #eee8dc;
   --shadow: 0 18px 60px rgba(38, 31, 21, .11);
-  --topbar-height: 52px;
+  --topbar-height: 104px;
   --toolbar-control-height: 34px;
 }
 
@@ -52,7 +52,7 @@ main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 38px;
+  min-height: calc(var(--topbar-height) - 16px);
 }
 .brand { position: relative; z-index: 2; display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
 .brand-mark {
@@ -270,7 +270,26 @@ kbd,
 .workspace-active .welcome { opacity: 0; transform: translateY(-100%); pointer-events: none; }
 .workspace-active .workspace { transform: translateY(-100%); }
 .library-body { display: flex; width: 100%; min-width: 0; min-height: 0; overflow: hidden; }
-.card-area { min-width: 360px; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; padding: 4px 12px 0; }
+.card-area {
+  position: relative;
+  min-width: 360px;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px 0;
+  overflow: visible;
+  transition: flex-basis .24s ease, min-width .24s ease, width .24s ease, padding .24s ease;
+}
+.card-area.collapsed {
+  flex: 0 0 0;
+  min-width: 0;
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.card-area.collapsed > :not(.card-area-toggle) { visibility: hidden; pointer-events: none; }
+.card-area.collapsed .card-area-toggle { pointer-events: auto; visibility: visible; }
 .card-toolbar {
   position: relative;
   z-index: 12;
@@ -369,10 +388,11 @@ kbd,
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
-  align-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 245px));
+  justify-content: center;
+  align-content: center;
   gap: 14px;
-  padding: 0 5px 28px 0;
+  padding: 28px 36px 36px;
   overflow: hidden;
 }
 .font-view-shell { min-width: 0; min-height: 0; flex: 1; display: flex; overflow: hidden; }
@@ -410,11 +430,29 @@ kbd,
 .favorite-sidebar-data .data-button { height: 30px; padding: 0 4px; }
 .status-bar { min-height: 42px; flex: none; display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(180px, 1fr); align-items: center; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: 12px; }
 .pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.page-info { display: inline-flex; align-items: center; gap: 0.35em; }
+.page-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: white;
+  background: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .font-status { min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }
 .font-status strong { overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; }
 .font-status span { flex: none; padding-left: 8px; border-left: 1px solid var(--line); font-size: 12px; }
 .font-status .favorite-status { color: var(--accent); }
+.view-status-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .view-status { text-align: right; white-space: nowrap; }
+.card-sample-size-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.card-sample-size-control input { width: 72px; accent-color: var(--accent); }
+.card-sample-size-control output { min-width: 1.8em; color: var(--ink); font-size: 11px; text-align: right; }
+.card-sample-size-control:has(input:disabled) { opacity: .38; }
 .page-button { min-width: 78px; height: 28px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: var(--paper); font-size: 12px; }
 .page-button:hover:not(:disabled) { color: white; border-color: var(--accent); background: var(--accent); }
 .page-button:disabled { cursor: default; opacity: .35; }
@@ -537,13 +575,13 @@ kbd,
 .detail-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; padding: 0 18px 18px; overflow: hidden; opacity: 1; transition: opacity .15s ease; }
 .detail-panel.collapsed .detail-content { visibility: hidden; opacity: 0; }
 .detail-panel.empty-preview .detail-content { visibility: hidden; opacity: 0; }
-.detail-toggle {
+.panel-toggle {
   position: absolute;
   z-index: 8;
-  left: -18px;
-  top: 24px;
+  top: 50%;
   width: 36px;
   height: 36px;
+  padding: 0;
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -552,13 +590,17 @@ kbd,
   box-shadow: 0 4px 15px rgba(0,0,0,.08);
   font-size: 24px;
   line-height: 1;
+  transform: translateY(-50%);
   transition: transform .24s ease;
 }
+.detail-toggle { left: -18px; }
+.card-area-toggle { right: -18px; }
 .resize-handle { position: absolute; z-index: 7; top: 0; bottom: 0; left: -5px; width: 10px; cursor: col-resize; }
 .resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 1px; background: transparent; transition: background .15s; }
 .resize-handle:hover::after, .detail-panel.resizing .resize-handle::after { background: var(--accent); }
 .detail-panel.collapsed .resize-handle { display: none; }
-.detail-panel.collapsed .detail-toggle { transform: rotate(180deg); }
+.detail-panel.collapsed .detail-toggle { transform: translateY(-50%) rotate(180deg); }
+.card-area.collapsed .card-area-toggle { transform: translateY(-50%) rotate(180deg); }
 .detail-panel .font-meta-row { flex: none; padding: 16px 0 10px; }
 .detail-toolbar { display: flex; justify-content: flex-end; padding: 22px 0 0; }
 .detail-preview-input, .detail-size { height: 54px; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper); }
@@ -573,9 +615,23 @@ kbd,
 .detail-tab-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .detail-tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
 .detail-tab-panel.active { display: flex; }
-.detail-panel .preview-stage { flex: 1; min-height: 0; height: auto; margin: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
-.detail-panel .preview-text { max-width: 100%; padding: 24px 16px; font-size: 28px; white-space: pre-wrap; }
-.preview-controls { flex: none; max-height: 46%; padding-top: 12px; overflow-y: auto; border-top: 1px solid var(--line); }
+.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
+.detail-panel .preview-text {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  padding: 24px 16px;
+  font-size: 28px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: hidden;
+  outline: none;
+  cursor: text;
+}
+.detail-panel .preview-text:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.detail-panel .preview-text:empty::before { content: attr(data-placeholder); color: var(--muted); }
+.preview-controls { flex: none; max-height: 46%; min-width: 0; padding-top: 12px; overflow-x: hidden; overflow-y: auto; border-top: 1px solid var(--line); }
+#previewTabPanel { overflow-x: hidden; }
 .preview-controls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .axis-status { min-width: 0; color: var(--muted); font-size: 10px; letter-spacing: .02em; }
 .detail-tab-panel[hidden] { display: none !important; }
@@ -590,6 +646,25 @@ kbd,
 .font-info-grid dd.copyable:hover { color: var(--accent); }
 .font-info-grid .span-2 { grid-column: 1 / -1; }
 .font-info-grid dd.wrap { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.45; }
+.font-info-grid dd.info-collapsible { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.45; }
+.font-info-grid dd.info-collapsible:not(.is-expanded) .info-collapsible-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.font-info-grid dd.info-collapsible.is-expanded .info-collapsible-body { overflow: visible; }
+.info-collapsible-toggle {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  font-size: 11px;
+}
+.info-collapsible-toggle:hover { text-decoration: underline; }
 .info-section-label { grid-column: 1 / -1; padding: 12px 8px 5px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); background: color-mix(in srgb, var(--paper) 72%, var(--panel)); font-size: 10px; letter-spacing: .12em; }
 .info-section-label:first-child { margin-top: 0; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgba(20,19,16,.46); backdrop-filter: blur(4px); }
@@ -649,7 +724,7 @@ kbd,
 .collapse-icon { width: 26px; height: 26px; display: grid; place-items: center; flex: none; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: 15px; transform: rotate(-90deg); transition: transform .18s ease, color .18s ease, border-color .18s ease; }
 .collapsible-panel[open] .collapse-icon { transform: rotate(0); }
 .collapsible-panel > summary:hover .collapse-icon { color: var(--accent); border-color: var(--accent); }
-.detail-panel .axis-controls, .detail-panel .standard-controls { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 12px; margin-top: 0; }
+.detail-panel .axis-controls, .detail-panel .standard-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 0; min-width: 0; }
 .detail-panel .axis-controls:not(:empty) { padding-top: 10px; border-top: 1px solid var(--line); }
 .detail-panel .standard-controls { margin-bottom: 0; }
 .detail-panel .standard-controls label { min-width: 0; }
@@ -685,7 +760,7 @@ kbd,
   .header-preview { width: min(360px, calc(100vw - 240px)); }
   .privacy { display: none; }
   .status-bar { grid-template-columns: minmax(0,1fr) auto; }
-  .view-status { display: none; }
+  .view-status-wrap { display: none; }
   .font-status span:nth-of-type(n+3) { display: none; }
 }
 
@@ -815,16 +890,24 @@ kbd,
               <div id="fontStatus" class="font-status">将鼠标移到字体卡片查看信息</div>
               <nav id="paginationBar" class="pagination-bar" aria-label="字体分页">
                 <button id="previousPage" class="page-button" type="button">← 上一页</button>
-                <span id="pageInfo">第 1 / 1 页</span>
+                <span id="pageInfo" class="page-info">第 <span class="page-current">1</span> / 1 页</span>
                 <button id="nextPage" class="page-button" type="button">下一页 →</button>
               </nav>
-              <div id="viewStatus" class="view-status">网格视图</div>
+              <div class="view-status-wrap">
+                <div id="viewStatus" class="view-status">网格视图</div>
+                <label class="card-sample-size-control" title="卡片预览字号">
+                  <span>字号</span>
+                  <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" aria-label="卡片预览字号" />
+                  <output id="cardSampleSizeOutput">49</output>
+                </label>
+              </div>
             </footer>
+            <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" title="折叠字体库" aria-label="折叠字体库">‹</button>
           </section>
 
           <aside id="detailPanel" class="detail-panel">
             <div id="resizeHandle" class="resize-handle" title="拖动调整栏宽" aria-hidden="true"></div>
-            <button id="detailToggle" class="detail-toggle" title="折叠详情" aria-label="折叠详情">›</button>
+            <button id="detailToggle" class="panel-toggle detail-toggle" type="button" title="折叠详情" aria-label="折叠详情">›</button>
             <div class="detail-content">
               <div class="font-meta-row">
                 <div>
@@ -845,11 +928,7 @@ kbd,
               <div class="detail-tab-panels">
                 <div id="previewTabPanel" class="detail-tab-panel active" role="tabpanel" aria-labelledby="previewTabButton">
                   <div id="previewStage" class="preview-stage">
-                    <div id="previewText" class="preview-text">天地玄黄 宇宙洪荒
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
-abcdefghijklmnopqrstuvwxyz
-0123456789
-，。！？；：“”「」</div>
+                    <div id="previewText" class="preview-text" contenteditable="true" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="点击输入预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
                     <div class="stage-hint">移动鼠标查看字形细节</div>
                   </div>
@@ -919,7 +998,11 @@ abcdefghijklmnopqrstuvwxyz
   <div id="toast" class="toast" role="status"></div>
   <script>
 const $ = (selector) => document.querySelector(selector);
-const COMMON_DETAIL_PREVIEW = "天地玄黄 宇宙洪荒\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n，。！？；：“”「」";
+const DEFAULT_DETAIL_PREVIEW = `天地玄黄 宇宙洪荒
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+，。！？；：“”「」`;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
 const DEFAULT_CHINESE_BRANDS = ["思源", "方正", "汉仪", "华文", "阿里巴巴", "站酷", "霞鹜", "鸿蒙", "小米", "文泉驿"];
 function loadCachedSearchBrands() {
@@ -955,7 +1038,7 @@ function loadFavoriteData() {
 const cachedFavoriteData = loadFavoriteData();
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
-  view: "grid", sort: "name", cardWidth: 245, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: "grid", sort: "name", cardWidth: 245, cardSampleSize: Number(localStorage.getItem("card-sample-size")) || 49, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -978,7 +1061,7 @@ const ui = {
   loadProgress: $("#loadProgress"), progressBar: $("#progressBar"), progressText: $("#progressText"), progressValue: $("#progressValue"),
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
   support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
-  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"),
+  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeOutput: $("#cardSampleSizeOutput"),
   empty: $("#emptyState"), previewInput: $("#previewInput"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
@@ -1007,6 +1090,46 @@ ui.brandSearchTags = $("#brandSearchTags");
 
 const cachedPreviewText = localStorage.getItem("font-preview-text");
 if (cachedPreviewText !== null) ui.previewInput.value = cachedPreviewText;
+const cachedDetailPreviewText = localStorage.getItem("detail-preview-text");
+ui.previewText.textContent = cachedDetailPreviewText ?? DEFAULT_DETAIL_PREVIEW;
+
+const INFO_COLLAPSE_LENGTH = 96;
+
+function setInfoPlain(element, text) {
+  element.classList.remove("info-collapsible", "is-expanded");
+  delete element.dataset.infoValue;
+  element.replaceChildren();
+  element.textContent = text;
+}
+
+function setInfoText(element, value, { title } = {}) {
+  const fullText = value ?? "—";
+  element.classList.remove("info-collapsible", "is-expanded");
+  element.replaceChildren();
+  delete element.dataset.infoValue;
+  if (fullText === "—" || String(fullText).length <= INFO_COLLAPSE_LENGTH) {
+    element.textContent = fullText;
+    element.title = title ?? (fullText === "—" ? "" : String(fullText));
+    return;
+  }
+  const text = String(fullText);
+  element.dataset.infoValue = text;
+  element.classList.add("info-collapsible");
+  element.title = title ?? text;
+  const body = document.createElement("span");
+  body.className = "info-collapsible-body";
+  body.textContent = text;
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "info-collapsible-toggle";
+  toggle.textContent = "展开";
+  element.append(body, toggle);
+}
+
+function syncDetailPreviewStage() {
+  ui.magnifiedText.textContent = ui.previewText.textContent;
+  localStorage.setItem("detail-preview-text", ui.previewText.textContent);
+}
 
 function toast(message) {
   ui.toast.textContent = message;
@@ -1051,7 +1174,8 @@ async function copyValue(value, label) {
 }
 
 function copyDetailValue(element, label) {
-  return copyValue(element.textContent.trim(), label);
+  const value = element.dataset.infoValue || element.querySelector(".info-collapsible-body")?.textContent || element.textContent;
+  return copyValue(value.trim(), label);
 }
 
 function setDetailTab(tab) {
@@ -1413,12 +1537,12 @@ function renderFontList({ deferFonts = false } = {}) {
   ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
-  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view) ? `repeat(auto-fill, minmax(${state.cardWidth}px, 1fr))` : "";
+  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view) ? `repeat(auto-fill, minmax(${state.cardWidth}px, ${state.cardWidth}px))` : "";
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   ui.count.textContent = `${state.filtered.length} 款字体`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
-  ui.pageInfo.textContent = `第 ${state.page + 1} / ${state.totalPages} 页`;
+  ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
   const viewName = ({ grid: "网格视图", list: "列表视图", single: "单字视图", focus: "无干扰视图" })[state.view] || "字体视图";
@@ -1450,8 +1574,11 @@ function updateFontStatus(font) {
 }
 
 function calculatePageSize() {
-  const width = Math.max(320, ui.list.clientWidth || 800);
-  const height = Math.max(160, ui.list.clientHeight || 500);
+  const listStyles = ui.list ? getComputedStyle(ui.list) : null;
+  const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 0;
+  const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 0;
+  const width = Math.max(320, (ui.list?.clientWidth || 800) - padX);
+  const height = Math.max(160, (ui.list?.clientHeight || 500) - padY);
   if (state.view === "single") {
     const columns = Math.max(1, Math.floor(width / state.singleCardSize));
     const rows = Math.max(1, Math.floor(height / state.singleCardSize));
@@ -1644,8 +1771,25 @@ function fitCardSample(sample) {
 }
 
 function cardBaseFontSize() {
-  if (state.view === "list") return 32;
-  return Math.max(28, Math.min(64, state.cardWidth * .2));
+  return state.cardSampleSize;
+}
+
+function updateCardSampleSizeControl() {
+  const disabled = state.view === "single";
+  ui.cardSampleSize.disabled = disabled;
+  ui.cardSampleSize.value = state.cardSampleSize;
+  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+}
+
+function applyCardSampleSize() {
+  state.cardSampleSize = Number(ui.cardSampleSize.value);
+  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
+  ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
+    sample.style.fontSize = `${state.cardSampleSize}px`;
+    fitCardSample(sample);
+  });
+  scheduleCardFit();
 }
 
 function scheduleCardFit() {
@@ -1678,7 +1822,6 @@ function previewFont(font, temporary = true) {
   renderFontDetails(font);
   ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
   updateFontStatus(font);
-  ui.previewText.textContent = COMMON_DETAIL_PREVIEW;
   ui.magnifiedText.textContent = ui.previewText.textContent;
   ui.axisStatus.textContent = font.axes ? `${font.axes.length} 个可变轴` : (temporary ? "悬停预览" : "正在检测可变轴…");
   ui.axes.replaceChildren();
@@ -1709,15 +1852,14 @@ function clearPreview() {
   state.selectionVersion++;
   ui.selectedName.textContent = "将鼠标移到字体卡片";
   ui.selectedStyle.textContent = "未选择字体";
-  ui.previewText.textContent = "";
-  ui.magnifiedText.textContent = "";
   ui.previewText.style.fontFamily = "";
+  ui.magnifiedText.style.fontFamily = "";
   syncToolbarPreview(null);
   ui.axisStatus.textContent = "暂无字体参数";
   ui.axes.replaceChildren();
   ui.favorite.textContent = "☆";
   updateFontStatus(null);
-  [ui.infoFamily, ui.infoPostscript, ...INFO_BASIC_FIELDS, ...INFO_EXTENDED_FIELDS].forEach(item => item.textContent = "—");
+  [ui.infoFamily, ui.infoPostscript, ...INFO_BASIC_FIELDS, ...INFO_EXTENDED_FIELDS].forEach(item => setInfoPlain(item, "—"));
 }
 
 function restorePinnedPreview() {
@@ -2120,43 +2262,36 @@ function cmapHasCodepoint(cmap, codepoint) {
   return false;
 }
 
-function setInfoText(element, value, { title } = {}) {
-  const text = value ?? "—";
-  element.textContent = text;
-  element.title = title ?? (text === "—" ? "" : String(text));
-}
-
 function renderFontDetails(font, details = null) {
-  ui.infoFamily.textContent = font.displayName || font.family || "—";
-  ui.infoPostscript.textContent = font.postscriptName || "—";
+  setInfoText(ui.infoFamily, font.displayName || font.family);
+  setInfoText(ui.infoPostscript, font.postscriptName);
   const extended = font.extendedDetails;
   const extendedPending = details !== false && state.previewed === font && !extended;
   if (details === null) {
-    INFO_BASIC_FIELDS.forEach(item => item.textContent = "读取中…");
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
+    INFO_BASIC_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
     return;
   }
   if (details === false) {
-    INFO_BASIC_FIELDS.forEach(item => item.textContent = "不可用");
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "不可用");
+    INFO_BASIC_FIELDS.forEach(item => setInfoPlain(item, "不可用"));
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "不可用"));
     return;
   }
-  ui.infoFormat.textContent = details.format;
-  ui.infoSize.textContent = formatFileSize(details.size);
-  ui.infoGlyphs.textContent = details.glyphs?.toLocaleString() || "—";
-  ui.infoUpm.textContent = details.upm || "—";
-  ui.infoWeight.textContent = details.weight || "—";
-  ui.infoWidth.textContent = details.width || "—";
-  ui.infoLanguage.textContent = [details.supportsChinese ? "中文" : "", details.supportsLatin ? "英文" : ""].filter(Boolean).join(" / ") || "其他";
-  ui.infoAspect.textContent = Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(3)} : 1` : "—";
-  ui.infoTables.textContent = details.tables.length ? `${details.tables.length} · ${details.tables.slice(0, 8).join(" ")}` : "—";
-  ui.infoTables.title = details.tables.join(", ");
+  setInfoText(ui.infoFormat, details.format);
+  setInfoText(ui.infoSize, formatFileSize(details.size));
+  setInfoText(ui.infoGlyphs, details.glyphs?.toLocaleString() || "—");
+  setInfoText(ui.infoUpm, details.upm || "—");
+  setInfoText(ui.infoWeight, details.weight || "—");
+  setInfoText(ui.infoWidth, details.width || "—");
+  setInfoText(ui.infoLanguage, [details.supportsChinese ? "中文" : "", details.supportsLatin ? "英文" : ""].filter(Boolean).join(" / ") || "其他");
+  setInfoText(ui.infoAspect, Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(3)} : 1` : "—");
+  setInfoText(ui.infoTables, details.tables.length ? details.tables.join(" · ") : "—");
   if (extendedPending) {
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
     return;
   }
   if (!extended) {
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "—");
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "—"));
     return;
   }
   setInfoText(ui.infoSubfamily, extended.subfamily);
@@ -2245,8 +2380,6 @@ function updatePreview() {
       updatePreview.shapeTimer = setTimeout(scanFontShapes, 260);
     }
   }
-  ui.previewText.textContent = state.previewed ? COMMON_DETAIL_PREVIEW : "";
-  ui.magnifiedText.textContent = state.previewed ? COMMON_DETAIL_PREVIEW : "";
   ui.cardMagnifiedText.textContent = cardPreviewText();
   scheduleLazyCardTextUpdate();
 }
@@ -2666,6 +2799,9 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
+ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
+ui.previewText.addEventListener("input", syncDetailPreviewStage);
+ui.previewText.addEventListener("blur", syncDetailPreviewStage);
 [ui.size, ui.spacing, ui.lineHeight, ui.bg, ui.color].forEach(input => input.addEventListener("input", updateVisualSettings));
 ui.favorite.addEventListener("click", toggleFavorite);
 ui.categoryButton.addEventListener("click", () => {
@@ -2689,8 +2825,20 @@ $("#favoritesFile").addEventListener("change", event => {
   if (file) importFavorites(file);
   event.target.value = "";
 });
+$("#infoTabPanel").addEventListener("click", event => {
+  const toggle = event.target.closest(".info-collapsible-toggle");
+  if (!toggle) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const field = toggle.closest("dd");
+  const expanded = field.classList.toggle("is-expanded");
+  toggle.textContent = expanded ? "收起" : "展开";
+});
 INFO_COPY_TARGETS.forEach(([element, label]) => {
-  element.addEventListener("click", () => copyDetailValue(element, label));
+  element.addEventListener("click", event => {
+    if (event.target.closest(".info-collapsible-toggle")) return;
+    copyDetailValue(element, label);
+  });
   element.addEventListener("keydown", event => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -2788,6 +2936,7 @@ function setView(view) {
   $("#singleViewButton").classList.toggle("active", view === "single");
   $("#focusViewButton").classList.toggle("active", view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
+  updateCardSampleSizeControl();
   renderFontList();
 }
 ui.list.addEventListener("wheel", event => {
@@ -2847,6 +2996,12 @@ $("#detailToggle").addEventListener("click", () => {
   }
   $("#detailToggle").title = collapsed ? "展开详情" : "折叠详情";
   $("#detailToggle").setAttribute("aria-label", collapsed ? "展开详情" : "折叠详情");
+});
+$("#cardAreaToggle").addEventListener("click", () => {
+  const area = $(".card-area");
+  const collapsed = area.classList.toggle("collapsed");
+  $("#cardAreaToggle").title = collapsed ? "展开字体库" : "折叠字体库";
+  $("#cardAreaToggle").setAttribute("aria-label", collapsed ? "展开字体库" : "折叠字体库");
 });
 const resizeHandle = $("#resizeHandle");
 resizeHandle.addEventListener("pointerdown", event => {
@@ -2988,6 +3143,9 @@ if ("ResizeObserver" in window) new ResizeObserver(() => {
 renderCategoryUI();
 renderSearchSuggestions();
 updateVisualSettings();
+updatePreview();
+syncDetailPreviewStage();
+updateCardSampleSizeControl();
 if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
 
   </script>

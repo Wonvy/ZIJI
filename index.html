@@ -131,16 +131,24 @@
               <div id="fontStatus" class="font-status">将鼠标移到字体卡片查看信息</div>
               <nav id="paginationBar" class="pagination-bar" aria-label="字体分页">
                 <button id="previousPage" class="page-button" type="button">← 上一页</button>
-                <span id="pageInfo">第 1 / 1 页</span>
+                <span id="pageInfo" class="page-info">第 <span class="page-current">1</span> / 1 页</span>
                 <button id="nextPage" class="page-button" type="button">下一页 →</button>
               </nav>
-              <div id="viewStatus" class="view-status">网格视图</div>
+              <div class="view-status-wrap">
+                <div id="viewStatus" class="view-status">网格视图</div>
+                <label class="card-sample-size-control" title="卡片预览字号">
+                  <span>字号</span>
+                  <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" aria-label="卡片预览字号" />
+                  <output id="cardSampleSizeOutput">49</output>
+                </label>
+              </div>
             </footer>
+            <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" title="折叠字体库" aria-label="折叠字体库">‹</button>
           </section>
 
           <aside id="detailPanel" class="detail-panel">
             <div id="resizeHandle" class="resize-handle" title="拖动调整栏宽" aria-hidden="true"></div>
-            <button id="detailToggle" class="detail-toggle" title="折叠详情" aria-label="折叠详情">›</button>
+            <button id="detailToggle" class="panel-toggle detail-toggle" type="button" title="折叠详情" aria-label="折叠详情">›</button>
             <div class="detail-content">
               <div class="font-meta-row">
                 <div>
@@ -161,11 +169,7 @@
               <div class="detail-tab-panels">
                 <div id="previewTabPanel" class="detail-tab-panel active" role="tabpanel" aria-labelledby="previewTabButton">
                   <div id="previewStage" class="preview-stage">
-                    <div id="previewText" class="preview-text">天地玄黄 宇宙洪荒
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
-abcdefghijklmnopqrstuvwxyz
-0123456789
-，。！？；：“”「」</div>
+                    <div id="previewText" class="preview-text" contenteditable="true" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="点击输入预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
                     <div class="stage-hint">移动鼠标查看字形细节</div>
                   </div>

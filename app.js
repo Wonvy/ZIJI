@@ -1,5 +1,9 @@
 const $ = (selector) => document.querySelector(selector);
-const COMMON_DETAIL_PREVIEW = "天地玄黄 宇宙洪荒\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n，。！？；：“”「」";
+const DEFAULT_DETAIL_PREVIEW = `天地玄黄 宇宙洪荒
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+，。！？；：“”「」`;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
 const DEFAULT_CHINESE_BRANDS = ["思源", "方正", "汉仪", "华文", "阿里巴巴", "站酷", "霞鹜", "鸿蒙", "小米", "文泉驿"];
 function loadCachedSearchBrands() {
@@ -35,7 +39,7 @@ function loadFavoriteData() {
 const cachedFavoriteData = loadFavoriteData();
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: "all", pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(), languageFilters: new Set(), weightFilters: new Set(), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: true,
-  view: "grid", sort: "name", cardWidth: 245, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: "grid", sort: "name", cardWidth: 245, cardSampleSize: Number(localStorage.getItem("card-sample-size")) || 49, singleCardSize: 82, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -58,7 +62,7 @@ const ui = {
   loadProgress: $("#loadProgress"), progressBar: $("#progressBar"), progressText: $("#progressText"), progressValue: $("#progressValue"),
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
   support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
-  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"),
+  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeOutput: $("#cardSampleSizeOutput"),
   empty: $("#emptyState"), previewInput: $("#previewInput"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
@@ -87,6 +91,46 @@ ui.brandSearchTags = $("#brandSearchTags");
 
 const cachedPreviewText = localStorage.getItem("font-preview-text");
 if (cachedPreviewText !== null) ui.previewInput.value = cachedPreviewText;
+const cachedDetailPreviewText = localStorage.getItem("detail-preview-text");
+ui.previewText.textContent = cachedDetailPreviewText ?? DEFAULT_DETAIL_PREVIEW;
+
+const INFO_COLLAPSE_LENGTH = 96;
+
+function setInfoPlain(element, text) {
+  element.classList.remove("info-collapsible", "is-expanded");
+  delete element.dataset.infoValue;
+  element.replaceChildren();
+  element.textContent = text;
+}
+
+function setInfoText(element, value, { title } = {}) {
+  const fullText = value ?? "—";
+  element.classList.remove("info-collapsible", "is-expanded");
+  element.replaceChildren();
+  delete element.dataset.infoValue;
+  if (fullText === "—" || String(fullText).length <= INFO_COLLAPSE_LENGTH) {
+    element.textContent = fullText;
+    element.title = title ?? (fullText === "—" ? "" : String(fullText));
+    return;
+  }
+  const text = String(fullText);
+  element.dataset.infoValue = text;
+  element.classList.add("info-collapsible");
+  element.title = title ?? text;
+  const body = document.createElement("span");
+  body.className = "info-collapsible-body";
+  body.textContent = text;
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "info-collapsible-toggle";
+  toggle.textContent = "展开";
+  element.append(body, toggle);
+}
+
+function syncDetailPreviewStage() {
+  ui.magnifiedText.textContent = ui.previewText.textContent;
+  localStorage.setItem("detail-preview-text", ui.previewText.textContent);
+}
 
 function toast(message) {
   ui.toast.textContent = message;
@@ -131,7 +175,8 @@ async function copyValue(value, label) {
 }
 
 function copyDetailValue(element, label) {
-  return copyValue(element.textContent.trim(), label);
+  const value = element.dataset.infoValue || element.querySelector(".info-collapsible-body")?.textContent || element.textContent;
+  return copyValue(value.trim(), label);
 }
 
 function setDetailTab(tab) {
@@ -493,12 +538,12 @@ function renderFontList({ deferFonts = false } = {}) {
   ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
-  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view) ? `repeat(auto-fill, minmax(${state.cardWidth}px, 1fr))` : "";
+  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view) ? `repeat(auto-fill, minmax(${state.cardWidth}px, ${state.cardWidth}px))` : "";
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   ui.count.textContent = `${state.filtered.length} 款字体`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
-  ui.pageInfo.textContent = `第 ${state.page + 1} / ${state.totalPages} 页`;
+  ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
   const viewName = ({ grid: "网格视图", list: "列表视图", single: "单字视图", focus: "无干扰视图" })[state.view] || "字体视图";
@@ -530,8 +575,11 @@ function updateFontStatus(font) {
 }
 
 function calculatePageSize() {
-  const width = Math.max(320, ui.list.clientWidth || 800);
-  const height = Math.max(160, ui.list.clientHeight || 500);
+  const listStyles = ui.list ? getComputedStyle(ui.list) : null;
+  const padX = listStyles ? parseFloat(listStyles.paddingLeft) + parseFloat(listStyles.paddingRight) : 0;
+  const padY = listStyles ? parseFloat(listStyles.paddingTop) + parseFloat(listStyles.paddingBottom) : 0;
+  const width = Math.max(320, (ui.list?.clientWidth || 800) - padX);
+  const height = Math.max(160, (ui.list?.clientHeight || 500) - padY);
   if (state.view === "single") {
     const columns = Math.max(1, Math.floor(width / state.singleCardSize));
     const rows = Math.max(1, Math.floor(height / state.singleCardSize));
@@ -724,8 +772,25 @@ function fitCardSample(sample) {
 }
 
 function cardBaseFontSize() {
-  if (state.view === "list") return 32;
-  return Math.max(28, Math.min(64, state.cardWidth * .2));
+  return state.cardSampleSize;
+}
+
+function updateCardSampleSizeControl() {
+  const disabled = state.view === "single";
+  ui.cardSampleSize.disabled = disabled;
+  ui.cardSampleSize.value = state.cardSampleSize;
+  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+}
+
+function applyCardSampleSize() {
+  state.cardSampleSize = Number(ui.cardSampleSize.value);
+  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+  localStorage.setItem("card-sample-size", String(state.cardSampleSize));
+  ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
+    sample.style.fontSize = `${state.cardSampleSize}px`;
+    fitCardSample(sample);
+  });
+  scheduleCardFit();
 }
 
 function scheduleCardFit() {
@@ -758,7 +823,6 @@ function previewFont(font, temporary = true) {
   renderFontDetails(font);
   ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
   updateFontStatus(font);
-  ui.previewText.textContent = COMMON_DETAIL_PREVIEW;
   ui.magnifiedText.textContent = ui.previewText.textContent;
   ui.axisStatus.textContent = font.axes ? `${font.axes.length} 个可变轴` : (temporary ? "悬停预览" : "正在检测可变轴…");
   ui.axes.replaceChildren();
@@ -789,15 +853,14 @@ function clearPreview() {
   state.selectionVersion++;
   ui.selectedName.textContent = "将鼠标移到字体卡片";
   ui.selectedStyle.textContent = "未选择字体";
-  ui.previewText.textContent = "";
-  ui.magnifiedText.textContent = "";
   ui.previewText.style.fontFamily = "";
+  ui.magnifiedText.style.fontFamily = "";
   syncToolbarPreview(null);
   ui.axisStatus.textContent = "暂无字体参数";
   ui.axes.replaceChildren();
   ui.favorite.textContent = "☆";
   updateFontStatus(null);
-  [ui.infoFamily, ui.infoPostscript, ...INFO_BASIC_FIELDS, ...INFO_EXTENDED_FIELDS].forEach(item => item.textContent = "—");
+  [ui.infoFamily, ui.infoPostscript, ...INFO_BASIC_FIELDS, ...INFO_EXTENDED_FIELDS].forEach(item => setInfoPlain(item, "—"));
 }
 
 function restorePinnedPreview() {
@@ -1200,43 +1263,36 @@ function cmapHasCodepoint(cmap, codepoint) {
   return false;
 }
 
-function setInfoText(element, value, { title } = {}) {
-  const text = value ?? "—";
-  element.textContent = text;
-  element.title = title ?? (text === "—" ? "" : String(text));
-}
-
 function renderFontDetails(font, details = null) {
-  ui.infoFamily.textContent = font.displayName || font.family || "—";
-  ui.infoPostscript.textContent = font.postscriptName || "—";
+  setInfoText(ui.infoFamily, font.displayName || font.family);
+  setInfoText(ui.infoPostscript, font.postscriptName);
   const extended = font.extendedDetails;
   const extendedPending = details !== false && state.previewed === font && !extended;
   if (details === null) {
-    INFO_BASIC_FIELDS.forEach(item => item.textContent = "读取中…");
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
+    INFO_BASIC_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
     return;
   }
   if (details === false) {
-    INFO_BASIC_FIELDS.forEach(item => item.textContent = "不可用");
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "不可用");
+    INFO_BASIC_FIELDS.forEach(item => setInfoPlain(item, "不可用"));
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "不可用"));
     return;
   }
-  ui.infoFormat.textContent = details.format;
-  ui.infoSize.textContent = formatFileSize(details.size);
-  ui.infoGlyphs.textContent = details.glyphs?.toLocaleString() || "—";
-  ui.infoUpm.textContent = details.upm || "—";
-  ui.infoWeight.textContent = details.weight || "—";
-  ui.infoWidth.textContent = details.width || "—";
-  ui.infoLanguage.textContent = [details.supportsChinese ? "中文" : "", details.supportsLatin ? "英文" : ""].filter(Boolean).join(" / ") || "其他";
-  ui.infoAspect.textContent = Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(3)} : 1` : "—";
-  ui.infoTables.textContent = details.tables.length ? `${details.tables.length} · ${details.tables.slice(0, 8).join(" ")}` : "—";
-  ui.infoTables.title = details.tables.join(", ");
+  setInfoText(ui.infoFormat, details.format);
+  setInfoText(ui.infoSize, formatFileSize(details.size));
+  setInfoText(ui.infoGlyphs, details.glyphs?.toLocaleString() || "—");
+  setInfoText(ui.infoUpm, details.upm || "—");
+  setInfoText(ui.infoWeight, details.weight || "—");
+  setInfoText(ui.infoWidth, details.width || "—");
+  setInfoText(ui.infoLanguage, [details.supportsChinese ? "中文" : "", details.supportsLatin ? "英文" : ""].filter(Boolean).join(" / ") || "其他");
+  setInfoText(ui.infoAspect, Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(3)} : 1` : "—");
+  setInfoText(ui.infoTables, details.tables.length ? details.tables.join(" · ") : "—");
   if (extendedPending) {
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "读取中…");
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "读取中…"));
     return;
   }
   if (!extended) {
-    INFO_EXTENDED_FIELDS.forEach(item => item.textContent = "—");
+    INFO_EXTENDED_FIELDS.forEach(item => setInfoPlain(item, "—"));
     return;
   }
   setInfoText(ui.infoSubfamily, extended.subfamily);
@@ -1325,8 +1381,6 @@ function updatePreview() {
       updatePreview.shapeTimer = setTimeout(scanFontShapes, 260);
     }
   }
-  ui.previewText.textContent = state.previewed ? COMMON_DETAIL_PREVIEW : "";
-  ui.magnifiedText.textContent = state.previewed ? COMMON_DETAIL_PREVIEW : "";
   ui.cardMagnifiedText.textContent = cardPreviewText();
   scheduleLazyCardTextUpdate();
 }
@@ -1746,6 +1800,9 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
+ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
+ui.previewText.addEventListener("input", syncDetailPreviewStage);
+ui.previewText.addEventListener("blur", syncDetailPreviewStage);
 [ui.size, ui.spacing, ui.lineHeight, ui.bg, ui.color].forEach(input => input.addEventListener("input", updateVisualSettings));
 ui.favorite.addEventListener("click", toggleFavorite);
 ui.categoryButton.addEventListener("click", () => {
@@ -1769,8 +1826,20 @@ $("#favoritesFile").addEventListener("change", event => {
   if (file) importFavorites(file);
   event.target.value = "";
 });
+$("#infoTabPanel").addEventListener("click", event => {
+  const toggle = event.target.closest(".info-collapsible-toggle");
+  if (!toggle) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const field = toggle.closest("dd");
+  const expanded = field.classList.toggle("is-expanded");
+  toggle.textContent = expanded ? "收起" : "展开";
+});
 INFO_COPY_TARGETS.forEach(([element, label]) => {
-  element.addEventListener("click", () => copyDetailValue(element, label));
+  element.addEventListener("click", event => {
+    if (event.target.closest(".info-collapsible-toggle")) return;
+    copyDetailValue(element, label);
+  });
   element.addEventListener("keydown", event => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -1868,6 +1937,7 @@ function setView(view) {
   $("#singleViewButton").classList.toggle("active", view === "single");
   $("#focusViewButton").classList.toggle("active", view === "focus");
   $("#cardDensity").disabled = !["grid", "focus"].includes(view);
+  updateCardSampleSizeControl();
   renderFontList();
 }
 ui.list.addEventListener("wheel", event => {
@@ -1927,6 +1997,12 @@ $("#detailToggle").addEventListener("click", () => {
   }
   $("#detailToggle").title = collapsed ? "展开详情" : "折叠详情";
   $("#detailToggle").setAttribute("aria-label", collapsed ? "展开详情" : "折叠详情");
+});
+$("#cardAreaToggle").addEventListener("click", () => {
+  const area = $(".card-area");
+  const collapsed = area.classList.toggle("collapsed");
+  $("#cardAreaToggle").title = collapsed ? "展开字体库" : "折叠字体库";
+  $("#cardAreaToggle").setAttribute("aria-label", collapsed ? "展开字体库" : "折叠字体库");
 });
 const resizeHandle = $("#resizeHandle");
 resizeHandle.addEventListener("pointerdown", event => {
@@ -2068,4 +2144,7 @@ if ("ResizeObserver" in window) new ResizeObserver(() => {
 renderCategoryUI();
 renderSearchSuggestions();
 updateVisualSettings();
+updatePreview();
+syncDetailPreviewStage();
+updateCardSampleSizeControl();
 if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
