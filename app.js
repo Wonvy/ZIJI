@@ -56,12 +56,16 @@ const CARD_GRID_GAP = 14;
 const CARD_GRID_PADDING_BLOCK = 24;
 const CARD_GRID_META_HEIGHT = 39;
 const CARD_MIN_WIDTH = 140;
-const CARD_COLUMNS_MIN = 3;
+const CARD_COLUMNS_MIN = 1;
 const CARD_COLUMNS_MAX = 12;
 const CARD_COLUMNS_DEFAULT = 7;
 const CARD_ROWS_MIN = 1;
 const CARD_ROWS_MAX = 12;
 const CARD_ROWS_DEFAULT = 4;
+
+function normalizeView(view) {
+  return view === "list" ? "grid" : view;
+}
 
 function clampCardColumns(value, max = CARD_COLUMNS_MAX) {
   return Math.max(CARD_COLUMNS_MIN, Math.min(max, Math.round(Number(value) || CARD_COLUMNS_DEFAULT)));
@@ -146,7 +150,7 @@ function getCardGridLayout() {
 
 function syncCardGridControls() {
   const capacity = getCardGridCapacity();
-  const disabled = !["grid", "focus"].includes(state.view);
+  const disabled = state.view === "single";
   state.cardColumns = clampCardColumns(state.cardColumns, capacity.maxColumns);
   state.cardRows = clampCardRows(state.cardRows, capacity.maxRows);
   const colInput = $("#cardColumns");
@@ -489,14 +493,14 @@ function applyStoredUiSettings(settings) {
   syncCardAreaToggle(settings.cardAreaCollapsed);
   setDetailTab(settings.detailTab);
   updateFilterControls();
-  setView(settings.view);
+  setView(normalizeView(settings.view));
 }
 const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
@@ -4270,7 +4274,6 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   const fragment = document.createDocumentFragment();
   for (const font of pageFonts) fragment.appendChild(createFontCard(font));
   ui.list.replaceChildren(fragment);
-  ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
   syncCardGridLayoutVars();
@@ -4285,7 +4288,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.innerHTML = `本页 ${pageFonts.length} / <span class="view-status-total">${state.filtered.length}</span> 款`;
+  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length}</span> / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -4336,7 +4339,6 @@ function calculatePageSize() {
     const rows = Math.max(1, Math.floor(layout.height / state.singleCardSize));
     return columns * rows;
   }
-  if (state.view === "list") return Math.max(1, Math.floor(layout.height / 102));
   return layout.columns * layout.rows;
 }
 
@@ -5853,7 +5855,6 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
   persistUiSettings();
 }));
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
-$("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
 $("#focusViewToggle")?.addEventListener("change", event => {
   setView(event.target.checked ? "focus" : "grid");
@@ -5924,9 +5925,9 @@ function updateFilterControls() {
   document.querySelectorAll("[data-sort]").forEach(input => { input.checked = input.dataset.sort === state.sort; });
 }
 function setView(view) {
+  view = normalizeView(view);
   state.view = view;
   $("#gridViewButton").classList.toggle("active", view === "grid");
-  $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
   const focusViewToggle = $("#focusViewToggle");
   if (focusViewToggle) focusViewToggle.checked = view === "focus";
@@ -5937,7 +5938,7 @@ function setView(view) {
   persistUiSettings();
 }
 ui.list.addEventListener("wheel", event => {
-  if (!event.ctrlKey || state.view === "list") return;
+  if (!event.ctrlKey) return;
   event.preventDefault();
   const direction = event.deltaY < 0 ? 1 : -1;
   if (state.view === "single") {

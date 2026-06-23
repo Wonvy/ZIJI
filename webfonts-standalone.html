@@ -483,7 +483,43 @@ kbd { color: var(--muted); font-size: 10px; }
 .preview-input-wrap input { width: 100%; padding: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font-family: Georgia, "Songti SC", serif; font-size: 20px; }
 .compact-control { display: grid; grid-template-columns: 1fr 36px; align-items: center; }
 .compact-control label { grid-column: 1 / -1; }
-input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="range"] {
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  accent-color: unset;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 14px;
+  margin-top: -5.5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--line));
+  border-radius: 3px;
+  background: var(--accent);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--line));
+  border-radius: 3px;
+  background: var(--accent);
+  cursor: pointer;
+}
 .compact-control output { text-align: right; font-size: 12px; }
 .font-meta-row { padding: 23px 34px 17px; }
 .font-meta-row h2 { margin: 5px 0 0; font-family: Georgia, "Songti SC", serif; font-size: 26px; font-weight: 500; }
@@ -672,7 +708,8 @@ kbd,
   height: var(--toolbar-control-height);
   font-size: 14px;
 }
-.toolbar-view .view-button:nth-child(3) { font-size: 13px; }
+.toolbar-view .view-button:nth-child(2) { font-size: 13px; }
+.view-controls > .view-button + .view-button { font-size: 13px; }
 .toolbar-view .grid-layout-control,
 .toolbar-view .columns-control { margin-left: 2px; gap: 4px; font-size: 9px; }
 .toolbar-view .grid-layout-control input,
@@ -703,7 +740,17 @@ kbd,
   box-sizing: border-box;
 }
 .filter-menu summary::-webkit-details-marker { display: none; }
-.filter-menu summary::after { content: "⌄"; margin-left: 2px; color: var(--muted); }
+.filter-menu summary::after {
+  content: "⌄";
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  height: 1em;
+  margin-left: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+}
 .filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
 .filter-menu-icon summary {
   width: 26px;
@@ -807,8 +854,18 @@ kbd,
 .view-button:first-child { border-radius: 4px 0 0 4px; }
 .view-button:nth-child(2) { margin-left: -7px; border-radius: 0; }
 .view-button:nth-child(3) { margin-left: -7px; border-radius: 0 4px 4px 0; font-family: Georgia, "Songti SC", serif; font-size: 15px; }
+.view-controls > .view-button:first-of-type {
+  border-radius: 4px 0 0 4px;
+}
+.view-controls > .view-button + .view-button {
+  margin-left: -7px;
+  border-radius: 0 4px 4px 0;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 15px;
+}
 .view-controls .card-preview-style-menu {
-  margin-left: 6px;
+  margin-right: 6px;
+  margin-left: 0;
 }
 .view-controls .card-preview-style-button {
   border-radius: 3px 0 0 3px;
@@ -849,18 +906,21 @@ kbd,
   --card-grid-sample-height: 66px;
   --card-grid-min-height: 129px;
   --card-grid-row-pitch: 143px;
-  min-height: 0;
+  min-height: 100%;
   width: 100%;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: var(--card-grid-min-height, 129px);
   align-items: stretch;
   justify-content: center;
-  align-content: start;
+  justify-items: stretch;
+  align-content: center;
+  place-content: center;
   gap: 14px;
   padding: 32px 36px;
   overflow-x: hidden;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 .font-view-shell { position: relative; z-index: 1; min-width: 0; min-height: 0; flex: 1; display: flex; overflow: hidden; }
 .font-page-area {
@@ -929,13 +989,20 @@ kbd,
 .font-status .favorite-status { color: var(--accent); }
 .view-status-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .view-status { text-align: right; white-space: nowrap; }
-.view-status-total {
+.view-status-count {
   color: var(--accent);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.card-sample-size-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
-.card-sample-size-control input { width: 88px; accent-color: var(--accent); }
+.card-sample-size-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.card-sample-size-control input { width: 88px; }
 .card-sample-size-control .step-button {
   width: 22px;
   height: 22px;
@@ -1139,7 +1206,12 @@ kbd,
 .card-family-option:hover { background: var(--paper); }
 .card-family-option.is-hover { background: var(--paper); }
 .card-family-option.active { color: var(--accent); font-weight: 600; }
-.font-list.list-view { display: flex; flex-direction: column; gap: 8px; }
+.font-list.list-view {
+  display: grid;
+  grid-auto-rows: minmax(94px, auto);
+  gap: 8px;
+  align-content: start;
+}
 .list-view .font-card { min-height: 94px; display: grid; grid-template-columns: minmax(150px, 240px) 1fr 120px; align-items: center; padding: 14px 48px 14px 18px; }
 .list-view .font-card strong,
 .list-view .font-card .card-family-switch { font-size: 14px; }
@@ -1481,8 +1553,8 @@ kbd,
 .card-preview-style-preset-dropdown.filter-menu-icon[open] summary svg { stroke: white; }
 .card-preview-style-preset-popover {
   top: calc(100% + 4px);
-  right: 0;
-  left: auto;
+  left: 0;
+  right: auto;
   min-width: 240px;
   max-width: min(320px, 92vw);
   max-height: min(320px, 48vh);
@@ -2821,9 +2893,6 @@ body.dark .preview-style-stage { background: #1a1917; }
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
-                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
-                <button id="listViewButton" class="view-button" title="列表视图" aria-label="列表视图">☷</button>
-                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <div class="card-preview-style-menu">
                   <button id="cardPreviewStyleButton" class="icon-button card-preview-style-button" type="button" title="卡片预览样式" aria-label="卡片预览样式">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
@@ -2835,7 +2904,9 @@ body.dark .preview-style-stage { background: #1a1917; }
                     <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式方案"></div>
                   </details>
                 </div>
-                <label class="grid-layout-control" title="每行显示列数">列 <input id="cardColumns" type="range" min="3" max="12" step="1" value="7" aria-label="每行显示列数" /><output id="cardColumnsOutput">7</output></label>
+                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
+                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <label class="grid-layout-control" title="每行显示列数">列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /><output id="cardColumnsOutput">7</output></label>
                 <label class="grid-layout-control" title="每页显示行数">行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /><output id="cardRowsOutput">4</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
@@ -3110,12 +3181,16 @@ const CARD_GRID_GAP = 14;
 const CARD_GRID_PADDING_BLOCK = 24;
 const CARD_GRID_META_HEIGHT = 39;
 const CARD_MIN_WIDTH = 140;
-const CARD_COLUMNS_MIN = 3;
+const CARD_COLUMNS_MIN = 1;
 const CARD_COLUMNS_MAX = 12;
 const CARD_COLUMNS_DEFAULT = 7;
 const CARD_ROWS_MIN = 1;
 const CARD_ROWS_MAX = 12;
 const CARD_ROWS_DEFAULT = 4;
+
+function normalizeView(view) {
+  return view === "list" ? "grid" : view;
+}
 
 function clampCardColumns(value, max = CARD_COLUMNS_MAX) {
   return Math.max(CARD_COLUMNS_MIN, Math.min(max, Math.round(Number(value) || CARD_COLUMNS_DEFAULT)));
@@ -3200,7 +3275,7 @@ function getCardGridLayout() {
 
 function syncCardGridControls() {
   const capacity = getCardGridCapacity();
-  const disabled = !["grid", "focus"].includes(state.view);
+  const disabled = state.view === "single";
   state.cardColumns = clampCardColumns(state.cardColumns, capacity.maxColumns);
   state.cardRows = clampCardRows(state.cardRows, capacity.maxRows);
   const colInput = $("#cardColumns");
@@ -3543,14 +3618,14 @@ function applyStoredUiSettings(settings) {
   syncCardAreaToggle(settings.cardAreaCollapsed);
   setDetailTab(settings.detailTab);
   updateFilterControls();
-  setView(settings.view);
+  setView(normalizeView(settings.view));
 }
 const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
-  view: uiSettings.view, sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
+  view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
@@ -7324,7 +7399,6 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   const fragment = document.createDocumentFragment();
   for (const font of pageFonts) fragment.appendChild(createFontCard(font));
   ui.list.replaceChildren(fragment);
-  ui.list.classList.toggle("list-view", state.view === "list");
   ui.list.classList.toggle("single-view", state.view === "single");
   ui.list.classList.toggle("focus-view", state.view === "focus");
   syncCardGridLayoutVars();
@@ -7339,7 +7413,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.innerHTML = `本页 ${pageFonts.length} / <span class="view-status-total">${state.filtered.length}</span> 款`;
+  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length}</span> / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -7390,7 +7464,6 @@ function calculatePageSize() {
     const rows = Math.max(1, Math.floor(layout.height / state.singleCardSize));
     return columns * rows;
   }
-  if (state.view === "list") return Math.max(1, Math.floor(layout.height / 102));
   return layout.columns * layout.rows;
 }
 
@@ -8907,7 +8980,6 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
   persistUiSettings();
 }));
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
-$("#listViewButton").addEventListener("click", () => setView("list"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
 $("#focusViewToggle")?.addEventListener("change", event => {
   setView(event.target.checked ? "focus" : "grid");
@@ -8978,9 +9050,9 @@ function updateFilterControls() {
   document.querySelectorAll("[data-sort]").forEach(input => { input.checked = input.dataset.sort === state.sort; });
 }
 function setView(view) {
+  view = normalizeView(view);
   state.view = view;
   $("#gridViewButton").classList.toggle("active", view === "grid");
-  $("#listViewButton").classList.toggle("active", view === "list");
   $("#singleViewButton").classList.toggle("active", view === "single");
   const focusViewToggle = $("#focusViewToggle");
   if (focusViewToggle) focusViewToggle.checked = view === "focus";
@@ -8991,7 +9063,7 @@ function setView(view) {
   persistUiSettings();
 }
 ui.list.addEventListener("wheel", event => {
-  if (!event.ctrlKey || state.view === "list") return;
+  if (!event.ctrlKey) return;
   event.preventDefault();
   const direction = event.deltaY < 0 ? 1 : -1;
   if (state.view === "single") {
