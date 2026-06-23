@@ -1601,6 +1601,10 @@ function strokeOutlineShadows(width, color) {
   return innerStrokeShadows(width, color);
 }
 
+function outerStrokeShadows(width, color) {
+  return innerStrokeShadows(width, color);
+}
+
 function strokeLayerShadows(width, layer) {
   if (layer.colorMode === "gradient") return gradientStrokeShadows(width, layer);
   return innerStrokeShadows(width, hexWithOpacity(layer.color, layer.opacity));
@@ -1631,10 +1635,10 @@ function innerStrokeShadows(width, color) {
   return shadows;
 }
 
-function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
+function cardPreviewStyleToCss(style = state.cardPreviewStyle, { assumeFillVisible = false } = {}) {
   const normalized = normalizeCardPreviewStyle(style);
   const fill = normalized.fill;
-  const fillEnabled = fill.enabled !== false;
+  const fillEnabled = fill.enabled !== false || (assumeFillVisible && fill.mode === "gradient");
   const useGradientFill = fillEnabled && fill.mode === "gradient";
   const css = {
     color: "",
@@ -1676,11 +1680,17 @@ function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
     const width = Number(layer.width) || 1;
     const position = resolveStrokePosition(layer);
     const useGradientStroke = layer.colorMode === "gradient";
-    if (useGradientFill || useGradientStroke) {
+    if (useGradientStroke) {
       shadows.unshift(...strokeLayerShadows(width, layer));
       return;
     }
     const color = hexWithOpacity(layer.color, layer.opacity);
+    if (useGradientFill) {
+      // background-clip:text 渐变无法盖住 -webkit-text-stroke 的内侧半宽，向外/居中轮廓改用阴影叠在字形后面
+      if (position === "inside") shadows.unshift(...innerStrokeShadows(width, color));
+      else shadows.unshift(...outerStrokeShadows(width, color));
+      return;
+    }
     if (position === "inside") {
       shadows.unshift(...innerStrokeShadows(width, color));
       return;
@@ -1813,14 +1823,22 @@ function deleteCardPreviewStylePreset(id) {
   return true;
 }
 
-function applyCardPreviewStyleToElement(element, style, { themeDefault = false } = {}) {
+function applyCardPreviewStyleToElement(element, style, { themeDefault = false, assumeFillVisible = false } = {}) {
   if (!element) return;
   clearCardPreviewStyleOnElement(element);
-  if (!style || !hasActiveCardPreviewStyle(style)) {
+  const canPreview = style && (
+    hasActiveCardPreviewStyle(style)
+    || (assumeFillVisible && style.fill?.mode === "gradient")
+  );
+  if (!canPreview) {
+    element.style.removeProperty("--preview-style-bleed");
     if (themeDefault) element.style.color = "var(--ink)";
     return;
   }
-  const css = cardPreviewStyleToCss(style);
+  const bleed = computePreviewStyleVisualBleed(style);
+  if (bleed > 0) element.style.setProperty("--preview-style-bleed", `${bleed}px`);
+  else element.style.removeProperty("--preview-style-bleed");
+  const css = cardPreviewStyleToCss(style, { assumeFillVisible });
   element.style.color = css.color;
   element.style.backgroundImage = css.backgroundImage || "none";
   element.style.backgroundClip = css.backgroundClip || "";
@@ -1832,6 +1850,7 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false }
   element.style.textShadow = css.textShadow;
   element.style.backgroundSize = css.backgroundSize || "";
   element.style.backgroundRepeat = css.backgroundRepeat || "";
+  element.classList.toggle("is-gradient-fill", Boolean(css.backgroundImage && css.webkitBackgroundClip === "text"));
 }
 
 function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
@@ -1863,6 +1882,8 @@ function clearCardPreviewStyleOnElement(element) {
   element.style.textShadow = "";
   element.style.backgroundSize = "";
   element.style.backgroundRepeat = "";
+  element.style.removeProperty("--preview-style-bleed");
+  element.classList.remove("is-gradient-fill");
 }
 
 function applyCardPreviewStyleToMagnifierText(target, sampleStyle, style = state.cardPreviewStyle) {
@@ -1894,7 +1915,38 @@ function scalePreviewStylePx(value, unitsPerPx) {
   return Number(value) * unitsPerPx;
 }
 
-function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle, unitsPerPx = 1 }) {
+function computePreviewStyleVisualBleed(style, unitsPerPx = 1) {
+  if (!style) return 0;
+  const normalized = normalizeCardPreviewStyle(style);
+  const fill = normalized.fill;
+  const fillEnabled = fill.enabled !== false;
+  const useGradientFill = fillEnabled && fill.mode === "gradient";
+  let bleed = 0;
+  for (const layer of normalized.layers) {
+    if (!layer.enabled) continue;
+    if (layer.type === "dropShadow") {
+      const blur = scalePreviewStylePx(Number(layer.blur) || 0, unitsPerPx);
+      const stdDev = blur / 2;
+      const dx = scalePreviewStylePx(Number(layer.offsetX) || 0, unitsPerPx);
+      const dy = scalePreviewStylePx(Number(layer.offsetY) || 0, unitsPerPx);
+      bleed = Math.max(bleed, 3 * stdDev + Math.abs(dx), 3 * stdDev + Math.abs(dy));
+      continue;
+    }
+    if (!isStrokeLayer(layer)) continue;
+    const width = scalePreviewStylePx(Number(layer.width) || 1, unitsPerPx);
+    const position = resolveStrokePosition(layer);
+    if (useGradientFill || layer.colorMode === "gradient") {
+      bleed = Math.max(bleed, width * 2);
+      continue;
+    }
+    if (position === "outside") bleed = Math.max(bleed, width * 2);
+    else if (position === "center") bleed = Math.max(bleed, width);
+    else bleed = Math.max(bleed, width);
+  }
+  return Math.ceil(bleed);
+}
+
+function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle, unitsPerPx = 1, bleed = 0 }) {
   const normalized = normalizeCardPreviewStyle(style);
   const defsParts = [];
   const fillValue = buildPreviewFillValue(normalized.fill, defsParts);
@@ -1906,7 +1958,8 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     dropShadows.forEach(layer => {
       filterBody += `<feDropShadow dx="${formatOutlineNumber(scalePreviewStylePx(layer.offsetX, unitsPerPx))}" dy="${formatOutlineNumber(scalePreviewStylePx(layer.offsetY, unitsPerPx))}" stdDeviation="${formatOutlineNumber(scalePreviewStylePx(layer.blur / 2, unitsPerPx))}" flood-color="${escapeXml(layer.color)}" flood-opacity="${formatOutlineNumber(layer.opacity / 100)}"/>`;
     });
-    defsParts.push(`<filter id="preview-shadow" x="-50%" y="-50%" width="200%" height="200%">${filterBody}</filter>`);
+    const filterPad = Math.max(bleed, 1);
+    defsParts.push(`<filter id="preview-shadow" x="${formatOutlineNumber(-filterPad)}" y="${formatOutlineNumber(-filterPad)}" width="${formatOutlineNumber(width + filterPad * 2)}" height="${formatOutlineNumber(height + filterPad * 2)}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">${filterBody}</filter>`);
     filterAttr = ` filter="url(#preview-shadow)"`;
   }
   let body = "";
@@ -1937,7 +1990,7 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     body += `<path clip-path="url(#${clipId})" fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `inside-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
   });
   const defsBlock = defsParts.length ? `<defs>${defsParts.join("")}</defs>` : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n${defsBlock}\n  <g${filterAttr}>${body}</g>\n</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n${defsBlock}\n  <g${filterAttr}>${body}</g>\n</svg>`;
 }
 
 function getCardPreviewStyleModalFont() {
@@ -1984,7 +2037,10 @@ function renderCardPreviewStyleModalPreview() {
   const style = isManageTab
     ? resolveManagePreviewStyle()
     : (cardPreviewStyleDraft || state.cardPreviewStyle);
-  applyCardPreviewStyleToElement(sample, style, { themeDefault: isManageTab || !style });
+  applyCardPreviewStyleToElement(sample, style, {
+    themeDefault: isManageTab || !style,
+    assumeFillVisible: !isManageTab
+  });
 }
 
 function getPreviewStyleLayerLabel(layer, layers) {
@@ -2129,6 +2185,46 @@ function syncGradientLegacyColors(target, scope) {
   else syncStrokeLayerLegacyColors(target);
 }
 
+function ensureGradientEditTargetEnabled(scope) {
+  if (!cardPreviewStyleDraft) return false;
+  if (scope === "fill") {
+    if (cardPreviewStyleDraft.fill.enabled === false) {
+      cardPreviewStyleDraft.fill.enabled = true;
+      renderCardPreviewStyleLayerList();
+      return true;
+    }
+    return false;
+  }
+  const layer = getGradientEditTarget(scope);
+  if (layer && layer.enabled === false) {
+    layer.enabled = true;
+    renderCardPreviewStyleLayerList();
+    return true;
+  }
+  return false;
+}
+
+function applyGradientStopFieldChange(input) {
+  if (!cardPreviewStyleDraft || !input?.dataset) return false;
+  const gradientScope = input.dataset.gradientScope;
+  const gradientStopField = input.dataset.gradientStopField;
+  const stopIndex = Number(input.dataset.stopIndex);
+  if (!gradientStopField || !gradientScope || !Number.isFinite(stopIndex)) return false;
+  const target = getGradientEditTarget(gradientScope);
+  if (!target) return false;
+  ensureGradientEditTargetEnabled(gradientScope);
+  const stops = normalizeGradientStops(target.stops, target);
+  const stop = stops[stopIndex];
+  if (!stop) return false;
+  stop[gradientStopField] = gradientStopField === "color" ? input.value : Number(input.value);
+  target.stops = normalizeGradientStops(stops, target);
+  syncGradientLegacyColors(target, gradientScope);
+  if (gradientStopField !== "color") syncStyleRangeProgress(input);
+  refreshGradientBarVisuals(gradientScope);
+  renderCardPreviewStyleModalPreview();
+  return true;
+}
+
 function refreshGradientBarVisuals(scope = draggingGradientScope || getActiveGradientScope()) {
   const target = getGradientEditTarget(scope);
   const panel = $("#cardPreviewStyleParams");
@@ -2172,6 +2268,7 @@ function addGradientStopAtOffset(offset, scope = getActiveGradientScope()) {
   cardPreviewStyleSelectedStopIndex = target.stops.reduce((best, stop, idx, arr) =>
     Math.abs(stop.offset - clamped) < Math.abs(arr[best].offset - clamped) ? idx : best, 0);
   syncGradientLegacyColors(target, scope);
+  ensureGradientEditTargetEnabled(scope);
   renderCardPreviewStyleParams();
   renderCardPreviewStyleModalPreview();
 }
@@ -2235,6 +2332,7 @@ function handleGradientStopDrag(event) {
     refreshGradientBarVisuals(scope);
     return;
   }
+  ensureGradientEditTargetEnabled(scope);
   const offset = gradientBarOffsetFromEvent(bar, event.clientX);
   const stop = target.stops[draggingGradientStopIndex];
   if (!stop) return;
@@ -2995,6 +3093,7 @@ function wireCardPreviewStyleModal() {
   });
   $("#cardPreviewStyleParams")?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft) return;
+    if (applyGradientStopFieldChange(event.target)) return;
     const fillField = event.target.dataset.fillField;
     if (fillField === "mode") {
       cardPreviewStyleDraft.fill.mode = event.target.value === "gradient" ? "gradient" : "solid";
@@ -3060,24 +3159,9 @@ function wireCardPreviewStyleModal() {
   });
   $("#cardPreviewStyleParams")?.addEventListener("input", event => {
     if (!cardPreviewStyleDraft) return;
-    const gradientScope = event.target.dataset.gradientScope;
-    const gradientStopField = event.target.dataset.gradientStopField;
+    if (applyGradientStopFieldChange(event.target)) return;
     const gradientField = event.target.dataset.gradientField;
-    const stopIndex = Number(event.target.dataset.stopIndex);
-    if (gradientStopField && gradientScope && Number.isFinite(stopIndex)) {
-      const target = getGradientEditTarget(gradientScope);
-      if (!target) return;
-      const stops = normalizeGradientStops(target.stops, target);
-      const stop = stops[stopIndex];
-      if (!stop) return;
-      stop[gradientStopField] = gradientStopField === "color" ? event.target.value : Number(event.target.value);
-      target.stops = normalizeGradientStops(stops, target);
-      syncGradientLegacyColors(target, gradientScope);
-      if (gradientStopField !== "color") syncStyleRangeProgress(event.target);
-      refreshGradientBarVisuals(gradientScope);
-      renderCardPreviewStyleModalPreview();
-      return;
-    }
+    const gradientScope = event.target.dataset.gradientScope;
     if (gradientField === "angle" && gradientScope) {
       const target = getGradientEditTarget(gradientScope);
       if (!target) return;
@@ -3437,7 +3521,10 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   if (!allCommands.length) throw new Error("未能解析预览文字轮廓");
   const svgCommands = trueTypeToSvgCommands(allCommands);
   const bbox = pathCommandsSvgBoundingBox(svgCommands);
-  const padding = Math.round(upm * 0.08);
+  const unitsPerPx = previewStyleUnitsPerPx(upm);
+  const styled = state.cardPreviewStyle && hasActiveCardPreviewStyle(state.cardPreviewStyle);
+  const effectBleed = styled ? computePreviewStyleVisualBleed(state.cardPreviewStyle, unitsPerPx) : 0;
+  const padding = Math.round(upm * 0.08) + effectBleed;
   const originX = bbox.minX - padding;
   const originY = bbox.minY - padding;
   const width = Math.max(1, bbox.maxX - bbox.minX + padding * 2);
@@ -3445,11 +3532,10 @@ async function buildFontOutlineSvg(font, text = cardPreviewText()) {
   const normalizedCommands = translateSvgPathCommands(svgCommands, -originX, -originY);
   const pathData = pathCommandsToSvgData(normalizedCommands);
   const label = escapeXml(font.displayName || font.family || "font");
-  if (!state.cardPreviewStyle || !hasActiveCardPreviewStyle(state.cardPreviewStyle)) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" role="img" aria-label="${label}">\n  <path fill="#181816" d="${pathData}"/>\n</svg>`;
+  if (!styled) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n  <path fill="#181816" d="${pathData}"/>\n</svg>`;
   }
-  const unitsPerPx = previewStyleUnitsPerPx(upm);
-  return buildStyledOutlineSvgMarkup({ pathData, width, height, label, style: state.cardPreviewStyle, unitsPerPx });
+  return buildStyledOutlineSvgMarkup({ pathData, width, height, label, style: state.cardPreviewStyle, unitsPerPx, bleed: effectBleed });
 }
 
 async function copyFontSvg(font) {

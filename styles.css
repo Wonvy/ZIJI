@@ -740,6 +740,11 @@ kbd,
   white-space: nowrap;
   overflow-wrap: normal;
 }
+.card-grid .font-card.has-preview-style .sample {
+  overflow: visible;
+  margin-block: calc(5px - var(--preview-style-bleed, 0px)) calc(3px - var(--preview-style-bleed, 0px));
+  padding: var(--preview-style-bleed, 0px);
+}
 .font-card.font-pending .sample, .font-card:not(.font-ready) .sample { color: var(--muted) !important; opacity: .32; }
 .font-card.font-loading .sample { opacity: .48; }
 .font-card.font-ready .sample { color: var(--ink); opacity: 1; transition: opacity .2s ease, color .2s ease; }
@@ -863,6 +868,7 @@ kbd,
 .list-view .font-card strong,
 .list-view .font-card .card-family-switch { font-size: 14px; }
 .list-view .font-card .sample { height: auto; margin: 0; font-size: 28px; white-space: nowrap; }
+.list-view .font-card.has-preview-style .sample { overflow: visible; padding: var(--preview-style-bleed, 0px); }
 .list-view .font-card small { position: static; text-align: right; }
 .font-list.single-view {
   --single-card-size: 82px;
@@ -919,6 +925,11 @@ kbd,
 .focus-view .font-card > strong,
 .focus-view .font-card > .card-family-switch { position: absolute; top: 16px; left: 18px; right: 42px; }
 .focus-view .font-card .sample { width: 100%; height: 140px; margin: 0; justify-content: center; text-align: center; }
+.focus-view .font-card.has-preview-style .sample {
+  overflow: visible;
+  padding: var(--preview-style-bleed, 0px);
+  margin-block: calc(0px - var(--preview-style-bleed, 0px));
+}
 .focus-view .font-card:hover > strong,
 .focus-view .font-card:hover > .card-family-switch,
 .focus-view .font-card:hover > small,
@@ -1217,6 +1228,7 @@ kbd,
 .card-preview-style-preset-item.card-preview-style-preset-preview {
   min-height: 72px;
   padding: 5px;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 5px;
   background: var(--paper);
@@ -1356,7 +1368,8 @@ kbd,
   align-items: center;
   justify-content: center;
   min-height: 72px;
-  overflow: hidden;
+  overflow: visible;
+  padding: var(--preview-style-bleed, 0px);
   border-radius: 4px;
   color: var(--ink);
   background: var(--stage);
@@ -1457,7 +1470,8 @@ kbd,
   min-height: 128px;
   display: grid;
   place-items: center;
-  padding: 14px 16px;
+  padding: 24px 20px;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--stage);
@@ -1465,12 +1479,18 @@ kbd,
 .preview-style-sample {
   display: inline-block;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  padding: var(--preview-style-bleed, 0px);
   font-size: 52px;
   line-height: 1.1;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.preview-style-sample.is-gradient-fill,
+.font-card.has-preview-style .sample.is-gradient-fill {
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 .preview-style-workspace {
   min-height: 0;
