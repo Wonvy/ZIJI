@@ -199,9 +199,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .preview-stage { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; margin: 0 34px; border-radius: 4px; background: var(--stage); cursor: crosshair; }
 .preview-text { max-width: 92%; padding: 60px 0; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
 .stage-hint { position: absolute; right: 13px; bottom: 11px; color: rgba(0,0,0,.42); font-size: 9px; letter-spacing: .1em; }
-.magnifier { position: absolute; z-index: 4; width: 190px; height: 190px; overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; border: 5px solid rgba(255,255,255,.88); border-radius: 50%; background: var(--stage); box-shadow: 0 10px 34px rgba(0,0,0,.25); transform: scale(.82); transition: opacity .16s ease, transform .18s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s; }
+.magnifier { position: absolute; z-index: 6; width: 190px; height: 190px; overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; border: 5px solid rgba(255,255,255,.88); border-radius: 50%; background: var(--stage); box-shadow: 0 10px 34px rgba(0,0,0,.25); transform: scale(.82); transition: opacity .16s ease, transform .18s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s; }
 .magnifier.visible { opacity: 1; visibility: visible; transform: scale(1); transition-delay: 0s; }
-.magnifier span { position: absolute; display: block; white-space: normal; overflow-wrap: anywhere; text-align: center; transform-origin: 0 0; }
+.magnifier span { position: absolute; display: block; white-space: pre-wrap; overflow-wrap: anywhere; text-align: center; transform-origin: 0 0; }
 .bottom-panel { padding: 19px 34px 23px; border-top: 1px solid var(--line); }
 .axis-controls, .standard-controls { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 24px; margin-top: 17px; }
 .axis-control span, .standard-controls label > span { display: flex; justify-content: space-between; margin-bottom: 7px; color: var(--muted); font-size: 10px; }
@@ -615,20 +615,23 @@ kbd,
 .detail-tab-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .detail-tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
 .detail-tab-panel.active { display: flex; }
-.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
+.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; cursor: crosshair; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
 .detail-panel .preview-text {
   max-width: 100%;
   min-width: 0;
   width: 100%;
-  padding: 24px 16px;
+  padding: 24px 0;
   font-size: 28px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   overflow-x: hidden;
   outline: none;
-  cursor: text;
+  cursor: crosshair;
+  user-select: none;
 }
+.detail-panel .preview-stage.is-editing .preview-text { cursor: text; user-select: text; }
 .detail-panel .preview-text:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.detail-panel .preview-stage.is-editing .stage-hint { opacity: 0; }
 .detail-panel .preview-text:empty::before { content: attr(data-placeholder); color: var(--muted); }
 .preview-controls { flex: none; max-height: 46%; min-width: 0; padding-top: 12px; overflow-x: hidden; overflow-y: auto; border-top: 1px solid var(--line); }
 #previewTabPanel { overflow-x: hidden; }
@@ -928,9 +931,9 @@ kbd,
               <div class="detail-tab-panels">
                 <div id="previewTabPanel" class="detail-tab-panel active" role="tabpanel" aria-labelledby="previewTabButton">
                   <div id="previewStage" class="preview-stage">
-                    <div id="previewText" class="preview-text" contenteditable="true" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="点击输入预览文字"></div>
+                    <div id="previewText" class="preview-text" contenteditable="false" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="双击编辑预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
-                    <div class="stage-hint">移动鼠标查看字形细节</div>
+                    <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
                   </div>
                   <div class="preview-controls">
                     <div class="preview-controls-head">
@@ -1127,8 +1130,60 @@ function setInfoText(element, value, { title } = {}) {
 }
 
 function syncDetailPreviewStage() {
-  ui.magnifiedText.textContent = ui.previewText.textContent;
+  applyDetailMagnifierStyles();
   localStorage.setItem("detail-preview-text", ui.previewText.textContent);
+}
+
+function isDetailPreviewEditing() {
+  return ui.stage.classList.contains("is-editing");
+}
+
+function setDetailPreviewEditing(editing) {
+  ui.stage.classList.toggle("is-editing", editing);
+  ui.previewText.contentEditable = editing ? "true" : "false";
+  if (!editing) hideMagnifier(ui.magnifier);
+}
+
+function applyDetailMagnifierStyles() {
+  const textStyle = getComputedStyle(ui.previewText);
+  ui.magnifiedText.textContent = ui.previewText.textContent;
+  ui.magnifiedText.style.fontFamily = textStyle.fontFamily;
+  ui.magnifiedText.style.fontSize = textStyle.fontSize;
+  ui.magnifiedText.style.fontWeight = textStyle.fontWeight;
+  ui.magnifiedText.style.fontStyle = textStyle.fontStyle;
+  ui.magnifiedText.style.lineHeight = textStyle.lineHeight;
+  ui.magnifiedText.style.letterSpacing = textStyle.letterSpacing;
+  ui.magnifiedText.style.color = textStyle.color;
+  ui.magnifiedText.style.fontVariationSettings = textStyle.fontVariationSettings;
+  ui.magnifiedText.style.whiteSpace = "pre-wrap";
+  ui.magnifiedText.style.textAlign = textStyle.textAlign;
+}
+
+function updateDetailMagnifier(event) {
+  if (!state.magnifier || !state.previewed || isDetailPreviewEditing()) {
+    hideMagnifier(ui.magnifier);
+    return;
+  }
+  const rect = ui.stage.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const lens = 190;
+  const zoom = 2.5;
+  const lensLeft = Math.min(rect.width - lens / 2, Math.max(lens / 2, x)) - lens / 2;
+  const lensTop = Math.min(rect.height - lens / 2, Math.max(lens / 2, y)) - lens / 2;
+  applyDetailMagnifierStyles();
+  showMagnifier(ui.magnifier);
+  ui.magnifier.style.left = `${lensLeft}px`;
+  ui.magnifier.style.top = `${lensTop}px`;
+  const textRect = ui.previewText.getBoundingClientRect();
+  const textStyle = getComputedStyle(ui.previewText);
+  ui.magnifiedText.style.left = `${lens / 2 - (event.clientX - textRect.left) * zoom}px`;
+  ui.magnifiedText.style.top = `${lens / 2 - (event.clientY - textRect.top) * zoom}px`;
+  ui.magnifiedText.style.transform = `scale(${zoom})`;
+  ui.magnifiedText.style.width = `${textRect.width}px`;
+  ui.magnifiedText.style.height = `${textRect.height}px`;
+  ui.magnifiedText.style.padding = textStyle.padding;
+  ui.magnifiedText.style.boxSizing = "border-box";
 }
 
 function toast(message) {
@@ -1140,10 +1195,9 @@ function toast(message) {
 
 function showMagnifier(element) {
   clearTimeout(element.hideTimer);
-  if (element.classList.contains("visible")) return;
   element.hidden = false;
   element.style.display = "block";
-  requestAnimationFrame(() => element.classList.add("visible"));
+  if (!element.classList.contains("visible")) requestAnimationFrame(() => element.classList.add("visible"));
 }
 
 function hideMagnifier(element) {
@@ -1823,6 +1877,7 @@ function previewFont(font, temporary = true) {
   ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
   updateFontStatus(font);
   ui.magnifiedText.textContent = ui.previewText.textContent;
+  applyDetailMagnifierStyles();
   ui.axisStatus.textContent = font.axes ? `${font.axes.length} 个可变轴` : (temporary ? "悬停预览" : "正在检测可变轴…");
   ui.axes.replaceChildren();
   if (font.axes) renderAxes(font.axes);
@@ -2410,6 +2465,37 @@ function updateVisualSettings() {
   ui.magnifier.style.backgroundColor = ui.bg.value;
 }
 
+function adjustRangeInput(input, direction) {
+  if (!input || input.disabled || input.type !== "range") return false;
+  const step = Number(input.step) || 1;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const next = Math.max(min, Math.min(max, Number(input.value) + direction * step));
+  if (next === Number(input.value)) return false;
+  input.value = String(next);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+
+function handlePreviewControlWheel(event) {
+  const label = event.target.closest("label, .axis-control");
+  const range = label?.querySelector('input[type="range"]');
+  if (!range) return;
+  event.preventDefault();
+  event.stopPropagation();
+  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+}
+
+function handlePreviewStageWheel(event) {
+  if (isDetailPreviewEditing() || !state.previewed) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const direction = event.deltaY < 0 ? 1 : -1;
+  if (event.shiftKey) adjustRangeInput(ui.spacing, direction);
+  else if (event.altKey) adjustRangeInput(ui.lineHeight, direction);
+  else adjustRangeInput(ui.size, direction);
+}
+
 function toggleFavorite() {
   const font = state.selected || state.previewed;
   if (!font) return;
@@ -2801,7 +2887,25 @@ ui.previewInput.addEventListener("input", () => {
 });
 ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
-ui.previewText.addEventListener("blur", syncDetailPreviewStage);
+ui.previewText.addEventListener("dblclick", () => {
+  setDetailPreviewEditing(true);
+  ui.previewText.focus();
+});
+ui.previewText.addEventListener("mousedown", event => {
+  if (!isDetailPreviewEditing()) event.preventDefault();
+});
+ui.previewText.addEventListener("focus", () => {
+  setDetailPreviewEditing(true);
+  hideMagnifier(ui.magnifier);
+});
+ui.previewText.addEventListener("blur", () => {
+  setDetailPreviewEditing(false);
+  syncDetailPreviewStage();
+});
+ui.stage.addEventListener("mousemove", updateDetailMagnifier);
+ui.stage.addEventListener("mouseleave", () => hideMagnifier(ui.magnifier));
+ui.stage.addEventListener("wheel", handlePreviewStageWheel, { passive: false });
+$(".preview-controls")?.addEventListener("wheel", handlePreviewControlWheel, { passive: false });
 [ui.size, ui.spacing, ui.lineHeight, ui.bg, ui.color].forEach(input => input.addEventListener("input", updateVisualSettings));
 ui.favorite.addEventListener("click", toggleFavorite);
 ui.categoryButton.addEventListener("click", () => {
@@ -3032,26 +3136,6 @@ resizeHandle.addEventListener("pointerup", event => {
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); ui.search.focus(); }
 });
-ui.stage.addEventListener("mousemove", event => {
-  if (!state.magnifier) return;
-  const rect = ui.stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
-  const lens = 190, zoom = 2.5;
-  const lensLeft = Math.min(rect.width-lens/2, Math.max(lens/2, x)) - lens/2;
-  const lensTop = Math.min(rect.height-lens/2, Math.max(lens/2, y)) - lens/2;
-  showMagnifier(ui.magnifier);
-  ui.magnifier.style.left = `${lensLeft}px`;
-  ui.magnifier.style.top = `${lensTop}px`;
-  const textRect = ui.previewText.getBoundingClientRect();
-  const textStyle = getComputedStyle(ui.previewText);
-  ui.magnifiedText.style.left = `${lens/2 - (event.clientX - textRect.left) * zoom}px`;
-  ui.magnifiedText.style.top = `${lens/2 - (event.clientY - textRect.top) * zoom}px`;
-  ui.magnifiedText.style.transform = `scale(${zoom})`;
-  ui.magnifiedText.style.width = `${textRect.width}px`;
-  ui.magnifiedText.style.height = `${textRect.height}px`;
-  ui.magnifiedText.style.padding = textStyle.padding;
-  ui.magnifiedText.style.boxSizing = "border-box";
-});
-ui.stage.addEventListener("mouseleave", () => hideMagnifier(ui.magnifier));
 ui.list.addEventListener("pointermove", event => {
   const card = event.target.closest(".font-card");
   if (!card) {

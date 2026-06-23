@@ -191,9 +191,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .preview-stage { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; margin: 0 34px; border-radius: 4px; background: var(--stage); cursor: crosshair; }
 .preview-text { max-width: 92%; padding: 60px 0; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
 .stage-hint { position: absolute; right: 13px; bottom: 11px; color: rgba(0,0,0,.42); font-size: 9px; letter-spacing: .1em; }
-.magnifier { position: absolute; z-index: 4; width: 190px; height: 190px; overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; border: 5px solid rgba(255,255,255,.88); border-radius: 50%; background: var(--stage); box-shadow: 0 10px 34px rgba(0,0,0,.25); transform: scale(.82); transition: opacity .16s ease, transform .18s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s; }
+.magnifier { position: absolute; z-index: 6; width: 190px; height: 190px; overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; border: 5px solid rgba(255,255,255,.88); border-radius: 50%; background: var(--stage); box-shadow: 0 10px 34px rgba(0,0,0,.25); transform: scale(.82); transition: opacity .16s ease, transform .18s cubic-bezier(.2,.8,.2,1), visibility 0s linear .18s; }
 .magnifier.visible { opacity: 1; visibility: visible; transform: scale(1); transition-delay: 0s; }
-.magnifier span { position: absolute; display: block; white-space: normal; overflow-wrap: anywhere; text-align: center; transform-origin: 0 0; }
+.magnifier span { position: absolute; display: block; white-space: pre-wrap; overflow-wrap: anywhere; text-align: center; transform-origin: 0 0; }
 .bottom-panel { padding: 19px 34px 23px; border-top: 1px solid var(--line); }
 .axis-controls, .standard-controls { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 24px; margin-top: 17px; }
 .axis-control span, .standard-controls label > span { display: flex; justify-content: space-between; margin-bottom: 7px; color: var(--muted); font-size: 10px; }
@@ -607,20 +607,23 @@ kbd,
 .detail-tab-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .detail-tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
 .detail-tab-panel.active { display: flex; }
-.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
+.detail-panel .preview-stage { flex: 1; min-width: 0; min-height: 0; height: auto; margin: 0; overflow: hidden; cursor: crosshair; box-shadow: inset 0 0 0 1px rgba(0,0,0,.025); }
 .detail-panel .preview-text {
   max-width: 100%;
   min-width: 0;
   width: 100%;
-  padding: 24px 16px;
+  padding: 24px 0;
   font-size: 28px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   overflow-x: hidden;
   outline: none;
-  cursor: text;
+  cursor: crosshair;
+  user-select: none;
 }
+.detail-panel .preview-stage.is-editing .preview-text { cursor: text; user-select: text; }
 .detail-panel .preview-text:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.detail-panel .preview-stage.is-editing .stage-hint { opacity: 0; }
 .detail-panel .preview-text:empty::before { content: attr(data-placeholder); color: var(--muted); }
 .preview-controls { flex: none; max-height: 46%; min-width: 0; padding-top: 12px; overflow-x: hidden; overflow-y: auto; border-top: 1px solid var(--line); }
 #previewTabPanel { overflow-x: hidden; }

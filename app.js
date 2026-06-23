@@ -128,8 +128,60 @@ function setInfoText(element, value, { title } = {}) {
 }
 
 function syncDetailPreviewStage() {
-  ui.magnifiedText.textContent = ui.previewText.textContent;
+  applyDetailMagnifierStyles();
   localStorage.setItem("detail-preview-text", ui.previewText.textContent);
+}
+
+function isDetailPreviewEditing() {
+  return ui.stage.classList.contains("is-editing");
+}
+
+function setDetailPreviewEditing(editing) {
+  ui.stage.classList.toggle("is-editing", editing);
+  ui.previewText.contentEditable = editing ? "true" : "false";
+  if (!editing) hideMagnifier(ui.magnifier);
+}
+
+function applyDetailMagnifierStyles() {
+  const textStyle = getComputedStyle(ui.previewText);
+  ui.magnifiedText.textContent = ui.previewText.textContent;
+  ui.magnifiedText.style.fontFamily = textStyle.fontFamily;
+  ui.magnifiedText.style.fontSize = textStyle.fontSize;
+  ui.magnifiedText.style.fontWeight = textStyle.fontWeight;
+  ui.magnifiedText.style.fontStyle = textStyle.fontStyle;
+  ui.magnifiedText.style.lineHeight = textStyle.lineHeight;
+  ui.magnifiedText.style.letterSpacing = textStyle.letterSpacing;
+  ui.magnifiedText.style.color = textStyle.color;
+  ui.magnifiedText.style.fontVariationSettings = textStyle.fontVariationSettings;
+  ui.magnifiedText.style.whiteSpace = "pre-wrap";
+  ui.magnifiedText.style.textAlign = textStyle.textAlign;
+}
+
+function updateDetailMagnifier(event) {
+  if (!state.magnifier || !state.previewed || isDetailPreviewEditing()) {
+    hideMagnifier(ui.magnifier);
+    return;
+  }
+  const rect = ui.stage.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const lens = 190;
+  const zoom = 2.5;
+  const lensLeft = Math.min(rect.width - lens / 2, Math.max(lens / 2, x)) - lens / 2;
+  const lensTop = Math.min(rect.height - lens / 2, Math.max(lens / 2, y)) - lens / 2;
+  applyDetailMagnifierStyles();
+  showMagnifier(ui.magnifier);
+  ui.magnifier.style.left = `${lensLeft}px`;
+  ui.magnifier.style.top = `${lensTop}px`;
+  const textRect = ui.previewText.getBoundingClientRect();
+  const textStyle = getComputedStyle(ui.previewText);
+  ui.magnifiedText.style.left = `${lens / 2 - (event.clientX - textRect.left) * zoom}px`;
+  ui.magnifiedText.style.top = `${lens / 2 - (event.clientY - textRect.top) * zoom}px`;
+  ui.magnifiedText.style.transform = `scale(${zoom})`;
+  ui.magnifiedText.style.width = `${textRect.width}px`;
+  ui.magnifiedText.style.height = `${textRect.height}px`;
+  ui.magnifiedText.style.padding = textStyle.padding;
+  ui.magnifiedText.style.boxSizing = "border-box";
 }
 
 function toast(message) {
@@ -141,10 +193,9 @@ function toast(message) {
 
 function showMagnifier(element) {
   clearTimeout(element.hideTimer);
-  if (element.classList.contains("visible")) return;
   element.hidden = false;
   element.style.display = "block";
-  requestAnimationFrame(() => element.classList.add("visible"));
+  if (!element.classList.contains("visible")) requestAnimationFrame(() => element.classList.add("visible"));
 }
 
 function hideMagnifier(element) {
@@ -824,6 +875,7 @@ function previewFont(font, temporary = true) {
   ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
   updateFontStatus(font);
   ui.magnifiedText.textContent = ui.previewText.textContent;
+  applyDetailMagnifierStyles();
   ui.axisStatus.textContent = font.axes ? `${font.axes.length} 个可变轴` : (temporary ? "悬停预览" : "正在检测可变轴…");
   ui.axes.replaceChildren();
   if (font.axes) renderAxes(font.axes);
@@ -1411,6 +1463,37 @@ function updateVisualSettings() {
   ui.magnifier.style.backgroundColor = ui.bg.value;
 }
 
+function adjustRangeInput(input, direction) {
+  if (!input || input.disabled || input.type !== "range") return false;
+  const step = Number(input.step) || 1;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const next = Math.max(min, Math.min(max, Number(input.value) + direction * step));
+  if (next === Number(input.value)) return false;
+  input.value = String(next);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+
+function handlePreviewControlWheel(event) {
+  const label = event.target.closest("label, .axis-control");
+  const range = label?.querySelector('input[type="range"]');
+  if (!range) return;
+  event.preventDefault();
+  event.stopPropagation();
+  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+}
+
+function handlePreviewStageWheel(event) {
+  if (isDetailPreviewEditing() || !state.previewed) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const direction = event.deltaY < 0 ? 1 : -1;
+  if (event.shiftKey) adjustRangeInput(ui.spacing, direction);
+  else if (event.altKey) adjustRangeInput(ui.lineHeight, direction);
+  else adjustRangeInput(ui.size, direction);
+}
+
 function toggleFavorite() {
   const font = state.selected || state.previewed;
   if (!font) return;
@@ -1802,7 +1885,25 @@ ui.previewInput.addEventListener("input", () => {
 });
 ui.cardSampleSize.addEventListener("input", applyCardSampleSize);
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
-ui.previewText.addEventListener("blur", syncDetailPreviewStage);
+ui.previewText.addEventListener("dblclick", () => {
+  setDetailPreviewEditing(true);
+  ui.previewText.focus();
+});
+ui.previewText.addEventListener("mousedown", event => {
+  if (!isDetailPreviewEditing()) event.preventDefault();
+});
+ui.previewText.addEventListener("focus", () => {
+  setDetailPreviewEditing(true);
+  hideMagnifier(ui.magnifier);
+});
+ui.previewText.addEventListener("blur", () => {
+  setDetailPreviewEditing(false);
+  syncDetailPreviewStage();
+});
+ui.stage.addEventListener("mousemove", updateDetailMagnifier);
+ui.stage.addEventListener("mouseleave", () => hideMagnifier(ui.magnifier));
+ui.stage.addEventListener("wheel", handlePreviewStageWheel, { passive: false });
+$(".preview-controls")?.addEventListener("wheel", handlePreviewControlWheel, { passive: false });
 [ui.size, ui.spacing, ui.lineHeight, ui.bg, ui.color].forEach(input => input.addEventListener("input", updateVisualSettings));
 ui.favorite.addEventListener("click", toggleFavorite);
 ui.categoryButton.addEventListener("click", () => {
@@ -2033,26 +2134,6 @@ resizeHandle.addEventListener("pointerup", event => {
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); ui.search.focus(); }
 });
-ui.stage.addEventListener("mousemove", event => {
-  if (!state.magnifier) return;
-  const rect = ui.stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
-  const lens = 190, zoom = 2.5;
-  const lensLeft = Math.min(rect.width-lens/2, Math.max(lens/2, x)) - lens/2;
-  const lensTop = Math.min(rect.height-lens/2, Math.max(lens/2, y)) - lens/2;
-  showMagnifier(ui.magnifier);
-  ui.magnifier.style.left = `${lensLeft}px`;
-  ui.magnifier.style.top = `${lensTop}px`;
-  const textRect = ui.previewText.getBoundingClientRect();
-  const textStyle = getComputedStyle(ui.previewText);
-  ui.magnifiedText.style.left = `${lens/2 - (event.clientX - textRect.left) * zoom}px`;
-  ui.magnifiedText.style.top = `${lens/2 - (event.clientY - textRect.top) * zoom}px`;
-  ui.magnifiedText.style.transform = `scale(${zoom})`;
-  ui.magnifiedText.style.width = `${textRect.width}px`;
-  ui.magnifiedText.style.height = `${textRect.height}px`;
-  ui.magnifiedText.style.padding = textStyle.padding;
-  ui.magnifiedText.style.boxSizing = "border-box";
-});
-ui.stage.addEventListener("mouseleave", () => hideMagnifier(ui.magnifier));
 ui.list.addEventListener("pointermove", event => {
   const card = event.target.closest(".font-card");
   if (!card) {
