@@ -107,17 +107,48 @@ body.workspace-active .header-preview { display: flex; align-items: flex-start; 
 body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input { flex: 1; min-width: 0; background: var(--panel); }
 .header-preview-input-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
+  position: relative;
   flex: 1;
   min-width: 0;
 }
+.header-preview-input {
+  position: relative;
+  padding-right: 28px;
+}
+.preview-input-history-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 4px 4px 0;
+  color: var(--muted);
+  background: transparent;
+  transition: color .12s ease, background .12s ease;
+}
+.preview-input-history-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+.preview-input-history-toggle:hover,
+.header-preview-input:hover .preview-input-history-toggle {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+}
 .preview-input-history {
-  position: static;
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   width: 100%;
-  max-height: 120px;
+  max-height: 160px;
   overflow: auto;
   padding: 4px;
   border: 1px solid var(--line);
@@ -144,9 +175,16 @@ body:not(.workspace-active) .topbar { display: none; }
 .preview-history-item:hover { color: var(--accent); background: var(--paper); }
 .toolbar-meta {
   flex: none;
+  align-items: center;
   gap: 8px;
   justify-self: start;
   grid-column: 1;
+}
+.toolbar-meta .eyebrow,
+.toolbar-meta strong {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 .toolbar-meta .eyebrow {
   color: var(--ink);
@@ -168,6 +206,7 @@ body:not(.workspace-active) .topbar { display: none; }
   font-weight: 700;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
+  margin-right: 4px;
 }
 .toolbar-icon-button {
   width: var(--toolbar-control-height);
@@ -177,10 +216,11 @@ body:not(.workspace-active) .topbar { display: none; }
   padding: 0;
   cursor: pointer;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--muted);
   background: var(--paper);
   flex: none;
+  box-sizing: border-box;
 }
 .toolbar-icon-button svg {
   width: 15px;
@@ -368,7 +408,7 @@ body:not(.workspace-active) .topbar { display: none; }
 .welcome .eyebrow { margin-bottom: 2px; letter-spacing: .2em; }
 .welcome h1 {
   margin: 8px 0 18px;
-  font-size: clamp(56px, 7.6vw, 108px);
+  font-size: clamp(48px, 6.6vw, 92px);
   font-weight: 700;
   line-height: 1.06;
   letter-spacing: -.03em;
@@ -379,7 +419,7 @@ body:not(.workspace-active) .topbar { display: none; }
   color: var(--accent);
   font-style: normal;
   font-weight: 400;
-  font-size: clamp(30px, 4vw, 52px);
+  font-size: clamp(26px, 3.4vw, 44px);
   line-height: 1.12;
   letter-spacing: -.01em;
 }
@@ -443,6 +483,18 @@ body:not(.workspace-active) .topbar { display: none; }
   color: var(--muted);
   font-size: 12px;
   opacity: .88;
+}
+.welcome-footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-bottom: 4px;
+}
+.welcome-footer .icon-button {
+  flex: none;
 }
 .eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .workspace { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
@@ -625,7 +677,6 @@ kbd,
   align-items: center;
   gap: 10px;
   padding: 2px 0 8px;
-  border-bottom: 1px solid var(--line);
   overflow: visible;
   container-type: inline-size;
   container-name: card-toolbar;
@@ -745,10 +796,13 @@ kbd,
 }
 .filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
 .filter-menu-icon summary {
-  width: 26px;
+  width: var(--toolbar-control-height);
+  height: var(--toolbar-control-height);
   padding: 0;
   justify-content: center;
   color: var(--muted);
+  box-sizing: border-box;
+  border-radius: 4px;
 }
 .filter-menu-icon summary::after { display: none; }
 .filter-menu-icon summary svg {
@@ -838,6 +892,7 @@ kbd,
   height: var(--toolbar-control-height);
   cursor: pointer;
   border: 1px solid var(--line);
+  border-radius: 4px;
   color: var(--muted);
   background: var(--paper);
   font-size: 14px;
@@ -873,6 +928,7 @@ kbd,
   font-size: 9px;
   flex: 0 1 auto;
   min-width: 0;
+  cursor: default;
 }
 .grid-layout-control input,
 .columns-control input {
@@ -1502,13 +1558,15 @@ kbd,
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 3px 0 0 3px;
+  border-radius: 4px 0 0 4px;
   border-right: 0;
   color: var(--ink);
   background: var(--paper);
+  box-sizing: border-box;
 }
 .card-preview-style-button svg { width: 16px; height: 16px; }
 .card-preview-style-button:hover,
+.card-preview-style-menu:hover .card-preview-style-button,
 .card-preview-style-menu:has(.card-preview-style-preset-dropdown[open]) .card-preview-style-button {
   color: white;
   border-color: var(--accent);
@@ -1521,15 +1579,18 @@ kbd,
 }
 .card-preview-style-preset-dropdown summary {
   width: 18px;
+  min-width: 18px;
   height: var(--toolbar-control-height);
   padding: 0;
   justify-content: center;
+  border: 1px solid var(--line);
   border-left: 0;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 4px 4px 0;
+  box-sizing: border-box;
 }
 .card-preview-style-preset-dropdown summary svg {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   display: block;
   fill: none;
   stroke: currentColor;
@@ -1537,6 +1598,14 @@ kbd,
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary,
+.card-preview-style-preset-dropdown[open] summary {
+  color: white;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary svg,
+.card-preview-style-preset-dropdown[open] summary svg { stroke: white; }
 .card-preview-style-preset-dropdown.filter-menu-icon[open] summary {
   color: white;
   border-color: var(--accent);
@@ -1547,17 +1616,17 @@ kbd,
   top: calc(100% + 4px);
   left: 0;
   right: auto;
-  min-width: 240px;
-  max-width: min(320px, 92vw);
-  max-height: min(320px, 48vh);
+  min-width: 300px;
+  max-width: min(380px, 92vw);
+  max-height: min(440px, 58vh);
   overflow: auto;
-  padding: 8px;
+  padding: 10px;
   transform: none;
   transition: none;
 }
 .card-preview-style-preset-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .card-preview-style-preset-option {
@@ -2109,14 +2178,22 @@ kbd,
   gap: 8px;
 }
 .preview-gradient-angle-dial {
+  flex: none;
   width: 44px;
   height: 44px;
-  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1;
+  padding: 3px;
   cursor: grab;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--ink);
   background: var(--paper);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   transition: border-color .12s ease, box-shadow .12s ease;
 }
 .preview-gradient-angle-dial:hover {
@@ -2362,13 +2439,32 @@ body.dark .preview-gradient-stop-handle-arrow {
 .preview-color-mode-field > span,
 .preview-style-radio-field > span,
 .preview-stroke-position-field > span { align-self: center; }
-.preview-color-mode-group,
+.preview-color-mode-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
 .preview-style-radio-group {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.preview-color-mode-btn,
+.preview-color-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1;
+}
+.preview-color-mode-option input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 .preview-style-radio-btn {
   height: 30px;
   padding: 0 12px;
@@ -2381,12 +2477,10 @@ body.dark .preview-gradient-stop-handle-arrow {
   line-height: 1;
   transition: color .12s ease, border-color .12s ease, background .12s ease;
 }
-.preview-color-mode-btn:hover,
 .preview-style-radio-btn:hover {
   color: var(--ink);
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
 }
-.preview-color-mode-btn.active,
 .preview-style-radio-btn.active {
   color: var(--accent);
   border-color: var(--accent);

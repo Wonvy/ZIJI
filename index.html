@@ -31,7 +31,10 @@
           <div class="header-preview-input-wrap search-control">
             <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
               <span class="preview-control-label">预览文字</span>
-              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击恢复默认预览文字" />
+              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击清空预览文字" />
+              <button id="previewInputHistoryToggle" class="preview-input-history-toggle" type="button" tabindex="-1" aria-label="最近预览文字" aria-expanded="false" aria-controls="previewInputHistory" title="悬停查看最近输入">
+                <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
             </label>
             <div id="previewInputHistory" class="preview-input-history" hidden aria-label="预览文字历史"></div>
           </div>
@@ -61,14 +64,16 @@
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
           <div class="welcome-actions">
             <span class="privacy"><i></i> 字体仅在本机处理</span>
-            <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
           </div>
           <div id="loadProgress" class="load-progress" hidden aria-live="polite">
             <div class="progress-track"><i id="progressBar"></i></div>
             <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
         </div>
-        <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+        <div class="welcome-footer">
+          <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
+          <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+        </div>
       </section>
 
       <section id="workspace" class="workspace" hidden>
@@ -140,10 +145,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
                   </button>
                   <details class="filter-menu filter-menu-icon card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                    <summary aria-label="切换预览样式方案" title="切换预览样式方案">
+                    <summary aria-label="切换预览样式" title="切换预览样式">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
                     </summary>
-                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式方案"></div>
+                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                   </details>
                 </div>
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
@@ -304,20 +309,20 @@
         <h3 id="cardPreviewStyleTitle">预览样式</h3>
         <button id="cardPreviewStyleClose" class="icon-button" type="button" aria-label="关闭">×</button>
       </div>
+      <div class="preview-style-preview-top">
+        <label class="preview-style-font-field" data-preview-status-hint="切换预览字体">
+          <span class="preview-style-field-label">预览字体</span>
+          <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
+        </label>
+        <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
+          <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
+        </div>
+      </div>
       <div class="preview-style-tabs" role="tablist" aria-label="预览样式面板">
         <button id="cardPreviewStyleEditTab" class="preview-style-tab active" type="button" role="tab" aria-selected="true" aria-controls="cardPreviewStyleEditPanel">编辑样式</button>
-        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">方案管理</button>
+        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">样式管理</button>
       </div>
       <div class="preview-style-body">
-        <div class="preview-style-preview-top">
-          <label class="preview-style-font-field" data-preview-status-hint="切换预览字体">
-            <span class="preview-style-field-label">预览字体</span>
-            <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
-          </label>
-          <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
-            <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
-          </div>
-        </div>
         <div id="cardPreviewStyleEditPanel" class="preview-style-tab-panel" role="tabpanel">
           <div class="preview-style-workspace">
             <aside class="preview-style-sidebar ps-scroll">
@@ -331,20 +336,20 @@
         </div>
         <div id="cardPreviewStyleManagePanel" class="preview-style-tab-panel" role="tabpanel" hidden>
           <div class="preview-style-manage-layout ps-scroll">
-            <div id="cardPreviewStylePresetList" class="preview-style-preset-grid" data-preview-status-hint="悬停预览效果，点击选中方案"></div>
+            <div id="cardPreviewStylePresetList" class="preview-style-preset-grid" data-preview-status-hint="悬停预览效果，点击选中样式"></div>
             <div class="preview-style-manage-actions">
-              <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的方案">编辑此方案</button>
-              <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名方案">重命名</button>
-              <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除方案">删除</button>
+              <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑此样式</button>
+              <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名样式">重命名</button>
+              <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除样式">删除</button>
               <span class="preview-style-preset-divider" aria-hidden="true"></span>
-              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出方案 JSON">导出 JSON</button>
-              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入方案 JSON">导入 JSON</button>
+              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式 JSON">导出 JSON</button>
+              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式 JSON">导入 JSON</button>
               <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
             </div>
           </div>
         </div>
         <div id="cardPreviewStylePresetRenameWrap" class="preview-style-preset-rename" hidden>
-          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="方案名称" />
+          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="样式名称" />
           <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button">确定</button>
           <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button">取消</button>
         </div>
@@ -353,7 +358,7 @@
         <div id="cardPreviewStyleStatusBar" class="preview-style-statusbar" role="status" aria-live="polite"><span class="preview-style-statusbar-text"></span></div>
         <div class="modal-footer preview-style-footer">
           <div class="preview-style-footer-left">
-            <button id="cardPreviewStyleSaveDraft" class="text-button" type="button" data-preview-status-hint="将当前编辑保存为新方案">保存为方案</button>
+            <button id="cardPreviewStyleSaveDraft" class="text-button" type="button" data-preview-status-hint="将当前编辑保存为新样式">保存为样式</button>
           </div>
           <div class="preview-style-footer-right">
             <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>

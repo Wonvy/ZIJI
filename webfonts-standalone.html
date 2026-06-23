@@ -115,17 +115,48 @@ body.workspace-active .header-preview { display: flex; align-items: flex-start; 
 body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input { flex: 1; min-width: 0; background: var(--panel); }
 .header-preview-input-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
+  position: relative;
   flex: 1;
   min-width: 0;
 }
+.header-preview-input {
+  position: relative;
+  padding-right: 28px;
+}
+.preview-input-history-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 4px 4px 0;
+  color: var(--muted);
+  background: transparent;
+  transition: color .12s ease, background .12s ease;
+}
+.preview-input-history-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+.preview-input-history-toggle:hover,
+.header-preview-input:hover .preview-input-history-toggle {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+}
 .preview-input-history {
-  position: static;
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   width: 100%;
-  max-height: 120px;
+  max-height: 160px;
   overflow: auto;
   padding: 4px;
   border: 1px solid var(--line);
@@ -152,9 +183,16 @@ body:not(.workspace-active) .topbar { display: none; }
 .preview-history-item:hover { color: var(--accent); background: var(--paper); }
 .toolbar-meta {
   flex: none;
+  align-items: center;
   gap: 8px;
   justify-self: start;
   grid-column: 1;
+}
+.toolbar-meta .eyebrow,
+.toolbar-meta strong {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 .toolbar-meta .eyebrow {
   color: var(--ink);
@@ -176,6 +214,7 @@ body:not(.workspace-active) .topbar { display: none; }
   font-weight: 700;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
+  margin-right: 4px;
 }
 .toolbar-icon-button {
   width: var(--toolbar-control-height);
@@ -185,10 +224,11 @@ body:not(.workspace-active) .topbar { display: none; }
   padding: 0;
   cursor: pointer;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--muted);
   background: var(--paper);
   flex: none;
+  box-sizing: border-box;
 }
 .toolbar-icon-button svg {
   width: 15px;
@@ -376,7 +416,7 @@ body:not(.workspace-active) .topbar { display: none; }
 .welcome .eyebrow { margin-bottom: 2px; letter-spacing: .2em; }
 .welcome h1 {
   margin: 8px 0 18px;
-  font-size: clamp(56px, 7.6vw, 108px);
+  font-size: clamp(48px, 6.6vw, 92px);
   font-weight: 700;
   line-height: 1.06;
   letter-spacing: -.03em;
@@ -387,7 +427,7 @@ body:not(.workspace-active) .topbar { display: none; }
   color: var(--accent);
   font-style: normal;
   font-weight: 400;
-  font-size: clamp(30px, 4vw, 52px);
+  font-size: clamp(26px, 3.4vw, 44px);
   line-height: 1.12;
   letter-spacing: -.01em;
 }
@@ -451,6 +491,18 @@ body:not(.workspace-active) .topbar { display: none; }
   color: var(--muted);
   font-size: 12px;
   opacity: .88;
+}
+.welcome-footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-bottom: 4px;
+}
+.welcome-footer .icon-button {
+  flex: none;
 }
 .eyebrow { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .workspace { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--panel); }
@@ -633,7 +685,6 @@ kbd,
   align-items: center;
   gap: 10px;
   padding: 2px 0 8px;
-  border-bottom: 1px solid var(--line);
   overflow: visible;
   container-type: inline-size;
   container-name: card-toolbar;
@@ -753,10 +804,13 @@ kbd,
 }
 .filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
 .filter-menu-icon summary {
-  width: 26px;
+  width: var(--toolbar-control-height);
+  height: var(--toolbar-control-height);
   padding: 0;
   justify-content: center;
   color: var(--muted);
+  box-sizing: border-box;
+  border-radius: 4px;
 }
 .filter-menu-icon summary::after { display: none; }
 .filter-menu-icon summary svg {
@@ -846,6 +900,7 @@ kbd,
   height: var(--toolbar-control-height);
   cursor: pointer;
   border: 1px solid var(--line);
+  border-radius: 4px;
   color: var(--muted);
   background: var(--paper);
   font-size: 14px;
@@ -881,6 +936,7 @@ kbd,
   font-size: 9px;
   flex: 0 1 auto;
   min-width: 0;
+  cursor: default;
 }
 .grid-layout-control input,
 .columns-control input {
@@ -1510,13 +1566,15 @@ kbd,
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 3px 0 0 3px;
+  border-radius: 4px 0 0 4px;
   border-right: 0;
   color: var(--ink);
   background: var(--paper);
+  box-sizing: border-box;
 }
 .card-preview-style-button svg { width: 16px; height: 16px; }
 .card-preview-style-button:hover,
+.card-preview-style-menu:hover .card-preview-style-button,
 .card-preview-style-menu:has(.card-preview-style-preset-dropdown[open]) .card-preview-style-button {
   color: white;
   border-color: var(--accent);
@@ -1529,15 +1587,18 @@ kbd,
 }
 .card-preview-style-preset-dropdown summary {
   width: 18px;
+  min-width: 18px;
   height: var(--toolbar-control-height);
   padding: 0;
   justify-content: center;
+  border: 1px solid var(--line);
   border-left: 0;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 4px 4px 0;
+  box-sizing: border-box;
 }
 .card-preview-style-preset-dropdown summary svg {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   display: block;
   fill: none;
   stroke: currentColor;
@@ -1545,6 +1606,14 @@ kbd,
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary,
+.card-preview-style-preset-dropdown[open] summary {
+  color: white;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary svg,
+.card-preview-style-preset-dropdown[open] summary svg { stroke: white; }
 .card-preview-style-preset-dropdown.filter-menu-icon[open] summary {
   color: white;
   border-color: var(--accent);
@@ -1555,17 +1624,17 @@ kbd,
   top: calc(100% + 4px);
   left: 0;
   right: auto;
-  min-width: 240px;
-  max-width: min(320px, 92vw);
-  max-height: min(320px, 48vh);
+  min-width: 300px;
+  max-width: min(380px, 92vw);
+  max-height: min(440px, 58vh);
   overflow: auto;
-  padding: 8px;
+  padding: 10px;
   transform: none;
   transition: none;
 }
 .card-preview-style-preset-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .card-preview-style-preset-option {
@@ -2117,14 +2186,22 @@ kbd,
   gap: 8px;
 }
 .preview-gradient-angle-dial {
+  flex: none;
   width: 44px;
   height: 44px;
-  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1;
+  padding: 3px;
   cursor: grab;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--ink);
   background: var(--paper);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   transition: border-color .12s ease, box-shadow .12s ease;
 }
 .preview-gradient-angle-dial:hover {
@@ -2370,13 +2447,32 @@ body.dark .preview-gradient-stop-handle-arrow {
 .preview-color-mode-field > span,
 .preview-style-radio-field > span,
 .preview-stroke-position-field > span { align-self: center; }
-.preview-color-mode-group,
+.preview-color-mode-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
 .preview-style-radio-group {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.preview-color-mode-btn,
+.preview-color-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1;
+}
+.preview-color-mode-option input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 .preview-style-radio-btn {
   height: 30px;
   padding: 0 12px;
@@ -2389,12 +2485,10 @@ body.dark .preview-gradient-stop-handle-arrow {
   line-height: 1;
   transition: color .12s ease, border-color .12s ease, background .12s ease;
 }
-.preview-color-mode-btn:hover,
 .preview-style-radio-btn:hover {
   color: var(--ink);
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
 }
-.preview-color-mode-btn.active,
 .preview-style-radio-btn.active {
   color: var(--accent);
   border-color: var(--accent);
@@ -2789,7 +2883,10 @@ body.dark .preview-style-stage { background: #1a1917; }
           <div class="header-preview-input-wrap search-control">
             <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
               <span class="preview-control-label">预览文字</span>
-              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击恢复默认预览文字" />
+              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击清空预览文字" />
+              <button id="previewInputHistoryToggle" class="preview-input-history-toggle" type="button" tabindex="-1" aria-label="最近预览文字" aria-expanded="false" aria-controls="previewInputHistory" title="悬停查看最近输入">
+                <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
             </label>
             <div id="previewInputHistory" class="preview-input-history" hidden aria-label="预览文字历史"></div>
           </div>
@@ -2819,14 +2916,16 @@ body.dark .preview-style-stage { background: #1a1917; }
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
           <div class="welcome-actions">
             <span class="privacy"><i></i> 字体仅在本机处理</span>
-            <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
           </div>
           <div id="loadProgress" class="load-progress" hidden aria-live="polite">
             <div class="progress-track"><i id="progressBar"></i></div>
             <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
         </div>
-        <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+        <div class="welcome-footer">
+          <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
+          <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+        </div>
       </section>
 
       <section id="workspace" class="workspace" hidden>
@@ -2898,10 +2997,10 @@ body.dark .preview-style-stage { background: #1a1917; }
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
                   </button>
                   <details class="filter-menu filter-menu-icon card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                    <summary aria-label="切换预览样式方案" title="切换预览样式方案">
+                    <summary aria-label="切换预览样式" title="切换预览样式">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
                     </summary>
-                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式方案"></div>
+                    <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                   </details>
                 </div>
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
@@ -3062,20 +3161,20 @@ body.dark .preview-style-stage { background: #1a1917; }
         <h3 id="cardPreviewStyleTitle">预览样式</h3>
         <button id="cardPreviewStyleClose" class="icon-button" type="button" aria-label="关闭">×</button>
       </div>
+      <div class="preview-style-preview-top">
+        <label class="preview-style-font-field" data-preview-status-hint="切换预览字体">
+          <span class="preview-style-field-label">预览字体</span>
+          <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
+        </label>
+        <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
+          <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
+        </div>
+      </div>
       <div class="preview-style-tabs" role="tablist" aria-label="预览样式面板">
         <button id="cardPreviewStyleEditTab" class="preview-style-tab active" type="button" role="tab" aria-selected="true" aria-controls="cardPreviewStyleEditPanel">编辑样式</button>
-        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">方案管理</button>
+        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">样式管理</button>
       </div>
       <div class="preview-style-body">
-        <div class="preview-style-preview-top">
-          <label class="preview-style-font-field" data-preview-status-hint="切换预览字体">
-            <span class="preview-style-field-label">预览字体</span>
-            <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
-          </label>
-          <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
-            <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
-          </div>
-        </div>
         <div id="cardPreviewStyleEditPanel" class="preview-style-tab-panel" role="tabpanel">
           <div class="preview-style-workspace">
             <aside class="preview-style-sidebar ps-scroll">
@@ -3089,20 +3188,20 @@ body.dark .preview-style-stage { background: #1a1917; }
         </div>
         <div id="cardPreviewStyleManagePanel" class="preview-style-tab-panel" role="tabpanel" hidden>
           <div class="preview-style-manage-layout ps-scroll">
-            <div id="cardPreviewStylePresetList" class="preview-style-preset-grid" data-preview-status-hint="悬停预览效果，点击选中方案"></div>
+            <div id="cardPreviewStylePresetList" class="preview-style-preset-grid" data-preview-status-hint="悬停预览效果，点击选中样式"></div>
             <div class="preview-style-manage-actions">
-              <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的方案">编辑此方案</button>
-              <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名方案">重命名</button>
-              <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除方案">删除</button>
+              <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑此样式</button>
+              <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名样式">重命名</button>
+              <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除样式">删除</button>
               <span class="preview-style-preset-divider" aria-hidden="true"></span>
-              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出方案 JSON">导出 JSON</button>
-              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入方案 JSON">导入 JSON</button>
+              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式 JSON">导出 JSON</button>
+              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式 JSON">导入 JSON</button>
               <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
             </div>
           </div>
         </div>
         <div id="cardPreviewStylePresetRenameWrap" class="preview-style-preset-rename" hidden>
-          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="方案名称" />
+          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="样式名称" />
           <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button">确定</button>
           <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button">取消</button>
         </div>
@@ -3111,7 +3210,7 @@ body.dark .preview-style-stage { background: #1a1917; }
         <div id="cardPreviewStyleStatusBar" class="preview-style-statusbar" role="status" aria-live="polite"><span class="preview-style-statusbar-text"></span></div>
         <div class="modal-footer preview-style-footer">
           <div class="preview-style-footer-left">
-            <button id="cardPreviewStyleSaveDraft" class="text-button" type="button" data-preview-status-hint="将当前编辑保存为新方案">保存为方案</button>
+            <button id="cardPreviewStyleSaveDraft" class="text-button" type="button" data-preview-status-hint="将当前编辑保存为新样式">保存为样式</button>
           </div>
           <div class="preview-style-footer-right">
             <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>
@@ -4632,13 +4731,13 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   strokePosition: "选择轮廓相对文字的位置",
   previewFont: "切换预览字体",
   previewStage: "实时预览当前样式效果",
-  managePreset: "悬停预览效果，点击选中方案",
-  manageEdit: "编辑当前选中的方案",
-  manageRename: "重命名方案",
-  manageDelete: "删除方案",
-  manageExport: "导出方案 JSON",
-  manageImport: "导入方案 JSON",
-  saveDraft: "将当前编辑保存为新方案",
+  managePreset: "悬停预览效果，点击选中样式",
+  manageEdit: "编辑当前选中的样式",
+  manageRename: "重命名样式",
+  manageDelete: "删除样式",
+  manageExport: "导出样式 JSON",
+  manageImport: "导入样式 JSON",
+  saveDraft: "将当前编辑保存为新样式",
   confirm: "应用样式到全部卡片",
   cancel: "放弃更改并关闭"
 };
@@ -5119,8 +5218,8 @@ function cardPreviewStylesEqual(a, b) {
   return JSON.stringify(normalizeCardPreviewStyle(a)) === JSON.stringify(normalizeCardPreviewStyle(b));
 }
 
-function uniqueCardPreviewStylePresetName(base = "未命名方案", excludeId = null) {
-  const trimmed = base.trim().slice(0, 48) || "未命名方案";
+function uniqueCardPreviewStylePresetName(base = "未命名样式", excludeId = null) {
+  const trimmed = base.trim().slice(0, 48) || "未命名样式";
   const exists = name => state.cardPreviewStylePresets.some(item => item.name === name && item.id !== excludeId);
   if (!exists(trimmed)) return trimmed;
   let index = 2;
@@ -5534,11 +5633,12 @@ function renderStyleSelectField(field, value, attrs = "") {
 
 function renderColorModeField(value, fieldAttr, fieldKey) {
   const current = value === "gradient" ? "gradient" : "solid";
-  const buttons = COLOR_MODE_OPTIONS.map(option => {
-    const active = option.value === current ? " active" : "";
-    return `<button type="button" class="preview-color-mode-btn${active}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}" aria-pressed="${option.value === current ? "true" : "false"}">${escapeHtml(option.label)}</button>`;
+  const groupName = fieldAttr === "data-fill-field" ? "preview-fill-color-mode" : "preview-layer-color-mode";
+  const options = COLOR_MODE_OPTIONS.map(option => {
+    const checked = option.value === current ? " checked" : "";
+    return `<label class="preview-color-mode-option"><input type="radio" name="${groupName}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}"${checked} /><span>${escapeHtml(option.label)}</span></label>`;
   }).join("");
-  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="group" aria-label="颜色类型">${buttons}</div></div>`;
+  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="radiogroup" aria-label="颜色类型">${options}</div></div>`;
 }
 
 function applyPreviewColorModeChange(trigger) {
@@ -6232,7 +6332,7 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   }
   const preset = findCardPreviewStylePreset(presetId);
   if (!preset) {
-    if (showToast) toast("方案不存在");
+    if (showToast) toast("样式不存在");
     return false;
   }
   state.cardPreviewStyle = hasActiveCardPreviewStyle(preset.style)
@@ -6319,19 +6419,44 @@ function renderCardPreviewStyleQuickMenu() {
     renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
   html += `</div><span class="popover-divider"></span>
-    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理方案…</button>`;
+    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式…</button>`;
   menu.innerHTML = html;
   applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
 }
 
+function handleGridLayoutControlWheel(event) {
+  const label = event.target.closest(".grid-layout-control");
+  const range = label?.querySelector('input[type="range"]');
+  if (!range || range.disabled) return;
+  event.preventDefault();
+  event.stopPropagation();
+  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+}
+
 function wireCardPreviewStyleQuickMenu() {
+  const menuWrap = $(".card-preview-style-menu");
   const dropdown = $("#cardPreviewStylePresetDropdown");
   const menu = $("#cardPreviewStylePresetMenu");
-  if (!dropdown || !menu) return;
+  if (!menuWrap || !dropdown || !menu) return;
   renderCardPreviewStyleQuickMenu();
-  dropdown.addEventListener("toggle", () => {
-    if (dropdown.open) applyQuickPresetMenuStyles();
+  let closeTimer = null;
+  const openMenu = () => {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    dropdown.setAttribute("open", "");
+    applyQuickPresetMenuStyles();
+  };
+  const scheduleClose = () => {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => dropdown.removeAttribute("open"), 140);
+  };
+  menuWrap.addEventListener("mouseenter", openMenu);
+  menuWrap.addEventListener("mouseleave", scheduleClose);
+  menu.addEventListener("mouseenter", openMenu);
+  menu.addEventListener("mouseleave", scheduleClose);
+  dropdown.querySelector("summary")?.addEventListener("click", event => {
+    event.preventDefault();
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
@@ -6368,7 +6493,7 @@ function showCardPreviewStylePresetEditor(mode, initialValue = "") {
   if (!wrap || !input) return;
   wrap.hidden = false;
   input.value = initialValue;
-  input.placeholder = mode === "rename" ? "输入新名称" : "输入方案名称";
+  input.placeholder = mode === "rename" ? "输入新名称" : "输入样式名称";
   input.focus();
   input.select();
 }
@@ -6381,7 +6506,7 @@ function applyCardPreviewStylePresetEditor() {
       ? cardPreviewStyleManagePresetId
       : cardPreviewStyleDraftPresetId;
     if (!name || !presetId) {
-      toast("请输入方案名称");
+      toast("请输入样式名称");
       return;
     }
     renameCardPreviewStylePreset(presetId, name);
@@ -6389,11 +6514,11 @@ function applyCardPreviewStylePresetEditor() {
     hideCardPreviewStylePresetEditor();
     if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
-    toast("已重命名方案");
+    toast("已重命名样式");
     return;
   }
   if (!name || !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
-    toast("请输入方案名称");
+    toast("请输入样式名称");
     return;
   }
   const preset = createCardPreviewStylePreset(name, cardPreviewStyleDraft);
@@ -6403,7 +6528,7 @@ function applyCardPreviewStylePresetEditor() {
   hideCardPreviewStylePresetEditor();
   if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
   renderCardPreviewStyleQuickMenu();
-  toast(`已保存方案「${preset.name}」`);
+  toast(`已保存样式「${preset.name}」`);
 }
 
 function saveCardPreviewStylePresetDraft() {
@@ -6414,7 +6539,7 @@ function saveCardPreviewStylePresetDraft() {
   if (cardPreviewStyleDraftPresetId) {
     const preset = updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
     if (!preset) {
-      toast("方案不存在");
+      toast("样式不存在");
       return;
     }
     cardPreviewStyleManagePresetId = preset.id;
@@ -6423,7 +6548,7 @@ function saveCardPreviewStylePresetDraft() {
     toast(`已更新「${preset.name}」`);
     return;
   }
-  showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名方案"));
+  showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名样式"));
 }
 
 function loadCardPreviewStylePresetDraft(presetId) {
@@ -6456,7 +6581,7 @@ function exportCardPreviewStylePresets() {
   link.download = `card-preview-styles-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast(`已导出 ${state.cardPreviewStylePresets.length} 个方案`);
+  toast(`已导出 ${state.cardPreviewStylePresets.length} 个样式`);
 }
 
 async function importCardPreviewStylePresets(file) {
@@ -6471,11 +6596,11 @@ async function importCardPreviewStylePresets(file) {
       createCardPreviewStylePreset(item.name, item.style);
       imported += 1;
     });
-    if (!imported) throw new Error("没有有效的样式方案");
+    if (!imported) throw new Error("没有有效的样式");
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
-    toast(`已导入 ${imported} 个方案`);
+    toast(`已导入 ${imported} 个样式`);
   } catch (error) {
     toast(error.message || "导入失败");
   }
@@ -6539,7 +6664,7 @@ function closeCardPreviewStyleModal(apply = false) {
       applyCardPreviewStyleToAllCards();
       persistUiSettings();
       if (state.activeCardPreviewStylePresetId) {
-        toast(`已应用「${findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)?.name || "方案"}」`);
+        toast(`已应用「${findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)?.name || "样式"}」`);
       } else {
         toast(state.cardPreviewStyle ? "已应用卡片预览样式" : "已恢复默认预览");
       }
@@ -6623,14 +6748,14 @@ function wireCardPreviewStyleModal() {
     if (!cardPreviewStyleManagePresetId) return;
     const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
     if (!preset) return;
-    if (!window.confirm(`删除方案「${preset.name}」？`)) return;
+    if (!window.confirm(`删除样式「${preset.name}」？`)) return;
     deleteCardPreviewStylePreset(cardPreviewStyleManagePresetId);
     cardPreviewStyleManagePresetId = "";
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
     renderCardPreviewStyleModalPreview();
-    toast("已删除方案");
+    toast("已删除样式");
   });
   $("#cardPreviewStylePresetRenameConfirm")?.addEventListener("click", applyCardPreviewStylePresetEditor);
   $("#cardPreviewStylePresetRenameCancel")?.addEventListener("click", hideCardPreviewStylePresetEditor);
@@ -6731,14 +6856,12 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleParams")?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft) return;
     applyGradientStopFieldChange(event.target);
+    if (event.target.matches('input[type="radio"][data-mode-value]')) {
+      applyPreviewColorModeChange(event.target);
+    }
   });
   $("#cardPreviewStyleParams")?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
-    const colorModeBtn = event.target.closest(".preview-color-mode-btn");
-    if (colorModeBtn) {
-      applyPreviewColorModeChange(colorModeBtn);
-      return;
-    }
     const radioBtn = event.target.closest(".preview-style-radio-btn");
     if (radioBtn?.dataset.layerField && radioBtn.dataset.radioValue) {
       const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
@@ -7413,7 +7536,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length}</span> / ${state.filtered.length} 款`;
+  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length ? start + pageFonts.length : start}</span> / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -8331,7 +8454,7 @@ function updatePreview() {
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
-  if ($("#cardPreviewStylePresetDropdown")?.open) applyQuickPresetMenuStyles();
+  if ($("#cardPreviewStylePresetDropdown")?.open || $(".card-preview-style-menu")?.matches(":hover")) applyQuickPresetMenuStyles();
 }
 
 function scheduleLazyCardTextUpdate() {
@@ -8817,6 +8940,24 @@ function renderPreviewInputHistory() {
 
 function hidePreviewInputHistory() {
   if (ui.previewInputHistory) ui.previewInputHistory.hidden = true;
+  $("#previewInputHistoryToggle")?.setAttribute("aria-expanded", "false");
+}
+
+function showPreviewInputHistoryPanel() {
+  renderPreviewInputHistory();
+  if (ui.previewInputHistory?.hidden) return;
+  $("#previewInputHistoryToggle")?.setAttribute("aria-expanded", "true");
+}
+
+let previewInputHistoryCloseTimer = null;
+
+function scheduleHidePreviewInputHistory() {
+  clearTimeout(previewInputHistoryCloseTimer);
+  previewInputHistoryCloseTimer = setTimeout(() => {
+    const toggle = $("#previewInputHistoryToggle");
+    if (toggle?.matches(":hover") || ui.previewInputHistory?.matches(":hover")) return;
+    hidePreviewInputHistory();
+  }, 120);
 }
 
 function setCardPreviewInputValue(text, { save = true, recordHistory = false } = {}) {
@@ -8850,29 +8991,26 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
-ui.previewInput.addEventListener("focus", () => {
-  renderPreviewInputHistory();
-});
 ui.previewInput.addEventListener("blur", () => {
   commitPreviewInputHistory();
-  setTimeout(() => {
-    if (!ui.previewInputHistory?.matches(":hover") && !ui.previewInputHistory?.contains(document.activeElement)) {
-      hidePreviewInputHistory();
-    }
-  }, 120);
 });
 ui.previewInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    commitPreviewInputHistory();
-    hidePreviewInputHistory();
-  }
+  if (event.key === "Enter") commitPreviewInputHistory();
   if (event.key === "Escape") hidePreviewInputHistory();
 });
 ui.previewInput.addEventListener("dblclick", event => {
   event.preventDefault();
-  setCardPreviewInputValue(DEFAULT_CARD_PREVIEW_TEXT, { recordHistory: true });
-  renderPreviewInputHistory();
+  setCardPreviewInputValue("", { recordHistory: false });
+  hidePreviewInputHistory();
 });
+const previewInputHistoryToggle = $("#previewInputHistoryToggle");
+previewInputHistoryToggle?.addEventListener("mouseenter", () => {
+  clearTimeout(previewInputHistoryCloseTimer);
+  showPreviewInputHistoryPanel();
+});
+previewInputHistoryToggle?.addEventListener("mouseleave", scheduleHidePreviewInputHistory);
+ui.previewInputHistory?.addEventListener("mouseenter", () => clearTimeout(previewInputHistoryCloseTimer));
+ui.previewInputHistory?.addEventListener("mouseleave", scheduleHidePreviewInputHistory);
 ui.previewInputHistory?.addEventListener("mousedown", event => event.preventDefault());
 ui.previewInputHistory?.addEventListener("click", event => {
   const item = event.target.closest(".preview-history-item");
@@ -9001,6 +9139,9 @@ $("#cardRows")?.addEventListener("input", event => {
     renderFontList();
   }
   persistUiSettings();
+});
+document.querySelectorAll(".grid-layout-control").forEach(label => {
+  label.addEventListener("wheel", handleGridLayoutControlWheel, { passive: false });
 });
 document.querySelectorAll("[data-sort]").forEach(input => input.addEventListener("change", () => {
   if (!input.checked) return;

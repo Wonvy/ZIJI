@@ -1507,13 +1507,13 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   strokePosition: "选择轮廓相对文字的位置",
   previewFont: "切换预览字体",
   previewStage: "实时预览当前样式效果",
-  managePreset: "悬停预览效果，点击选中方案",
-  manageEdit: "编辑当前选中的方案",
-  manageRename: "重命名方案",
-  manageDelete: "删除方案",
-  manageExport: "导出方案 JSON",
-  manageImport: "导入方案 JSON",
-  saveDraft: "将当前编辑保存为新方案",
+  managePreset: "悬停预览效果，点击选中样式",
+  manageEdit: "编辑当前选中的样式",
+  manageRename: "重命名样式",
+  manageDelete: "删除样式",
+  manageExport: "导出样式 JSON",
+  manageImport: "导入样式 JSON",
+  saveDraft: "将当前编辑保存为新样式",
   confirm: "应用样式到全部卡片",
   cancel: "放弃更改并关闭"
 };
@@ -1994,8 +1994,8 @@ function cardPreviewStylesEqual(a, b) {
   return JSON.stringify(normalizeCardPreviewStyle(a)) === JSON.stringify(normalizeCardPreviewStyle(b));
 }
 
-function uniqueCardPreviewStylePresetName(base = "未命名方案", excludeId = null) {
-  const trimmed = base.trim().slice(0, 48) || "未命名方案";
+function uniqueCardPreviewStylePresetName(base = "未命名样式", excludeId = null) {
+  const trimmed = base.trim().slice(0, 48) || "未命名样式";
   const exists = name => state.cardPreviewStylePresets.some(item => item.name === name && item.id !== excludeId);
   if (!exists(trimmed)) return trimmed;
   let index = 2;
@@ -2409,11 +2409,12 @@ function renderStyleSelectField(field, value, attrs = "") {
 
 function renderColorModeField(value, fieldAttr, fieldKey) {
   const current = value === "gradient" ? "gradient" : "solid";
-  const buttons = COLOR_MODE_OPTIONS.map(option => {
-    const active = option.value === current ? " active" : "";
-    return `<button type="button" class="preview-color-mode-btn${active}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}" aria-pressed="${option.value === current ? "true" : "false"}">${escapeHtml(option.label)}</button>`;
+  const groupName = fieldAttr === "data-fill-field" ? "preview-fill-color-mode" : "preview-layer-color-mode";
+  const options = COLOR_MODE_OPTIONS.map(option => {
+    const checked = option.value === current ? " checked" : "";
+    return `<label class="preview-color-mode-option"><input type="radio" name="${groupName}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}"${checked} /><span>${escapeHtml(option.label)}</span></label>`;
   }).join("");
-  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="group" aria-label="颜色类型">${buttons}</div></div>`;
+  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="radiogroup" aria-label="颜色类型">${options}</div></div>`;
 }
 
 function applyPreviewColorModeChange(trigger) {
@@ -3107,7 +3108,7 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   }
   const preset = findCardPreviewStylePreset(presetId);
   if (!preset) {
-    if (showToast) toast("方案不存在");
+    if (showToast) toast("样式不存在");
     return false;
   }
   state.cardPreviewStyle = hasActiveCardPreviewStyle(preset.style)
@@ -3194,19 +3195,44 @@ function renderCardPreviewStyleQuickMenu() {
     renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
   html += `</div><span class="popover-divider"></span>
-    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理方案…</button>`;
+    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式…</button>`;
   menu.innerHTML = html;
   applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
 }
 
+function handleGridLayoutControlWheel(event) {
+  const label = event.target.closest(".grid-layout-control");
+  const range = label?.querySelector('input[type="range"]');
+  if (!range || range.disabled) return;
+  event.preventDefault();
+  event.stopPropagation();
+  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+}
+
 function wireCardPreviewStyleQuickMenu() {
+  const menuWrap = $(".card-preview-style-menu");
   const dropdown = $("#cardPreviewStylePresetDropdown");
   const menu = $("#cardPreviewStylePresetMenu");
-  if (!dropdown || !menu) return;
+  if (!menuWrap || !dropdown || !menu) return;
   renderCardPreviewStyleQuickMenu();
-  dropdown.addEventListener("toggle", () => {
-    if (dropdown.open) applyQuickPresetMenuStyles();
+  let closeTimer = null;
+  const openMenu = () => {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    dropdown.setAttribute("open", "");
+    applyQuickPresetMenuStyles();
+  };
+  const scheduleClose = () => {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => dropdown.removeAttribute("open"), 140);
+  };
+  menuWrap.addEventListener("mouseenter", openMenu);
+  menuWrap.addEventListener("mouseleave", scheduleClose);
+  menu.addEventListener("mouseenter", openMenu);
+  menu.addEventListener("mouseleave", scheduleClose);
+  dropdown.querySelector("summary")?.addEventListener("click", event => {
+    event.preventDefault();
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
@@ -3243,7 +3269,7 @@ function showCardPreviewStylePresetEditor(mode, initialValue = "") {
   if (!wrap || !input) return;
   wrap.hidden = false;
   input.value = initialValue;
-  input.placeholder = mode === "rename" ? "输入新名称" : "输入方案名称";
+  input.placeholder = mode === "rename" ? "输入新名称" : "输入样式名称";
   input.focus();
   input.select();
 }
@@ -3256,7 +3282,7 @@ function applyCardPreviewStylePresetEditor() {
       ? cardPreviewStyleManagePresetId
       : cardPreviewStyleDraftPresetId;
     if (!name || !presetId) {
-      toast("请输入方案名称");
+      toast("请输入样式名称");
       return;
     }
     renameCardPreviewStylePreset(presetId, name);
@@ -3264,11 +3290,11 @@ function applyCardPreviewStylePresetEditor() {
     hideCardPreviewStylePresetEditor();
     if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
-    toast("已重命名方案");
+    toast("已重命名样式");
     return;
   }
   if (!name || !cardPreviewStyleDraft || !hasActiveCardPreviewStyle(cardPreviewStyleDraft)) {
-    toast("请输入方案名称");
+    toast("请输入样式名称");
     return;
   }
   const preset = createCardPreviewStylePreset(name, cardPreviewStyleDraft);
@@ -3278,7 +3304,7 @@ function applyCardPreviewStylePresetEditor() {
   hideCardPreviewStylePresetEditor();
   if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
   renderCardPreviewStyleQuickMenu();
-  toast(`已保存方案「${preset.name}」`);
+  toast(`已保存样式「${preset.name}」`);
 }
 
 function saveCardPreviewStylePresetDraft() {
@@ -3289,7 +3315,7 @@ function saveCardPreviewStylePresetDraft() {
   if (cardPreviewStyleDraftPresetId) {
     const preset = updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
     if (!preset) {
-      toast("方案不存在");
+      toast("样式不存在");
       return;
     }
     cardPreviewStyleManagePresetId = preset.id;
@@ -3298,7 +3324,7 @@ function saveCardPreviewStylePresetDraft() {
     toast(`已更新「${preset.name}」`);
     return;
   }
-  showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名方案"));
+  showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名样式"));
 }
 
 function loadCardPreviewStylePresetDraft(presetId) {
@@ -3331,7 +3357,7 @@ function exportCardPreviewStylePresets() {
   link.download = `card-preview-styles-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast(`已导出 ${state.cardPreviewStylePresets.length} 个方案`);
+  toast(`已导出 ${state.cardPreviewStylePresets.length} 个样式`);
 }
 
 async function importCardPreviewStylePresets(file) {
@@ -3346,11 +3372,11 @@ async function importCardPreviewStylePresets(file) {
       createCardPreviewStylePreset(item.name, item.style);
       imported += 1;
     });
-    if (!imported) throw new Error("没有有效的样式方案");
+    if (!imported) throw new Error("没有有效的样式");
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
-    toast(`已导入 ${imported} 个方案`);
+    toast(`已导入 ${imported} 个样式`);
   } catch (error) {
     toast(error.message || "导入失败");
   }
@@ -3414,7 +3440,7 @@ function closeCardPreviewStyleModal(apply = false) {
       applyCardPreviewStyleToAllCards();
       persistUiSettings();
       if (state.activeCardPreviewStylePresetId) {
-        toast(`已应用「${findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)?.name || "方案"}」`);
+        toast(`已应用「${findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)?.name || "样式"}」`);
       } else {
         toast(state.cardPreviewStyle ? "已应用卡片预览样式" : "已恢复默认预览");
       }
@@ -3498,14 +3524,14 @@ function wireCardPreviewStyleModal() {
     if (!cardPreviewStyleManagePresetId) return;
     const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
     if (!preset) return;
-    if (!window.confirm(`删除方案「${preset.name}」？`)) return;
+    if (!window.confirm(`删除样式「${preset.name}」？`)) return;
     deleteCardPreviewStylePreset(cardPreviewStyleManagePresetId);
     cardPreviewStyleManagePresetId = "";
     persistUiSettings();
     renderCardPreviewStyleManagePanel();
     renderCardPreviewStyleQuickMenu();
     renderCardPreviewStyleModalPreview();
-    toast("已删除方案");
+    toast("已删除样式");
   });
   $("#cardPreviewStylePresetRenameConfirm")?.addEventListener("click", applyCardPreviewStylePresetEditor);
   $("#cardPreviewStylePresetRenameCancel")?.addEventListener("click", hideCardPreviewStylePresetEditor);
@@ -3606,14 +3632,12 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleParams")?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft) return;
     applyGradientStopFieldChange(event.target);
+    if (event.target.matches('input[type="radio"][data-mode-value]')) {
+      applyPreviewColorModeChange(event.target);
+    }
   });
   $("#cardPreviewStyleParams")?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
-    const colorModeBtn = event.target.closest(".preview-color-mode-btn");
-    if (colorModeBtn) {
-      applyPreviewColorModeChange(colorModeBtn);
-      return;
-    }
     const radioBtn = event.target.closest(".preview-style-radio-btn");
     if (radioBtn?.dataset.layerField && radioBtn.dataset.radioValue) {
       const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
@@ -4288,7 +4312,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length}</span> / ${state.filtered.length} 款`;
+  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length ? start + pageFonts.length : start}</span> / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -5206,7 +5230,7 @@ function updatePreview() {
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
-  if ($("#cardPreviewStylePresetDropdown")?.open) applyQuickPresetMenuStyles();
+  if ($("#cardPreviewStylePresetDropdown")?.open || $(".card-preview-style-menu")?.matches(":hover")) applyQuickPresetMenuStyles();
 }
 
 function scheduleLazyCardTextUpdate() {
@@ -5692,6 +5716,24 @@ function renderPreviewInputHistory() {
 
 function hidePreviewInputHistory() {
   if (ui.previewInputHistory) ui.previewInputHistory.hidden = true;
+  $("#previewInputHistoryToggle")?.setAttribute("aria-expanded", "false");
+}
+
+function showPreviewInputHistoryPanel() {
+  renderPreviewInputHistory();
+  if (ui.previewInputHistory?.hidden) return;
+  $("#previewInputHistoryToggle")?.setAttribute("aria-expanded", "true");
+}
+
+let previewInputHistoryCloseTimer = null;
+
+function scheduleHidePreviewInputHistory() {
+  clearTimeout(previewInputHistoryCloseTimer);
+  previewInputHistoryCloseTimer = setTimeout(() => {
+    const toggle = $("#previewInputHistoryToggle");
+    if (toggle?.matches(":hover") || ui.previewInputHistory?.matches(":hover")) return;
+    hidePreviewInputHistory();
+  }, 120);
 }
 
 function setCardPreviewInputValue(text, { save = true, recordHistory = false } = {}) {
@@ -5725,29 +5767,26 @@ ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
 });
-ui.previewInput.addEventListener("focus", () => {
-  renderPreviewInputHistory();
-});
 ui.previewInput.addEventListener("blur", () => {
   commitPreviewInputHistory();
-  setTimeout(() => {
-    if (!ui.previewInputHistory?.matches(":hover") && !ui.previewInputHistory?.contains(document.activeElement)) {
-      hidePreviewInputHistory();
-    }
-  }, 120);
 });
 ui.previewInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    commitPreviewInputHistory();
-    hidePreviewInputHistory();
-  }
+  if (event.key === "Enter") commitPreviewInputHistory();
   if (event.key === "Escape") hidePreviewInputHistory();
 });
 ui.previewInput.addEventListener("dblclick", event => {
   event.preventDefault();
-  setCardPreviewInputValue(DEFAULT_CARD_PREVIEW_TEXT, { recordHistory: true });
-  renderPreviewInputHistory();
+  setCardPreviewInputValue("", { recordHistory: false });
+  hidePreviewInputHistory();
 });
+const previewInputHistoryToggle = $("#previewInputHistoryToggle");
+previewInputHistoryToggle?.addEventListener("mouseenter", () => {
+  clearTimeout(previewInputHistoryCloseTimer);
+  showPreviewInputHistoryPanel();
+});
+previewInputHistoryToggle?.addEventListener("mouseleave", scheduleHidePreviewInputHistory);
+ui.previewInputHistory?.addEventListener("mouseenter", () => clearTimeout(previewInputHistoryCloseTimer));
+ui.previewInputHistory?.addEventListener("mouseleave", scheduleHidePreviewInputHistory);
 ui.previewInputHistory?.addEventListener("mousedown", event => event.preventDefault());
 ui.previewInputHistory?.addEventListener("click", event => {
   const item = event.target.closest(".preview-history-item");
@@ -5876,6 +5915,9 @@ $("#cardRows")?.addEventListener("input", event => {
     renderFontList();
   }
   persistUiSettings();
+});
+document.querySelectorAll(".grid-layout-control").forEach(label => {
+  label.addEventListener("wheel", handleGridLayoutControlWheel, { passive: false });
 });
 document.querySelectorAll("[data-sort]").forEach(input => input.addEventListener("change", () => {
   if (!input.checked) return;
