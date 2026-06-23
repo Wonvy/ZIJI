@@ -262,11 +262,11 @@ const PREVIEW_EFFECT_TYPES = {
     fields: [
       { key: "color", type: "color", label: "颜色" },
       { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
-      { key: "offsetX", type: "range", label: "X 偏移", min: -40, max: 40, step: 1 },
-      { key: "offsetY", type: "range", label: "Y 偏移", min: -40, max: 40, step: 1 },
+      { key: "angle", type: "range", label: "角度", min: 0, max: 360, step: 1 },
+      { key: "distance", type: "range", label: "距离", min: 0, max: 80, step: 1 },
       { key: "blur", type: "range", label: "模糊", min: 0, max: 40, step: 1 }
     ],
-    defaults: { color: "#000000", opacity: 35, offsetX: 2, offsetY: 3, blur: 4 }
+    defaults: { color: "#000000", opacity: 35, angle: 56, distance: 4, blur: 4 }
   },
   stroke: {
     label: "轮廓",
@@ -323,6 +323,11 @@ function normalizePreviewLayer(layer) {
       normalized[field.key] = Number.isFinite(Number(layer[field.key])) ? Number(layer[field.key]) : defaults[field.key];
     }
   });
+  if (type === "dropShadow" && !Number.isFinite(Number(layer.angle)) && !Number.isFinite(Number(layer.distance))) {
+    const migrated = shadowAngleDistanceFromOffset(layer.offsetX, layer.offsetY);
+    normalized.angle = migrated.angle;
+    normalized.distance = migrated.distance;
+  }
   if (type === "stroke") {
     normalized.colorMode = layer.colorMode === "gradient" ? "gradient" : "solid";
     normalized.angle = Number.isFinite(Number(layer.angle)) ? Number(layer.angle) : defaults.angle;
@@ -385,6 +390,11 @@ function syncStrokeLayerLegacyColors(layer) {
 
 function ensureDefaultPreviewLayers(layers) {
   const normalized = (Array.isArray(layers) ? layers : []).map(normalizePreviewLayer).filter(Boolean);
+  const seenIds = new Set();
+  normalized.forEach(layer => {
+    if (!layer.id || seenIds.has(layer.id)) layer.id = nextPreviewStyleLayerId();
+    seenIds.add(layer.id);
+  });
   for (const type of PREVIEW_EFFECT_TYPE_ORDER) {
     if (!normalized.some(layer => layer.type === type)) normalized.push(createPreviewStyleLayer(type, false));
   }
@@ -417,6 +427,7 @@ function resolveStyleLayerOrder(style, rawOrder) {
   const layerIds = (style.layers || []).map(layer => layer.id);
   let order = Array.isArray(rawOrder) ? rawOrder.map(String) : [PREVIEW_STYLE_FILL_LAYER_ID, ...layerIds];
   order = order.filter(key => key === PREVIEW_STYLE_FILL_LAYER_ID || layerIds.includes(key));
+  order = [...new Set(order)];
   layerIds.forEach(id => {
     if (!order.includes(id)) order.push(id);
   });
@@ -1586,6 +1597,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   gradientStop: "单击选中色标，双击修改颜色，左右拖动调整位置",
   gradientStopDelete: "松开鼠标删除该色标（至少保留 2 个）",
   gradientAngle: "按住拖拽调整渐变角度",
+  shadowAngle: "按住拖拽调整投影角度",
   gradientColor: "调整当前色标颜色",
   gradientOpacity: "调整当前色标不透明度",
   layerList: "拖动调整图层顺序，列表越靠上越在前，勾选启用或禁用",
@@ -1605,6 +1617,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
 let draggingGradientScope = null;
 let draggingGradientDeleteIntent = false;
 let draggingGradientAngleScope = null;
+let draggingShadowAngleLayerId = null;
 let draggingPreviewStyleLayerId = null;
 
 function createPreviewStyleLayer(type, enabled = false, overrides = {}) {
@@ -1627,6 +1640,17 @@ function duplicatePreviewStyleLayer(layerId) {
   else order.push(copy.id);
   syncStyleLayerOrder(cardPreviewStyleDraft);
   return copy.id;
+}
+
+function removePreviewStyleLayer(layerId) {
+  if (!cardPreviewStyleDraft || !layerId) return false;
+  const index = cardPreviewStyleDraft.layers.findIndex(layer => layer.id === layerId);
+  if (index < 0) return false;
+  cardPreviewStyleDraft.layers.splice(index, 1);
+  cardPreviewStyleDraft.layerOrder = cardPreviewStyleDraft.layerOrder.filter(key => key !== layerId);
+  if (cardPreviewStyleSelectedLayerId === layerId) cardPreviewStyleSelectedLayerId = null;
+  syncStyleLayerOrder(cardPreviewStyleDraft);
+  return true;
 }
 
 function movePreviewStyleLayer(sourceKey, targetKey, before = true) {
@@ -1782,6 +1806,24 @@ function resolveStrokePosition(layer) {
   return "outside";
 }
 
+function shadowAngleDistanceFromOffset(offsetX, offsetY) {
+  const x = Number(offsetX) || 0;
+  const y = Number(offsetY) || 0;
+  const distance = Math.round(Math.sqrt(x * x + y * y));
+  const angle = distance ? (Math.round(Math.atan2(y, x) * 180 / Math.PI + 360) % 360) : PREVIEW_EFFECT_TYPES.dropShadow.defaults.angle;
+  return { angle, distance };
+}
+
+function previewShadowOffset(layer, unitsPerPx = 1) {
+  const distance = scalePreviewStylePx(Number(layer.distance) || 0, unitsPerPx);
+  const angle = Number(layer.angle) || 0;
+  const rad = angle * Math.PI / 180;
+  return {
+    x: Math.cos(rad) * distance,
+    y: Math.sin(rad) * distance
+  };
+}
+
 function strokeOutlineShadows(width, color) {
   return innerStrokeShadows(width, color);
 }
@@ -1831,6 +1873,201 @@ function getEnabledStyleLayerOrder(style) {
 
 function cardPreviewStyleNeedsLayerStack(style) {
   return getEnabledStyleLayerOrder(style).length > 1;
+}
+
+function styleNeedsSvgTextPreview(style) {
+  if (!style) return false;
+  const normalized = normalizeCardPreviewStyle(style);
+  return normalized.layers.some(layer => {
+    if (!layer.enabled) return false;
+    if (layer.type === "dropShadow") return Number(layer.blur) <= 0;
+    return isStrokeLayer(layer);
+  });
+}
+
+const PREVIEW_SVG_NS = "http://www.w3.org/2000/svg";
+
+function createPreviewSvgElement(tag) {
+  return document.createElementNS(PREVIEW_SVG_NS, tag);
+}
+
+function setPreviewSvgAttrs(element, attrs) {
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (value == null || value === "") return;
+    element.setAttribute(key, String(value));
+  });
+}
+
+function appendPreviewSvgLinearGradient(defs, id, stops, angle) {
+  const gradient = createPreviewSvgElement("linearGradient");
+  const angleValue = Number(angle) || 0;
+  const rad = ((angleValue - 90) * Math.PI) / 180;
+  setPreviewSvgAttrs(gradient, {
+    id,
+    gradientUnits: "objectBoundingBox",
+    x1: formatOutlineNumber(0.5 - Math.cos(rad) * 0.5),
+    y1: formatOutlineNumber(0.5 - Math.sin(rad) * 0.5),
+    x2: formatOutlineNumber(0.5 + Math.cos(rad) * 0.5),
+    y2: formatOutlineNumber(0.5 + Math.sin(rad) * 0.5)
+  });
+  normalizeGradientStops(stops).forEach(stop => {
+    const stopEl = createPreviewSvgElement("stop");
+    setPreviewSvgAttrs(stopEl, {
+      offset: `${formatOutlineNumber(stop.offset)}%`,
+      "stop-color": stop.color,
+      "stop-opacity": formatOutlineNumber(stop.opacity / 100)
+    });
+    gradient.appendChild(stopEl);
+  });
+  defs.appendChild(gradient);
+}
+
+function previewSvgFillValue(fill, defs) {
+  if (fill.enabled === false) return "none";
+  if (fill.mode === "gradient") {
+    const id = "preview-svg-fill-gradient";
+    appendPreviewSvgLinearGradient(defs, id, fill.stops, fill.angle);
+    return `url(#${id})`;
+  }
+  return hexWithOpacity(fill.color, fill.opacity);
+}
+
+function previewSvgStrokeValue(layer, defs, suffix) {
+  if (layer.colorMode === "gradient") {
+    const id = `preview-svg-stroke-gradient-${suffix}`;
+    appendPreviewSvgLinearGradient(defs, id, layer.stops, layer.angle);
+    return `url(#${id})`;
+  }
+  return hexWithOpacity(layer.color, layer.opacity);
+}
+
+function createPreviewSvgUse(sourceId) {
+  const use = createPreviewSvgElement("use");
+  use.setAttribute("href", `#${sourceId}`);
+  use.setAttribute("stroke-linejoin", "round");
+  use.setAttribute("stroke-linecap", "round");
+  return use;
+}
+
+function previewSvgStrokePaintWidth(layer, unitsPerPx = 1) {
+  const position = resolveStrokePosition(layer);
+  return scalePreviewStylePx(Number(layer.width) || 1, unitsPerPx) * (position === "center" ? 1 : 2);
+}
+
+function buildPreviewSvgTextStack(root, host, style) {
+  const normalized = normalizeCardPreviewStyle(style);
+  const text = root.dataset.previewText || "";
+  const sizeEl = root.querySelector(".preview-style-svg-size");
+  const computed = getComputedStyle(host || root);
+  const fontSize = parseFloat(computed.fontSize) || 49;
+  const lineHeightValue = parseFloat(computed.lineHeight);
+  const lineHeight = Number.isFinite(lineHeightValue) ? lineHeightValue : fontSize * 1.2;
+  const bleed = Math.max(2, computePreviewStyleVisualBleed(normalized, 1) + 2);
+  const measuredWidth = Math.ceil(sizeEl?.getBoundingClientRect().width || sizeEl?.offsetWidth || Math.max(1, text.length) * fontSize * 0.6);
+  const measuredHeight = Math.ceil(sizeEl?.getBoundingClientRect().height || sizeEl?.offsetHeight || lineHeight);
+  const width = Math.max(1, measuredWidth + bleed * 2);
+  const height = Math.max(1, measuredHeight + bleed * 2);
+  const baseline = bleed + Math.max(fontSize, (measuredHeight + fontSize) / 2 - fontSize * 0.08);
+  const svg = createPreviewSvgElement("svg");
+  svg.classList.add("preview-style-svg");
+  setPreviewSvgAttrs(svg, {
+    viewBox: `0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}`,
+    width: formatOutlineNumber(width),
+    height: formatOutlineNumber(height),
+    "aria-hidden": "true",
+    focusable: "false"
+  });
+  svg.style.fontFamily = computed.fontFamily;
+  svg.style.fontSize = computed.fontSize;
+  svg.style.fontWeight = computed.fontWeight;
+  svg.style.fontStyle = computed.fontStyle;
+  svg.style.letterSpacing = computed.letterSpacing;
+  svg.style.fontVariationSettings = computed.fontVariationSettings;
+  const defs = createPreviewSvgElement("defs");
+  const sourceId = `preview-svg-text-${Math.random().toString(36).slice(2)}`;
+  const sourceText = createPreviewSvgElement("text");
+  sourceText.classList.add("preview-style-svg-source");
+  sourceText.textContent = text;
+  setPreviewSvgAttrs(sourceText, {
+    id: sourceId,
+    x: bleed,
+    y: baseline,
+    "dominant-baseline": "alphabetic"
+  });
+  defs.appendChild(sourceText);
+  svg.appendChild(defs);
+  const body = createPreviewSvgElement("g");
+  const orderedSvgLayers = getEnabledStyleLayerOrder(normalized).map(key => ({
+    key,
+    layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
+  }));
+  const svgDrawLayers = [
+    ...orderedSvgLayers.filter(item => item.layer?.type === "dropShadow"),
+    ...orderedSvgLayers
+      .filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) !== "inside")
+      .sort((a, b) => previewSvgStrokePaintWidth(b.layer) - previewSvgStrokePaintWidth(a.layer)),
+    ...orderedSvgLayers.filter(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID),
+    ...orderedSvgLayers.filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) === "inside")
+  ];
+  svgDrawLayers.forEach(({ key, layer }, index) => {
+    if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
+      const fillUse = createPreviewSvgUse(sourceId);
+      setPreviewSvgAttrs(fillUse, { fill: previewSvgFillValue(normalized.fill, defs), stroke: "none" });
+      body.appendChild(fillUse);
+      return;
+    }
+    if (!layer?.enabled) return;
+    if (layer.type === "dropShadow") {
+      const shadowUse = createPreviewSvgUse(sourceId);
+      const shadowOffset = previewShadowOffset(layer);
+      setPreviewSvgAttrs(shadowUse, {
+        fill: hexWithOpacity(layer.color, layer.opacity),
+        stroke: "none",
+        transform: `translate(${formatOutlineNumber(shadowOffset.x)} ${formatOutlineNumber(shadowOffset.y)})`
+      });
+      if (Number(layer.blur) > 0) {
+        const filterId = `preview-svg-shadow-${index}`;
+        const filter = createPreviewSvgElement("filter");
+        setPreviewSvgAttrs(filter, {
+          id: filterId,
+          x: -bleed,
+          y: -bleed,
+          width: width + bleed * 2,
+          height: height + bleed * 2,
+          filterUnits: "userSpaceOnUse",
+          "color-interpolation-filters": "sRGB"
+        });
+        const blur = createPreviewSvgElement("feGaussianBlur");
+        setPreviewSvgAttrs(blur, { stdDeviation: Math.max(0, Number(layer.blur) || 0) / 2 });
+        filter.appendChild(blur);
+        defs.appendChild(filter);
+        shadowUse.setAttribute("filter", `url(#${filterId})`);
+      }
+      body.appendChild(shadowUse);
+      return;
+    }
+    if (!isStrokeLayer(layer)) return;
+    const position = resolveStrokePosition(layer);
+    const strokeWidth = previewSvgStrokePaintWidth(layer);
+    const strokeUse = createPreviewSvgUse(sourceId);
+    setPreviewSvgAttrs(strokeUse, {
+      fill: "none",
+      stroke: previewSvgStrokeValue(layer, defs, `${index}`),
+      "stroke-width": strokeWidth
+    });
+    if (position === "inside") {
+      const clipId = `preview-svg-clip-${index}`;
+      const clipPath = createPreviewSvgElement("clipPath");
+      clipPath.setAttribute("id", clipId);
+      clipPath.appendChild(createPreviewSvgUse(sourceId));
+      defs.appendChild(clipPath);
+      strokeUse.setAttribute("clip-path", `url(#${clipId})`);
+    }
+    body.appendChild(strokeUse);
+  });
+  svg.appendChild(body);
+  root.querySelector(".preview-style-svg")?.remove();
+  root.appendChild(svg);
 }
 
 function cardPreviewStyleToEffectCssForLayer(layerId, style = state.cardPreviewStyle) {
@@ -1904,7 +2141,8 @@ function cardPreviewStyleToEffectCss(style = state.cardPreviewStyle, { isolatedS
   for (const layer of normalized.layers) {
     if (!layer.enabled) continue;
     if (layer.type === "dropShadow") {
-      shadows.push(`${layer.offsetX}px ${layer.offsetY}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
+      const offset = previewShadowOffset(layer);
+      shadows.push(`${formatOutlineNumber(offset.x)}px ${formatOutlineNumber(offset.y)}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
     }
   }
   let primaryWebkit = null;
@@ -1989,7 +2227,8 @@ function cardPreviewStyleToCss(style = state.cardPreviewStyle) {
   for (const layer of normalized.layers) {
     if (!layer.enabled) continue;
     if (layer.type === "dropShadow") {
-      shadows.push(`${layer.offsetX}px ${layer.offsetY}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
+      const offset = previewShadowOffset(layer);
+      shadows.push(`${formatOutlineNumber(offset.x)}px ${formatOutlineNumber(offset.y)}px ${layer.blur}px ${hexWithOpacity(layer.color, layer.opacity)}`);
     }
   }
   let primaryWebkit = null;
@@ -2136,6 +2375,10 @@ function deleteCardPreviewStylePreset(id) {
 
 function getPreviewStyleStackText(element) {
   if (!element) return "";
+  const svgStack = element.classList?.contains("preview-style-svg-stack")
+    ? element
+    : element.querySelector?.(":scope > .preview-style-svg-stack");
+  if (svgStack) return svgStack.dataset.previewText || svgStack.querySelector(".preview-style-svg-size")?.textContent || "";
   return element.querySelector(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill")?.textContent ?? element.textContent;
 }
 
@@ -2145,6 +2388,15 @@ function getPreviewSampleText(sample) {
 
 function setPreviewSampleText(sample, text) {
   if (!sample) return;
+  const svgStack = sample.classList?.contains("preview-style-svg-stack")
+    ? sample
+    : sample.querySelector?.(":scope > .preview-style-svg-stack");
+  if (svgStack) {
+    svgStack.dataset.previewText = text;
+    svgStack.querySelectorAll(".preview-style-svg-size, .preview-style-svg-source").forEach(layer => { layer.textContent = text; });
+    syncPreviewStyleSvgStackTypography(svgStack, sample);
+    return;
+  }
   const layers = sample.querySelectorAll(".preview-style-text-size, .preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
   if (layers.length) {
     layers.forEach(layer => { layer.textContent = text; });
@@ -2156,18 +2408,23 @@ function setPreviewSampleText(sample, text) {
 function resolvePreviewStyleStackRoot(element) {
   if (!element) return null;
   if (element.classList.contains("preview-style-text-stack")) return element;
-  return element.querySelector(":scope > .preview-style-text-stack");
+  if (element.classList.contains("preview-style-svg-stack")) return element;
+  return element.querySelector(":scope > .preview-style-text-stack, :scope > .preview-style-svg-stack");
 }
 
 function flattenPreviewStyleStackHost(element, text) {
   const inner = resolvePreviewStyleStackRoot(element);
   const resolvedText = text ?? (inner && inner !== element ? getPreviewStyleStackText(inner) : element.textContent);
-  element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+  element.classList.remove("preview-style-text-stack", "preview-style-svg-stack", "is-gradient-fill");
   element.textContent = resolvedText;
   return { root: element, layers: [element], host: element };
 }
 
 function syncPreviewStyleTextStackTypography(stackRoot, host = stackRoot) {
+  if (stackRoot?.classList.contains("preview-style-svg-stack")) {
+    syncPreviewStyleSvgStackTypography(stackRoot, host);
+    return;
+  }
   if (!stackRoot?.classList.contains("preview-style-text-stack")) return;
   const sizeEl = stackRoot.querySelector(".preview-style-text-size");
   const layers = stackRoot.querySelectorAll(".preview-style-text-layer, .preview-style-text-fill, .preview-style-text-stroke");
@@ -2190,6 +2447,43 @@ function syncPreviewStyleTextStackTypography(stackRoot, host = stackRoot) {
   });
 }
 
+function syncPreviewStyleSvgStackTypography(stackRoot, host = stackRoot) {
+  if (!stackRoot?.classList.contains("preview-style-svg-stack")) return;
+  const source = host || stackRoot;
+  const computed = getComputedStyle(source);
+  const sizeEl = stackRoot.querySelector(".preview-style-svg-size");
+  const props = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontVariationSettings", "letterSpacing", "lineHeight"];
+  props.forEach(prop => {
+    const value = source.style[prop] || computed[prop];
+    if (value && sizeEl) sizeEl.style[prop] = value;
+  });
+  if (stackRoot._previewSvgStyle) buildPreviewSvgTextStack(stackRoot, source, stackRoot._previewSvgStyle);
+}
+
+function ensurePreviewStyleSvgStack(element, text, style) {
+  if (!element) return { root: element, host: element };
+  const resolvedText = text ?? getPreviewStyleStackText(element);
+  element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+  let stackRoot = element.querySelector(":scope > .preview-style-svg-stack");
+  if (!stackRoot) {
+    element.replaceChildren();
+    stackRoot = document.createElement("span");
+    stackRoot.className = "preview-style-svg-stack";
+    element.appendChild(stackRoot);
+  } else {
+    stackRoot.replaceChildren();
+  }
+  stackRoot.dataset.previewText = resolvedText;
+  stackRoot._previewSvgStyle = cloneCardPreviewStyle(style);
+  const sizeEl = document.createElement("span");
+  sizeEl.className = "preview-style-svg-size";
+  sizeEl.textContent = resolvedText;
+  sizeEl.setAttribute("aria-hidden", "true");
+  stackRoot.appendChild(sizeEl);
+  syncPreviewStyleSvgStackTypography(stackRoot, element);
+  return { root: stackRoot, host: element };
+}
+
 function ensurePreviewStyleLayerStack(element, text, order) {
   if (!element) return { root: element, layers: [], host: element };
   const count = Array.isArray(order) ? order.length : 0;
@@ -2199,7 +2493,7 @@ function ensurePreviewStyleLayerStack(element, text, order) {
     if (text != null) element.textContent = resolvedText;
     return { root: element, layers: [element], host: element };
   }
-  element.classList.remove("preview-style-text-stack", "is-gradient-fill");
+  element.classList.remove("preview-style-text-stack", "preview-style-svg-stack", "is-gradient-fill");
   let stackRoot = element.querySelector(":scope > .preview-style-text-stack");
   if (!stackRoot) {
     element.replaceChildren();
@@ -2264,6 +2558,10 @@ function applyCardPreviewStyleToElement(element, style, { themeDefault = false, 
     return;
   }
   const order = getEnabledStyleLayerOrder(style);
+  if (styleNeedsSvgTextPreview(style)) {
+    ensurePreviewStyleSvgStack(element, text, style);
+    return;
+  }
   if (text != null && order.length <= 1 && !resolvePreviewStyleStackRoot(element)) {
     element.textContent = text;
   }
@@ -2358,9 +2656,8 @@ function computePreviewStyleVisualBleed(style, unitsPerPx = 1) {
     if (layer.type === "dropShadow") {
       const blur = scalePreviewStylePx(Number(layer.blur) || 0, unitsPerPx);
       const stdDev = blur / 2;
-      const dx = scalePreviewStylePx(Number(layer.offsetX) || 0, unitsPerPx);
-      const dy = scalePreviewStylePx(Number(layer.offsetY) || 0, unitsPerPx);
-      bleed = Math.max(bleed, 3 * stdDev + Math.abs(dx), 3 * stdDev + Math.abs(dy));
+      const offset = previewShadowOffset(layer, unitsPerPx);
+      bleed = Math.max(bleed, 3 * stdDev + Math.abs(offset.x), 3 * stdDev + Math.abs(offset.y));
       continue;
     }
     if (!isStrokeLayer(layer)) continue;
@@ -2379,49 +2676,55 @@ function computePreviewStyleVisualBleed(style, unitsPerPx = 1) {
 
 function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = state.cardPreviewStyle, unitsPerPx = 1, bleed = 0 }) {
   const normalized = normalizeCardPreviewStyle(style);
-  const defsParts = [];
+  const pathId = "preview-path";
+  const defsParts = [`<path id="${pathId}" d="${pathData}"/>`];
+  const usePath = extra => `<use href="#${pathId}"${extra}/>`;
   const fillValue = buildPreviewFillValue(normalized.fill, defsParts);
-  const enabledLayers = normalized.layers.filter(layer => layer.enabled);
-  let filterAttr = "";
-  const dropShadows = enabledLayers.filter(layer => layer.type === "dropShadow");
-  if (dropShadows.length) {
-    let filterBody = "";
-    dropShadows.forEach(layer => {
-      filterBody += `<feDropShadow dx="${formatOutlineNumber(scalePreviewStylePx(layer.offsetX, unitsPerPx))}" dy="${formatOutlineNumber(scalePreviewStylePx(layer.offsetY, unitsPerPx))}" stdDeviation="${formatOutlineNumber(scalePreviewStylePx(layer.blur / 2, unitsPerPx))}" flood-color="${escapeXml(layer.color)}" flood-opacity="${formatOutlineNumber(layer.opacity / 100)}"/>`;
-    });
-    const filterPad = Math.max(bleed, 1);
-    defsParts.push(`<filter id="preview-shadow" x="${formatOutlineNumber(-filterPad)}" y="${formatOutlineNumber(-filterPad)}" width="${formatOutlineNumber(width + filterPad * 2)}" height="${formatOutlineNumber(height + filterPad * 2)}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">${filterBody}</filter>`);
-    filterAttr = ` filter="url(#preview-shadow)"`;
-  }
   let body = "";
-  const outsideStrokes = [];
-  const centerStrokes = [];
-  const insideStrokes = [];
-  enabledLayers.forEach(layer => {
+  const orderedSvgLayers = getEnabledStyleLayerOrder(normalized).map(key => ({
+    key,
+    layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
+  }));
+  const svgDrawLayers = [
+    ...orderedSvgLayers.filter(item => item.layer?.type === "dropShadow"),
+    ...orderedSvgLayers
+      .filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) !== "inside")
+      .sort((a, b) => previewSvgStrokePaintWidth(b.layer, unitsPerPx) - previewSvgStrokePaintWidth(a.layer, unitsPerPx)),
+    ...orderedSvgLayers.filter(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID),
+    ...orderedSvgLayers.filter(item => item.layer && isStrokeLayer(item.layer) && resolveStrokePosition(item.layer) === "inside")
+  ];
+  svgDrawLayers.forEach(({ key, layer }, index) => {
+    if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
+      body += usePath(` fill="${fillValue}"`);
+      return;
+    }
+    if (!layer?.enabled) return;
+    if (layer.type === "dropShadow") {
+      const blur = scalePreviewStylePx(Number(layer.blur) || 0, unitsPerPx);
+      const offset = previewShadowOffset(layer, unitsPerPx);
+      let filterAttr = "";
+      if (blur > 0) {
+        const filterId = `preview-shadow-${index}`;
+        const filterPad = Math.max(bleed, 1);
+        defsParts.push(`<filter id="${filterId}" x="${formatOutlineNumber(-filterPad)}" y="${formatOutlineNumber(-filterPad)}" width="${formatOutlineNumber(width + filterPad * 2)}" height="${formatOutlineNumber(height + filterPad * 2)}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${formatOutlineNumber(blur / 2)}"/></filter>`);
+        filterAttr = ` filter="url(#${filterId})"`;
+      }
+      body += usePath(` fill="${escapeXml(hexWithOpacity(layer.color, layer.opacity))}" transform="translate(${formatOutlineNumber(offset.x)} ${formatOutlineNumber(offset.y)})"${filterAttr}`);
+      return;
+    }
     if (!isStrokeLayer(layer)) return;
     const position = resolveStrokePosition(layer);
-    if (position === "outside") outsideStrokes.push(layer);
-    else if (position === "center") centerStrokes.push(layer);
-    else insideStrokes.push(layer);
-  });
-  outsideStrokes.forEach((layer, index) => {
-    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * 2;
-    body += `<path fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `outside-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
-  });
-  body += `<path fill="${fillValue}" d="${pathData}"/>`;
-  centerStrokes.forEach((layer, index) => {
-    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx);
-    body += `<path fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `center-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
-  });
-  let innerIndex = 0;
-  insideStrokes.forEach((layer, index) => {
-    const clipId = `preview-clip-${index}`;
-    defsParts.push(`<clipPath id="${clipId}"><path d="${pathData}"/></clipPath>`);
-    const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * 2;
-    body += `<path clip-path="url(#${clipId})" fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `inside-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" d="${pathData}"/>`;
+    const strokeWidth = previewSvgStrokePaintWidth(layer, unitsPerPx);
+    let clipAttr = "";
+    if (position === "inside") {
+      const clipId = `preview-clip-${index}`;
+      defsParts.push(`<clipPath id="${clipId}"><use href="#${pathId}"/></clipPath>`);
+      clipAttr = ` clip-path="url(#${clipId})"`;
+    }
+    body += usePath(`${clipAttr} fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `${position}-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" stroke-linejoin="round" stroke-linecap="round"`);
   });
   const defsBlock = defsParts.length ? `<defs>${defsParts.join("")}</defs>` : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n${defsBlock}\n  <g${filterAttr}>${body}</g>\n</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n${defsBlock}\n  <g>${body}</g>\n</svg>`;
 }
 
 function getCardPreviewStyleModalFont() {
@@ -2638,6 +2941,72 @@ function applyGradientAngleChange(scope, angle) {
   target.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
   refreshGradientBarVisuals(scope);
   refreshGradientAngleDial(scope, target.angle);
+  renderCardPreviewStyleModalPreview();
+}
+
+function shadowAngleDialPoint(angle, radius = 14, center = 20) {
+  const rad = (Number(angle) || 0) * Math.PI / 180;
+  return {
+    x: center + radius * Math.cos(rad),
+    y: center + radius * Math.sin(rad)
+  };
+}
+
+function shadowAngleFromPointer(dial, clientX, clientY) {
+  const rect = dial.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  let angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+  if (angle < 0) angle += 360;
+  return angle;
+}
+
+function renderShadowAngleDial(angle, layerId) {
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = shadowAngleDialPoint(value);
+  return `<div class="preview-gradient-angle-field preview-style-field">
+    <span>角度</span>
+    <div class="preview-gradient-angle-control">
+      <button type="button" class="preview-gradient-angle-dial preview-shadow-angle-dial" data-shadow-field="angle" data-layer-id="${escapeHtml(layerId)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.shadowAngle)}" aria-label="投影角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
+        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
+          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
+        </svg>
+      </button>
+      <span class="preview-gradient-angle-value" data-shadow-angle-value="${escapeHtml(layerId)}">${value}°</span>
+    </div>
+  </div>`;
+}
+
+function refreshShadowAngleDial(layerId, angle) {
+  const panel = $("#cardPreviewStyleParams");
+  const dial = panel?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(layerId)}"]`);
+  if (!dial) return;
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = shadowAngleDialPoint(value);
+  dial.setAttribute("aria-valuenow", String(value));
+  const line = dial.querySelector("line");
+  const knob = dial.querySelector("circle:last-of-type");
+  if (line) {
+    line.setAttribute("x2", tip.x.toFixed(2));
+    line.setAttribute("y2", tip.y.toFixed(2));
+  }
+  if (knob) {
+    knob.setAttribute("cx", tip.x.toFixed(2));
+    knob.setAttribute("cy", tip.y.toFixed(2));
+  }
+  panel.querySelector(`[data-shadow-angle-value="${CSS.escape(layerId)}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
+}
+
+function applyShadowAngleChange(layerId, angle) {
+  const layer = cardPreviewStyleDraft?.layers.find(entry => entry.id === layerId);
+  if (!layer || layer.type !== "dropShadow") return;
+  layer.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  refreshShadowAngleDial(layer.id, layer.angle);
+  syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
 }
 
@@ -3037,7 +3406,7 @@ function renderCardPreviewStyleLayerList() {
     const label = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
     const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
     const disabled = layer.enabled ? "" : " is-disabled";
-    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerDuplicate)}">+</button></li>`;
+    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><span class="layer-actions"><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerDuplicate)}">+</button><button type="button" class="layer-delete" title="删除图层" aria-label="删除${escapeHtml(label)}">×</button></span></li>`;
   }).join("");
   list.innerHTML = html;
 }
@@ -3066,6 +3435,20 @@ function renderStrokeStyleParams(layer) {
   return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${modeField}${colorField}${opacityField}${sizeFields}${positionField}${gradientFields}</div>`;
 }
 
+function renderDropShadowStyleParams(layer) {
+  const meta = PREVIEW_EFFECT_TYPES.dropShadow;
+  const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
+  const fields = meta.fields.map(field => {
+    if (field.key === "angle") return renderShadowAngleDial(layer.angle, layer.id);
+    const value = layer[field.key];
+    if (field.type === "color") {
+      return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><input type="color" data-layer-field="${field.key}" value="${escapeHtml(value)}" /></label>`;
+    }
+    return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
+  }).join("");
+  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${fields}</div>`;
+}
+
 function renderCardPreviewStyleParams() {
   const panel = $("#cardPreviewStyleParams");
   if (!panel || !cardPreviewStyleDraft) return;
@@ -3087,6 +3470,12 @@ function renderCardPreviewStyleParams() {
   const meta = PREVIEW_EFFECT_TYPES[layer.type];
   if (layer.type === "stroke") {
     panel.innerHTML = renderStrokeStyleParams(layer);
+    syncAllStyleRanges(panel);
+    updatePreviewStyleStatusBar();
+    return;
+  }
+  if (layer.type === "dropShadow") {
+    panel.innerHTML = renderDropShadowStyleParams(layer);
     syncAllStyleRanges(panel);
     updatePreviewStyleStatusBar();
     return;
@@ -3400,6 +3789,13 @@ function loadManagePresetToEdit() {
   setCardPreviewStyleModalTab("edit");
 }
 
+function createNewCardPreviewStyleDraft() {
+  cardPreviewStyleManagePresetId = "";
+  cardPreviewStyleManageHoverPresetId = null;
+  loadCardPreviewStylePresetDraft(null);
+  setCardPreviewStyleModalTab("edit");
+}
+
 function syncCardPreviewStylePresetEditorVisibility() {
   const wrap = $("#cardPreviewStylePresetRenameWrap");
   const editFooter = $("#cardPreviewStyleFooterEdit");
@@ -3662,6 +4058,7 @@ function wireCardPreviewStyleModal() {
     if (event.relatedTarget && presetList.contains(event.relatedTarget)) return;
     clearManagePresetHover();
   });
+  $("#cardPreviewStyleManageNew")?.addEventListener("click", createNewCardPreviewStyleDraft);
   $("#cardPreviewStyleManageEdit")?.addEventListener("click", loadManagePresetToEdit);
   $("#cardPreviewStyleManageRename")?.addEventListener("click", () => {
     if (!cardPreviewStyleManagePresetId) return;
@@ -3746,7 +4143,15 @@ function wireCardPreviewStyleModal() {
       renderCardPreviewStyleModal();
       return;
     }
-    if (event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`) && !event.target.closest(".layer-duplicate")) {
+    if (event.target.closest(".layer-delete")) {
+      event.stopPropagation();
+      const layerId = event.target.closest("[data-layer-id]")?.dataset.layerId;
+      if (!layerId || !removePreviewStyleLayer(layerId)) return;
+      renderCardPreviewStyleModal();
+      renderCardPreviewStyleModalPreview();
+      return;
+    }
+    if (event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`) && !event.target.closest(".layer-duplicate, .layer-delete")) {
       cardPreviewStyleSelectedLayerId = null;
       cardPreviewStyleSelectedStopIndex = 0;
       renderCardPreviewStyleLayerList();
@@ -3754,7 +4159,7 @@ function wireCardPreviewStyleModal() {
       return;
     }
     const item = event.target.closest("[data-layer-id]");
-    if (!item || event.target.matches('input[type="checkbox"]') || event.target.closest(".layer-duplicate")) return;
+    if (!item || event.target.matches('input[type="checkbox"]') || event.target.closest(".layer-duplicate, .layer-delete")) return;
     cardPreviewStyleSelectedLayerId = item.dataset.layerId;
     cardPreviewStyleSelectedStopIndex = 0;
     renderCardPreviewStyleLayerList();
@@ -3845,6 +4250,15 @@ function wireCardPreviewStyleModal() {
     refreshGradientBarVisuals(scope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerdown", event => {
+    const shadowDial = event.target.closest(".preview-shadow-angle-dial");
+    if (shadowDial && cardPreviewStyleDraft) {
+      event.preventDefault();
+      draggingShadowAngleLayerId = shadowDial.dataset.layerId || cardPreviewStyleSelectedLayerId;
+      shadowDial.classList.add("is-dragging");
+      shadowDial.setPointerCapture(event.pointerId);
+      applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(shadowDial, event.clientX, event.clientY));
+      return;
+    }
     const dial = event.target.closest(".preview-gradient-angle-dial");
     if (dial && cardPreviewStyleDraft) {
       event.preventDefault();
@@ -3868,6 +4282,11 @@ function wireCardPreviewStyleModal() {
     refreshGradientBarVisuals(draggingGradientScope);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {
+    if (draggingShadowAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(draggingShadowAngleLayerId)}"]`);
+      if (dial) applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(dial, event.clientX, event.clientY));
+      return;
+    }
     if (draggingGradientAngleScope) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
       if (dial) applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
@@ -3877,6 +4296,13 @@ function wireCardPreviewStyleModal() {
     handleGradientStopDrag(event);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointerup", event => {
+    if (draggingShadowAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(draggingShadowAngleLayerId)}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingShadowAngleLayerId = null;
+      return;
+    }
     if (draggingGradientAngleScope) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
       if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
@@ -3888,6 +4314,13 @@ function wireCardPreviewStyleModal() {
     finishGradientStopDrag(event);
   });
   $("#cardPreviewStyleParams")?.addEventListener("pointercancel", event => {
+    if (draggingShadowAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(draggingShadowAngleLayerId)}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingShadowAngleLayerId = null;
+      return;
+    }
     if (draggingGradientAngleScope) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
       if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
