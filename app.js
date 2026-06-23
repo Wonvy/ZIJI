@@ -2319,6 +2319,13 @@ function applyManagePresetIconStyles() {
     else glyph.style.fontFamily = "";
     applyCardPreviewStyleToElement(glyph, resolveManagePresetStyle(card.dataset.presetId || ""), { themeDefault: true });
   });
+  if (!font) return;
+  ensureFontLoaded(font, MANAGE_PRESET_PREVIEW_CHAR).then(() => {
+    if (cardPreviewStyleModalTab !== "manage" || !list.isConnected) return;
+    list.querySelectorAll(".preview-style-preset-glyph").forEach(glyph => {
+      glyph.style.fontFamily = cssName(font);
+    });
+  });
 }
 
 function renderManagePresetIconCard(presetId, name, { selected = false, current = false } = {}) {
@@ -2373,13 +2380,6 @@ function renderCardPreviewStyleManagePanel() {
   ).join("");
   list.innerHTML = html;
   applyManagePresetIconStyles();
-  const font = getCardPreviewStyleModalFont();
-  if (font) {
-    ensureFontLoaded(font, MANAGE_PRESET_PREVIEW_CHAR).then(() => {
-      if (cardPreviewStyleModalTab !== "manage") return;
-      applyManagePresetIconStyles();
-    });
-  }
   const hasPreset = Boolean(cardPreviewStyleManagePresetId);
   const renameBtn = $("#cardPreviewStyleManageRename");
   const deleteBtn = $("#cardPreviewStyleManageDelete");
@@ -2422,6 +2422,53 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
   return true;
 }
 
+function resolveQuickPresetStyle(presetId) {
+  if (!presetId) return null;
+  const preset = findCardPreviewStylePreset(presetId);
+  return preset ? preset.style : null;
+}
+
+function getQuickMenuPreviewFont() {
+  return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
+}
+
+function getQuickMenuPreviewChar() {
+  const text = cardPreviewText().trim();
+  return [...text][0] || MANAGE_PRESET_PREVIEW_CHAR;
+}
+
+function renderQuickPresetMenuItem(presetId, { active = false, ariaLabel = "默认" } = {}) {
+  return `<button type="button" class="card-preview-style-preset-item card-preview-style-preset-preview${active ? " active is-current" : ""}" role="menuitem" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(ariaLabel)}">
+    <span class="preview-style-preset-glyph" aria-hidden="true">${escapeHtml(getQuickMenuPreviewChar())}</span>
+  </button>`;
+}
+
+function applyQuickPresetMenuStyles() {
+  const menu = $("#cardPreviewStylePresetMenu");
+  if (!menu) return;
+  const font = getQuickMenuPreviewFont();
+  const previewChar = getQuickMenuPreviewChar();
+  menu.querySelectorAll(".card-preview-style-preset-preview").forEach(item => {
+    const glyph = item.querySelector(".preview-style-preset-glyph");
+    if (!glyph) return;
+    glyph.textContent = previewChar;
+    if (font) {
+      registerFont(font);
+      glyph.style.fontFamily = cssName(font);
+    } else {
+      glyph.style.fontFamily = "";
+    }
+    applyCardPreviewStyleToElement(glyph, resolveQuickPresetStyle(item.dataset.presetId || ""), { themeDefault: true });
+  });
+  if (!font) return;
+  ensureFontLoaded(font, previewChar).then(() => {
+    if (!menu.isConnected) return;
+    menu.querySelectorAll(".card-preview-style-preset-preview .preview-style-preset-glyph").forEach(glyph => {
+      glyph.style.fontFamily = cssName(font);
+    });
+  });
+}
+
 function syncCardPreviewStyleButtonLabel() {
   const button = $("#cardPreviewStyleButton");
   if (!button) return;
@@ -2438,20 +2485,15 @@ function renderCardPreviewStyleQuickMenu() {
   const toggle = $("#cardPreviewStyleMenuToggle");
   if (!menu) return;
   const activeId = state.activeCardPreviewStylePresetId || "";
-  let html = `<button type="button" class="card-preview-style-preset-item${activeId ? "" : " active"}" role="menuitem" data-preset-id="">
-    <span class="preset-name">默认</span>
-    ${activeId ? "" : '<span class="preset-badge">使用中</span>'}
-  </button>`;
-  html += state.cardPreviewStylePresets.map(preset => {
-    const active = preset.id === activeId ? " active" : "";
-    return `<button type="button" class="card-preview-style-preset-item${active}" role="menuitem" data-preset-id="${escapeHtml(preset.id)}">
-      <span class="preset-name">${escapeHtml(preset.name)}</span>
-      ${active ? '<span class="preset-badge">使用中</span>' : ""}
-    </button>`;
-  }).join("");
-  html += `<div class="card-preview-style-preset-divider" aria-hidden="true"></div>
+  let html = `<div class="card-preview-style-preset-grid" role="presentation">`;
+  html += renderQuickPresetMenuItem("", { active: !activeId, ariaLabel: "默认样式" });
+  html += state.cardPreviewStylePresets.map(preset =>
+    renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, ariaLabel: preset.name })
+  ).join("");
+  html += `</div><div class="card-preview-style-preset-divider" aria-hidden="true"></div>
     <button type="button" class="card-preview-style-preset-item card-preview-style-preset-action" role="menuitem" data-preset-action="manage">管理方案…</button>`;
   menu.innerHTML = html;
+  applyQuickPresetMenuStyles();
   syncCardPreviewStyleButtonLabel();
   if (toggle) toggle.disabled = false;
 }
@@ -2470,10 +2512,13 @@ function wireCardPreviewStyleQuickMenu() {
   const toggle = $("#cardPreviewStyleMenuToggle");
   if (!wrap || !menu || !toggle) return;
   renderCardPreviewStyleQuickMenu();
+  wrap.addEventListener("mouseenter", () => applyQuickPresetMenuStyles());
   toggle.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
-    setCardPreviewStyleQuickMenuOpen(!wrap.classList.contains("is-open"));
+    const opening = !wrap.classList.contains("is-open");
+    setCardPreviewStyleQuickMenuOpen(opening);
+    if (opening) applyQuickPresetMenuStyles();
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
@@ -2663,7 +2708,12 @@ function openCardPreviewStyleModal() {
     }
   });
   renderCardPreviewStyleModal();
-  setCardPreviewStyleModalTab("edit");
+  $("#cardPreviewStyleEditTab")?.classList.add("active");
+  $("#cardPreviewStyleManageTab")?.classList.remove("active");
+  $("#cardPreviewStyleEditTab")?.setAttribute("aria-selected", "true");
+  $("#cardPreviewStyleManageTab")?.setAttribute("aria-selected", "false");
+  $("#cardPreviewStyleEditPanel")?.removeAttribute("hidden");
+  $("#cardPreviewStyleManagePanel")?.setAttribute("hidden", "");
   $("#cardPreviewStyleModal").hidden = false;
 }
 
