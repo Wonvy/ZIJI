@@ -3921,6 +3921,10 @@ function handleGridLayoutControlWheel(event) {
   adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
 }
 
+function closeCardPreviewStyleQuickMenu() {
+  $("#cardPreviewStylePresetDropdown")?._closeQuickMenu?.();
+}
+
 function wireCardPreviewStyleQuickMenu() {
   const menuWrap = $(".card-preview-style-menu");
   const dropdown = $("#cardPreviewStylePresetDropdown");
@@ -3930,12 +3934,18 @@ function wireCardPreviewStyleQuickMenu() {
   renderCardPreviewStyleQuickMenu();
   const presetPopoverOptions = { align: "left", minWidth: 320 };
   let closeTimer = null;
+  let suppressOpenUntil = 0;
   const closeMenu = () => {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    suppressOpenUntil = Date.now() + 500;
     dropdown.removeAttribute("open");
+    menu.hidden = true;
     resetFloatingPopover(menu, dropdown);
   };
   const syncPopover = () => {
     if (dropdown.open) {
+      menu.hidden = false;
       document.querySelectorAll(".filter-menu[open]").forEach(other => {
         if (other === dropdown) return;
         other.removeAttribute("open");
@@ -3945,11 +3955,14 @@ function wireCardPreviewStyleQuickMenu() {
       applyQuickPresetMenuStyles();
     } else {
       resetFloatingPopover(menu, dropdown);
+      menu.hidden = true;
     }
   };
   const openMenu = () => {
+    if (Date.now() < suppressOpenUntil) return;
     clearTimeout(closeTimer);
     closeTimer = null;
+    menu.hidden = false;
     if (!dropdown.open) dropdown.setAttribute("open", "");
     else applyQuickPresetMenuStyles();
   };
@@ -3969,16 +3982,17 @@ function wireCardPreviewStyleQuickMenu() {
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
-    if (actionBtn?.dataset.presetAction === "new") {
+    if (actionBtn?.dataset.presetAction === "new" || actionBtn?.dataset.presetAction === "manage") {
+      event.preventDefault();
+      event.stopPropagation();
       closeMenu();
-      openCardPreviewStyleModal();
-      createNewCardPreviewStyleDraft();
-      return;
-    }
-    if (actionBtn?.dataset.presetAction === "manage") {
-      closeMenu();
-      openCardPreviewStyleModal();
-      setCardPreviewStyleModalTab("manage");
+      if (actionBtn.dataset.presetAction === "new") {
+        openCardPreviewStyleModal();
+        createNewCardPreviewStyleDraft();
+      } else {
+        openCardPreviewStyleModal();
+        setCardPreviewStyleModalTab("manage");
+      }
       return;
     }
     const item = event.target.closest("[data-preset-id]");
@@ -3986,6 +4000,7 @@ function wireCardPreviewStyleQuickMenu() {
     applyCardPreviewStylePresetById(item.dataset.presetId || null);
     closeMenu();
   });
+  dropdown._closeQuickMenu = closeMenu;
 }
 
 function loadManagePresetToEdit() {
@@ -4159,6 +4174,7 @@ function renderCardPreviewStyleModal() {
 
 function openCardPreviewStyleModal() {
   if (!state.fonts.length) return toast("请先加载字体");
+  closeCardPreviewStyleQuickMenu();
   cardPreviewStyleDraftPresetId = state.activeCardPreviewStylePresetId;
   if (cardPreviewStyleDraftPresetId && findCardPreviewStylePreset(cardPreviewStyleDraftPresetId)) {
     cardPreviewStyleDraft = normalizeCardPreviewStyle(findCardPreviewStylePreset(cardPreviewStyleDraftPresetId).style);

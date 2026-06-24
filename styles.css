@@ -1773,9 +1773,11 @@ body.header-card-preview-focus .preview-input-history {
 .card-preview-style-preset-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
+  width: 100%;
   padding: 4px;
+  box-sizing: border-box;
 }
 .card-preview-style-preset-action {
   width: auto;
@@ -1789,7 +1791,12 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 12px;
   text-align: center;
 }
+.card-preview-style-preset-footer .card-preview-style-preset-action:not(.card-preview-style-preset-action-new) {
+  flex: 1 1 auto;
+  width: auto;
+}
 .card-preview-style-preset-action-new {
+  flex: none;
   width: 32px;
   min-width: 32px;
   height: 32px;
