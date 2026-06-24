@@ -1009,7 +1009,7 @@ function setSearchTerm(term) {
   ui.search.value = term;
   applyFilter();
   renderSearchSuggestions();
-  ui.searchSuggestions.hidden = true;
+  hideSearchSuggestions();
   ui.search.focus();
 }
 
@@ -3000,13 +3000,70 @@ function clearCardPreviewStyleOnElement(element) {
   element.classList.remove("is-gradient-fill");
 }
 
-function applyCardPreviewStyleToMagnifierText(target, sampleStyle, style = state.cardPreviewStyle) {
+function applyCardPreviewStyleToMagnifierText(target, sample, sampleStyle, style = state.cardPreviewStyle) {
   clearCardPreviewStyleOnElement(target);
+  const text = getPreviewSampleText(sample);
   if (!style || !hasActiveCardPreviewStyle(style)) {
+    target.textContent = text;
     target.style.color = sampleStyle.color;
     return;
   }
+  const stackRoot = resolvePreviewStyleStackRoot(sample);
+  if (stackRoot?.classList.contains("preview-style-text-stack")) {
+    target.replaceChildren(stackRoot.cloneNode(true));
+    const magnifierStack = resolvePreviewStyleStackRoot(target);
+    if (magnifierStack) syncPreviewStyleTextStackTypography(magnifierStack, sample);
+    return;
+  }
+  if (stackRoot?.classList.contains("preview-style-svg-stack") || styleNeedsSvgTextPreview(style)) {
+    applyCardPreviewStyleToElement(target, style, { text });
+    const magnifierStack = resolvePreviewStyleStackRoot(target);
+    if (magnifierStack) syncPreviewStyleSvgStackTypography(magnifierStack, sample);
+    return;
+  }
+  target.textContent = text;
   applyCardPreviewStyleToElement(target, style);
+}
+
+function getCardMagnifierContentRect(sample) {
+  const stackRoot = resolvePreviewStyleStackRoot(sample);
+  if (stackRoot) {
+    const stackRect = stackRoot.getBoundingClientRect();
+    if (stackRect.width > 0 && stackRect.height > 0) return stackRect;
+  }
+  const range = document.createRange();
+  range.selectNodeContents(sample);
+  const textRect = range.getBoundingClientRect();
+  if (textRect.width > 0 && textRect.height > 0) return textRect;
+  return sample.getBoundingClientRect();
+}
+
+function updateCardMagnifierPreview(enlarged, sample, sampleStyle, event, lens, zoom) {
+  const contentRect = getCardMagnifierContentRect(sample);
+  const styled = state.cardPreviewStyle && hasActiveCardPreviewStyle(state.cardPreviewStyle);
+  const stackRoot = resolvePreviewStyleStackRoot(sample);
+  applyCardPreviewStyleToMagnifierText(enlarged, sample, sampleStyle);
+  if (!styled || !stackRoot) {
+    enlarged.style.fontFamily = sampleStyle.fontFamily;
+    enlarged.style.fontSize = sampleStyle.fontSize;
+    enlarged.style.fontWeight = sampleStyle.fontWeight;
+    enlarged.style.lineHeight = sampleStyle.lineHeight;
+    enlarged.style.letterSpacing = sampleStyle.letterSpacing;
+    enlarged.style.fontVariationSettings = sampleStyle.fontVariationSettings;
+    if (!styled) enlarged.style.color = sampleStyle.color;
+  }
+  enlarged.style.display = "block";
+  enlarged.style.boxSizing = "border-box";
+  enlarged.style.padding = "0";
+  enlarged.style.margin = "0";
+  enlarged.style.textAlign = sampleStyle.textAlign;
+  enlarged.style.whiteSpace = sampleStyle.whiteSpace;
+  enlarged.style.transformOrigin = "0 0";
+  enlarged.style.left = `${lens / 2 - (event.clientX - contentRect.left) * zoom}px`;
+  enlarged.style.top = `${lens / 2 - (event.clientY - contentRect.top) * zoom}px`;
+  enlarged.style.width = `${contentRect.width}px`;
+  enlarged.style.height = `${contentRect.height}px`;
+  enlarged.style.transform = `scale(${zoom})`;
 }
 
 function previewStyleUnitsPerPx(upm, referenceFontSize = state.cardSampleSize) {
@@ -5635,13 +5692,16 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
-    preloadAdjacentPages();
-    if (state.pendingSelectionId != null) {
-      const pendingId = state.pendingSelectionId;
-      state.pendingSelectionId = null;
-      const pendingFont = state.fonts.find(item => item.id === pendingId);
-      if (pendingFont) selectFont(pendingFont);
-    }
+    void waitForCurrentPageReady(renderToken).then(() => {
+      if (renderToken !== state.renderVersion) return;
+      preloadAdjacentPages();
+      if (state.pendingSelectionId != null) {
+        const pendingId = state.pendingSelectionId;
+        state.pendingSelectionId = null;
+        const pendingFont = state.fonts.find(item => item.id === pendingId);
+        if (pendingFont) selectFont(pendingFont);
+      }
+    });
   };
   const finishRender = () => {
     if (renderToken !== state.renderVersion) return;
@@ -5705,13 +5765,31 @@ function goToPage(page) {
   requestAnimationFrame(restorePinnedPreview);
 }
 
+const PRELOAD_AHEAD_PAGES = 2;
+
+async function waitForCurrentPageReady(renderToken) {
+  const start = state.page * state.pageSize;
+  const pageFonts = state.filtered.slice(start, start + state.pageSize);
+  if (!pageFonts.length) return;
+  const previewText = cardPreviewText();
+  for (let index = 0; index < pageFonts.length; index += 6) {
+    if (renderToken !== state.renderVersion) return;
+    const batch = pageFonts.slice(index, index + 6);
+    await Promise.all(batch.map(font => ensureFontLoaded(font, previewText)));
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  if (renderToken !== state.renderVersion) return;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 function preloadAdjacentPages() {
   const token = ++state.preloadVersion;
   const basePage = state.page;
-  const scheduledPages = Array.from({ length: 3 }, (_, index) => basePage + index + 2).filter(page => page <= state.totalPages);
+  const scheduledPages = Array.from({ length: PRELOAD_AHEAD_PAGES }, (_, index) => basePage + index + 1)
+    .filter(page => page < state.totalPages);
   preloadLog(`预加载任务 #${token} 已排队`, { currentPage: basePage + 1, scheduledPages, pageSize: state.pageSize });
   const run = async () => {
-    for (let offset = 1; offset <= 3; offset++) {
+    for (let offset = 1; offset <= PRELOAD_AHEAD_PAGES; offset++) {
       if (token !== state.preloadVersion) {
         preloadLog(`预加载任务 #${token} 已取消`, { replacedBy: state.preloadVersion });
         return;
@@ -7154,16 +7232,43 @@ function escapeHtml(value = "") {
   const el = document.createElement("span"); el.textContent = value; return el.innerHTML;
 }
 
+const searchControl = ui.search.closest(".search-control");
+let searchSuggestionsCloseTimer = 0;
+
+function showSearchSuggestions() {
+  clearTimeout(searchSuggestionsCloseTimer);
+  renderSearchSuggestions();
+  ui.searchSuggestions.hidden = false;
+}
+
+function hideSearchSuggestions() {
+  clearTimeout(searchSuggestionsCloseTimer);
+  ui.searchSuggestions.hidden = true;
+}
+
+function syncSearchSuggestionsVisibility() {
+  const open = searchControl?.matches(":hover") || document.activeElement === ui.search;
+  if (open) showSearchSuggestions();
+  else hideSearchSuggestions();
+}
+
+function scheduleSearchSuggestionsSync() {
+  clearTimeout(searchSuggestionsCloseTimer);
+  searchSuggestionsCloseTimer = setTimeout(syncSearchSuggestionsVisibility, 120);
+}
+
 ui.load.addEventListener("click", loadFonts);
 ui.reload.addEventListener("click", loadFonts);
 ui.search.addEventListener("input", () => { applyFilter(); renderSearchSuggestions(); });
-ui.search.addEventListener("focus", () => { renderSearchSuggestions(); ui.searchSuggestions.hidden = false; });
-ui.search.addEventListener("click", () => ui.searchSuggestions.hidden = false);
+searchControl?.addEventListener("mouseenter", showSearchSuggestions);
+searchControl?.addEventListener("mouseleave", scheduleSearchSuggestionsSync);
+ui.search.addEventListener("focus", showSearchSuggestions);
+ui.search.addEventListener("blur", () => requestAnimationFrame(scheduleSearchSuggestionsSync));
 document.addEventListener("pointerdown", event => {
-  if (!event.target.closest(".search-control")) ui.searchSuggestions.hidden = true;
+  if (!event.target.closest(".search-control")) hideSearchSuggestions();
 });
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !ui.searchSuggestions.hidden) ui.searchSuggestions.hidden = true;
+  if (event.key === "Escape" && !ui.searchSuggestions.hidden) hideSearchSuggestions();
   if (event.key === "Escape" && ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
 });
 document.addEventListener("keydown", event => {
@@ -7634,7 +7739,6 @@ ui.list.addEventListener("pointermove", event => {
   }
   if (card.dataset.fontLoaded !== "true") loadCardFont(card);
   const lens = 210, zoom = 3;
-  const sampleRect = sample.getBoundingClientRect();
   const sampleStyle = getComputedStyle(sample);
   const cardStyle = getComputedStyle(card);
   const left = Math.max(8, Math.min(window.innerWidth - lens - 8, event.clientX - lens / 2));
@@ -7643,26 +7747,7 @@ ui.list.addEventListener("pointermove", event => {
   ui.cardMagnifier.style.left = `${left}px`;
   ui.cardMagnifier.style.top = `${top}px`;
   ui.cardMagnifier.style.backgroundColor = resolveMagnifierBackground(cardStyle.backgroundColor, "--panel");
-  const enlarged = ui.cardMagnifiedText;
-  enlarged.textContent = getPreviewSampleText(sample);
-  enlarged.style.left = `${lens / 2 - (event.clientX - sampleRect.left) * zoom}px`;
-  enlarged.style.top = `${lens / 2 - (event.clientY - sampleRect.top) * zoom}px`;
-  enlarged.style.width = `${sampleRect.width}px`;
-  enlarged.style.height = `${sampleRect.height}px`;
-  enlarged.style.transform = `scale(${zoom})`;
-  enlarged.style.fontFamily = sampleStyle.fontFamily;
-  enlarged.style.fontSize = sampleStyle.fontSize;
-  enlarged.style.fontWeight = sampleStyle.fontWeight;
-  enlarged.style.lineHeight = sampleStyle.lineHeight;
-  enlarged.style.letterSpacing = sampleStyle.letterSpacing;
-  applyCardPreviewStyleToMagnifierText(enlarged, sampleStyle);
-  enlarged.style.padding = sampleStyle.padding;
-  enlarged.style.boxSizing = "border-box";
-  enlarged.style.display = sampleStyle.display;
-  enlarged.style.alignItems = sampleStyle.alignItems;
-  enlarged.style.justifyContent = sampleStyle.justifyContent;
-  enlarged.style.placeItems = sampleStyle.placeItems;
-  enlarged.style.textAlign = sampleStyle.textAlign;
+  updateCardMagnifierPreview(ui.cardMagnifiedText, sample, sampleStyle, event, lens, zoom);
 });
 ui.list.addEventListener("contextmenu", event => {
   const card = event.target.closest(".font-card");

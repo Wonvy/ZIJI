@@ -24,6 +24,23 @@ body {
     var(--paper);
   font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+::selection {
+  background: transparent;
+  color: inherit;
+}
+::-moz-selection {
+  background: transparent;
+  color: inherit;
 }
 body::before {
   content: "";
@@ -821,7 +838,7 @@ kbd,
 .toolbar-section { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .search-control { position: relative; min-width: 0; width: 100%; }
 .card-search { width: 100%; min-width: 0; height: var(--toolbar-control-height); margin: 0; }
-.search-suggestions { position: absolute; z-index: 60; top: calc(var(--toolbar-control-height) + 4px); left: 0; width: min(460px, 75vw); padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); box-shadow: var(--shadow); }
+.search-suggestions { position: absolute; z-index: 60; top: var(--toolbar-control-height); left: 0; width: min(460px, 75vw); padding: 14px 10px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); box-shadow: var(--shadow); }
 .search-suggestions[hidden] { display: none; }
 .suggestion-group + .suggestion-group { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); }
 .suggestion-group > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
@@ -3630,7 +3647,13 @@ body.dark .preview-controls { background: #1a1917; }
 }
 .card-magnifier.visible { opacity: 1; visibility: visible; transform: scale(1); transition-delay: 0s; }
 .card-magnifier::after { content: ""; position: absolute; inset: 50% auto auto 50%; width: 6px; height: 6px; border: 1px solid var(--accent); border-radius: 50%; transform: translate(-50%,-50%); }
-.card-magnifier span { position: absolute; display: block; transform-origin: 0 0; white-space: normal; overflow-wrap: anywhere; }
+.card-magnifier span { position: absolute; display: block; transform-origin: 0 0; white-space: normal; overflow-wrap: anywhere; overflow: visible; }
+.card-magnifier span > .preview-style-text-stack,
+.card-magnifier span > .preview-style-svg-stack {
+  display: inline-block;
+  vertical-align: top;
+  line-height: inherit;
+}
 
 @container card-toolbar (min-width: 981px) and (max-width: 1200px) {
   .toolbar-search-wrap,
