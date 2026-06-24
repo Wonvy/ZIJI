@@ -1008,7 +1008,7 @@ function pinyinInitials(text) {
 function setSearchTerm(term) {
   ui.search.value = term;
   applyFilter();
-  renderSearchSuggestions();
+  suppressSearchSuggestions = true;
   hideSearchSuggestions();
   ui.search.focus();
 }
@@ -7233,42 +7233,53 @@ function escapeHtml(value = "") {
 }
 
 const searchControl = ui.search.closest(".search-control");
-let searchSuggestionsCloseTimer = 0;
+let suppressSearchSuggestions = false;
 
 function showSearchSuggestions() {
-  clearTimeout(searchSuggestionsCloseTimer);
+  if (suppressSearchSuggestions) return;
   renderSearchSuggestions();
   ui.searchSuggestions.hidden = false;
 }
 
 function hideSearchSuggestions() {
-  clearTimeout(searchSuggestionsCloseTimer);
   ui.searchSuggestions.hidden = true;
-}
-
-function syncSearchSuggestionsVisibility() {
-  const open = searchControl?.matches(":hover") || document.activeElement === ui.search;
-  if (open) showSearchSuggestions();
-  else hideSearchSuggestions();
-}
-
-function scheduleSearchSuggestionsSync() {
-  clearTimeout(searchSuggestionsCloseTimer);
-  searchSuggestionsCloseTimer = setTimeout(syncSearchSuggestionsVisibility, 120);
 }
 
 ui.load.addEventListener("click", loadFonts);
 ui.reload.addEventListener("click", loadFonts);
-ui.search.addEventListener("input", () => { applyFilter(); renderSearchSuggestions(); });
-searchControl?.addEventListener("mouseenter", showSearchSuggestions);
-searchControl?.addEventListener("mouseleave", scheduleSearchSuggestionsSync);
+ui.search.addEventListener("input", () => {
+  suppressSearchSuggestions = false;
+  applyFilter();
+  renderSearchSuggestions();
+});
+searchControl?.addEventListener("mouseenter", () => {
+  suppressSearchSuggestions = false;
+  showSearchSuggestions();
+});
+searchControl?.addEventListener("mouseleave", hideSearchSuggestions);
 ui.search.addEventListener("focus", showSearchSuggestions);
-ui.search.addEventListener("blur", () => requestAnimationFrame(scheduleSearchSuggestionsSync));
+searchControl?.querySelector(".search-box")?.addEventListener("click", event => {
+  if (event.target.closest("#searchSuggestions")) return;
+  suppressSearchSuggestions = true;
+  hideSearchSuggestions();
+});
+ui.search.addEventListener("blur", () => {
+  requestAnimationFrame(() => {
+    if (searchControl?.matches(":hover")) return;
+    hideSearchSuggestions();
+  });
+});
 document.addEventListener("pointerdown", event => {
-  if (!event.target.closest(".search-control")) hideSearchSuggestions();
+  if (!event.target.closest(".search-control")) {
+    suppressSearchSuggestions = false;
+    hideSearchSuggestions();
+  }
 });
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !ui.searchSuggestions.hidden) hideSearchSuggestions();
+  if (event.key === "Escape" && !ui.searchSuggestions.hidden) {
+    suppressSearchSuggestions = false;
+    hideSearchSuggestions();
+  }
   if (event.key === "Escape" && ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
 });
 document.addEventListener("keydown", event => {
