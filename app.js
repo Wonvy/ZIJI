@@ -67,7 +67,7 @@ const CARD_ROWS_MAX = 12;
 const CARD_ROWS_DEFAULT = 4;
 
 function normalizeView(view) {
-  return view === "list" ? "grid" : view;
+  return view === "list" || view === "focus" ? "grid" : view;
 }
 
 function clampCardColumns(value, max = CARD_COLUMNS_MAX) {
@@ -137,7 +137,7 @@ function syncCardGridLayoutVars() {
   ui.list.style.setProperty("--card-grid-sample-height", `${sampleHeight}px`);
   ui.list.style.setProperty("--card-grid-min-height", `${cardHeight}px`);
   ui.list.style.setProperty("--card-grid-row-pitch", `${rowPitch}px`);
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     ui.list.style.setProperty("--card-grid-max-height", `${getCardGridMaxHeight()}px`);
   } else {
     ui.list.style.removeProperty("--card-grid-max-height");
@@ -279,6 +279,7 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelWidth: null,
   favoriteSidebarWidth: null,
   favoriteCategoryView: "all",
+  distractionFree: false,
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
   cardPreviewStylePresets: [],
@@ -663,6 +664,10 @@ function loadUiSettings() {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     const settings = normalizeLayoutSettings({ ...UI_SETTINGS_DEFAULTS, ...parsed });
+    if (parsed.view === "focus") {
+      settings.view = "grid";
+      settings.distractionFree = true;
+    }
     if ((Number(parsed.builtInCardPreviewStylePresetVersion) || 0) < BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION) {
       const existingPresets = Array.isArray(settings.cardPreviewStylePresets) ? settings.cardPreviewStylePresets : [];
       const existingIds = new Set(existingPresets.map(preset => String(preset?.id || "")));
@@ -723,6 +728,7 @@ function collectUiSettings() {
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
     favoriteSidebarWidth: ui.favoriteSidebar?.dataset.openWidth ? Number(ui.favoriteSidebar.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
+    distractionFree: state.distractionFree,
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
     cardPreviewStylePresets: state.cardPreviewStylePresets,
@@ -809,7 +815,7 @@ const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSetting
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), searchBrandCounts: new Map(), magnifier: uiSettings.magnifier,
   view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
-  familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
+  familyIndex: new Map(), pendingSelectionId: null, distractionFree: Boolean(uiSettings.distractionFree), collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
   activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
@@ -5790,7 +5796,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   state.prefetchCards.clear();
   state.singleCardSize = clampSingleCardSize(state.singleCardSize);
   ui.list.classList.toggle("single-view", state.view === "single");
-  ui.list.classList.toggle("focus-view", state.view === "focus");
+  ui.list.classList.toggle("focus-view", state.distractionFree);
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   state.pageSize = calculatePageSize();
   state.totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
@@ -5830,7 +5836,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   };
   const finishRender = () => {
     if (renderToken !== state.renderVersion) return;
-    if (remeasure && ["grid", "focus"].includes(state.view)) {
+    if (remeasure && state.view === "grid") {
       const nextPageSize = calculatePageSize();
       if (nextPageSize !== state.pageSize) {
         renderFontList({ deferFonts, remeasure: false });
@@ -6210,7 +6216,7 @@ function applyCardSampleSize({ fit = false } = {}) {
 }
 
 function refreshCardGridPageIfNeeded() {
-  if (!["grid", "focus"].includes(state.view)) return;
+  if (state.view !== "grid") return;
   const nextPageSize = calculatePageSize();
   if (nextPageSize === state.pageSize) return;
   state.page = 0;
@@ -7700,12 +7706,16 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
 $("#focusViewToggle")?.addEventListener("change", event => {
-  setView(event.target.checked ? "focus" : "grid");
+  state.distractionFree = event.target.checked;
+  updateHeaderCardPreviewFocus();
+  updateFilterControls();
+  renderFontList();
+  persistUiSettings();
 });
 $("#cardColumns")?.addEventListener("input", event => {
   state.cardColumns = clampCardColumns(event.target.value, getCardGridCapacity().maxColumns);
   syncCardGridControls();
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     state.page = 0;
     renderFontList();
   }
@@ -7714,7 +7724,7 @@ $("#cardColumns")?.addEventListener("input", event => {
 $("#cardRows")?.addEventListener("input", event => {
   state.cardRows = clampCardRows(event.target.value, getCardGridCapacity().maxRows);
   syncCardGridControls();
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     state.page = 0;
     renderFontList();
   }
@@ -7775,8 +7785,8 @@ function updateFilterControls() {
   const collapseFamilyFonts = $("#collapseFamilyFonts");
   const focusViewToggle = $("#focusViewToggle");
   if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
-  if (focusViewToggle) focusViewToggle.checked = state.view === "focus";
-  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.distractionFree;
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.distractionFree);
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? t("filter.badgeItems", { count: supportCount }) : t("filter.badgeAll");
   $("#weightBadge").textContent = state.weightFilters.size
@@ -7792,8 +7802,8 @@ function setView(view) {
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#singleViewButton").classList.toggle("active", view === "single");
   const focusViewToggle = $("#focusViewToggle");
-  if (focusViewToggle) focusViewToggle.checked = view === "focus";
-  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.distractionFree;
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.distractionFree);
   syncCardGridControls();
   updateCardSampleSizeControl();
   renderFontList();
@@ -8051,7 +8061,7 @@ if ("ResizeObserver" in window) {
     scheduleCardFit();
     clearTimeout(ui.list.pageResizeTimer);
     ui.list.pageResizeTimer = setTimeout(() => {
-      if (["grid", "focus"].includes(state.view)) syncCardGridControls();
+      if (state.view === "grid") syncCardGridControls();
       if (calculatePageSize() !== state.pageSize) renderFontList();
     }, 120);
   };

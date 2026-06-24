@@ -1291,7 +1291,9 @@ body.header-card-preview-focus .preview-input-history {
   font-weight: 700;
   line-height: 1;
 }
-.filter-menu-label { white-space: nowrap; }
+.filter-menu-label { color: color-mix(in srgb, var(--muted) 62%, transparent); white-space: nowrap; }
+.filter-menu[open] > summary .filter-menu-label,
+.filter-menu summary:hover .filter-menu-label { color: var(--muted); }
 
 @media (max-width: 1200px) {
   .toolbar-filter-group .filter-menu-label { display: none; }
@@ -1360,6 +1362,21 @@ body.header-card-preview-focus .preview-input-history {
 .filter-menu-icon[open] summary svg { stroke: var(--accent); }
 .filter-menu[open] summary { border-color: var(--ink); }
 .filter-menu-icon[open] summary { border-color: var(--accent); }
+.locale-menu.filter-menu-icon summary {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+}
+.locale-menu.filter-menu-icon summary:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.locale-menu.filter-menu-icon summary svg {
+  width: 16px;
+  height: 16px;
+}
 .filter-popover { position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; min-width: 145px; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); box-shadow: var(--shadow); }
 .filter-popover.is-floating,
 .card-family-menu.is-floating {
@@ -2054,7 +2071,8 @@ body.header-card-preview-focus .preview-input-history {
 .focus-view .font-card > strong,
 .focus-view .font-card > .card-family-switch,
 .focus-view .font-card > small,
-.focus-view .font-card > .star { opacity: 0; pointer-events: none; }
+.focus-view .font-card > .star,
+.focus-view .font-card .card-actions { opacity: 0; pointer-events: none; }
 .card-grid.focus-view .font-card,
 .card-grid.focus-view .font-card.active { background: transparent; }
 .card-grid.focus-view .font-card:hover { box-shadow: none; }
@@ -2074,10 +2092,6 @@ body.header-card-preview-focus .preview-input-history {
 .focus-view .font-card.has-preview-style .sample {
   overflow: visible;
 }
-.focus-view .font-card:hover > strong,
-.focus-view .font-card:hover > .card-family-switch,
-.focus-view .font-card:hover > small,
-.focus-view .font-card:hover > .star { opacity: 1; pointer-events: auto; }
 .font-card:has(.card-family-switch.is-open) { z-index: 8; }
 .detail-panel {
   position: relative;
@@ -4421,7 +4435,7 @@ body.dark .preview-controls { background: #1a1917; }
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
-                    <label class="check-option"><input type="checkbox" id="focusViewToggle"> <span data-i18n="view.focusMode">无干扰视图</span></label>
+                    <label class="check-option"><input type="checkbox" id="focusViewToggle"> <span data-i18n="view.focusMode">仅显示预览</span></label>
                     <label class="check-option"><input type="checkbox" id="collapseFamilyFonts"> <span data-i18n="view.collapseFamily">折叠家族字体</span></label>
                   </div>
                 </details>
@@ -4797,7 +4811,7 @@ const I18N_MESSAGES = {
     "view.sizeTitle": "单字卡片大小",
     "view.sizeAria": "单字卡片大小",
     "view.options": "视图选项",
-    "view.focusMode": "无干扰视图",
+    "view.focusMode": "仅显示预览",
     "view.collapseFamily": "折叠家族字体",
     "scan.variableFonts": "正在识别可变字体",
     "scan.variableDone": "可变字体识别完成",
@@ -5008,7 +5022,7 @@ const I18N_MESSAGES = {
     "view.sizeTitle": "Single card size",
     "view.sizeAria": "Single card size",
     "view.options": "View options",
-    "view.focusMode": "Focus view",
+    "view.focusMode": "Preview only",
     "view.collapseFamily": "Collapse family fonts",
     "scan.variableFonts": "Detecting variable fonts",
     "scan.variableDone": "Variable font scan complete",
@@ -5219,7 +5233,7 @@ const I18N_MESSAGES = {
     "view.sizeTitle": "Taille de carte unique",
     "view.sizeAria": "Taille de carte unique",
     "view.options": "Options d’affichage",
-    "view.focusMode": "Vue focus",
+    "view.focusMode": "Apercu uniquement",
     "view.collapseFamily": "Replier les familles",
     "scan.variableFonts": "Détection des polices variables",
     "scan.variableDone": "Analyse des polices variables terminée",
@@ -5617,7 +5631,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "單字卡片大小",
     "view.sizeAria": "單字卡片大小",
     "view.options": "檢視選項",
-    "view.focusMode": "無干擾檢視",
+    "view.focusMode": "僅顯示預覽",
     "view.collapseFamily": "摺疊家族字型",
     "scan.variableFonts": "正在識別可變字型",
     "scan.variableDone": "可變字型識別完成",
@@ -5829,7 +5843,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "単一カードサイズ",
     "view.sizeAria": "単一カードサイズ",
     "view.options": "表示オプション",
-    "view.focusMode": "集中表示",
+    "view.focusMode": "プレビューのみ",
     "view.collapseFamily": "ファミリーフォントを折りたたむ",
     "scan.variableFonts": "可変フォントを検出中",
     "scan.variableDone": "可変フォントの検出完了",
@@ -6041,7 +6055,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "단일 카드 크기",
     "view.sizeAria": "단일 카드 크기",
     "view.options": "보기 옵션",
-    "view.focusMode": "집중 보기",
+    "view.focusMode": "미리보기만 표시",
     "view.collapseFamily": "패밀리 글꼴 접기",
     "scan.variableFonts": "가변 글꼴 감지 중",
     "scan.variableDone": "가변 글꼴 감지 완료",
@@ -6253,7 +6267,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Größe der einzelnen Karte",
     "view.sizeAria": "Größe der einzelnen Karte",
     "view.options": "Ansichtsoptionen",
-    "view.focusMode": "Fokusansicht",
+    "view.focusMode": "Nur Vorschau",
     "view.collapseFamily": "Familienschriften einklappen",
     "scan.variableFonts": "Variable Schriften werden erkannt",
     "scan.variableDone": "Scan variabler Schriften abgeschlossen",
@@ -6465,7 +6479,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Tamaño de tarjeta individual",
     "view.sizeAria": "Tamaño de tarjeta individual",
     "view.options": "Opciones de vista",
-    "view.focusMode": "Vista enfocada",
+    "view.focusMode": "Solo vista previa",
     "view.collapseFamily": "Contraer familias tipográficas",
     "scan.variableFonts": "Detectando fuentes variables",
     "scan.variableDone": "Análisis de fuentes variables completado",
@@ -6677,7 +6691,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Tamanho do cartão individual",
     "view.sizeAria": "Tamanho do cartão individual",
     "view.options": "Opções de visualização",
-    "view.focusMode": "Visualização focada",
+    "view.focusMode": "Somente prévia",
     "view.collapseFamily": "Recolher famílias tipográficas",
     "scan.variableFonts": "Detectando fontes variáveis",
     "scan.variableDone": "Varredura de fontes variáveis concluída",
@@ -6889,7 +6903,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Dimensione scheda singola",
     "view.sizeAria": "Dimensione scheda singola",
     "view.options": "Opzioni visualizzazione",
-    "view.focusMode": "Vista focus",
+    "view.focusMode": "Solo anteprima",
     "view.collapseFamily": "Comprimi famiglie di font",
     "scan.variableFonts": "Rilevamento font variabili",
     "scan.variableDone": "Scansione font variabili completata",
@@ -7101,7 +7115,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Размер одной карточки",
     "view.sizeAria": "Размер одной карточки",
     "view.options": "Параметры вида",
-    "view.focusMode": "Режим фокуса",
+    "view.focusMode": "Только предпросмотр",
     "view.collapseFamily": "Свернуть семейства",
     "scan.variableFonts": "Обнаружение вариативных шрифтов",
     "scan.variableDone": "Сканирование вариативных шрифтов завершено",
@@ -7313,7 +7327,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Grootte enkele kaart",
     "view.sizeAria": "Grootte enkele kaart",
     "view.options": "Weergaveopties",
-    "view.focusMode": "Focusweergave",
+    "view.focusMode": "Alleen voorbeeld",
     "view.collapseFamily": "Lettertypefamilies inklappen",
     "scan.variableFonts": "Variabele lettertypen detecteren",
     "scan.variableDone": "Scan variabele lettertypen voltooid",
@@ -7525,7 +7539,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Rozmiar pojedynczej karty",
     "view.sizeAria": "Rozmiar pojedynczej karty",
     "view.options": "Opcje widoku",
-    "view.focusMode": "Widok skupiony",
+    "view.focusMode": "Tylko podglad",
     "view.collapseFamily": "Zwiń rodziny czcionek",
     "scan.variableFonts": "Wykrywanie czcionek zmiennych",
     "scan.variableDone": "Skan czcionek zmiennych zakończony",
@@ -7737,7 +7751,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Tek kart boyutu",
     "view.sizeAria": "Tek kart boyutu",
     "view.options": "Görünüm seçenekleri",
-    "view.focusMode": "Odak görünümü",
+    "view.focusMode": "Yalnızca önizleme",
     "view.collapseFamily": "Aile yazı tiplerini daralt",
     "scan.variableFonts": "Değişken yazı tipleri algılanıyor",
     "scan.variableDone": "Değişken yazı tipi taraması tamamlandı",
@@ -7949,7 +7963,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Kích thước thẻ đơn",
     "view.sizeAria": "Kích thước thẻ đơn",
     "view.options": "Tùy chọn hiển thị",
-    "view.focusMode": "Chế độ tập trung",
+    "view.focusMode": "Chỉ xem trước",
     "view.collapseFamily": "Thu gọn họ phông",
     "scan.variableFonts": "Đang phát hiện phông biến thể",
     "scan.variableDone": "Quét phông biến thể hoàn tất",
@@ -8161,7 +8175,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "ขนาดการ์ดเดี่ยว",
     "view.sizeAria": "ขนาดการ์ดเดี่ยว",
     "view.options": "ตัวเลือกมุมมอง",
-    "view.focusMode": "โหมดโฟกัส",
+    "view.focusMode": "แสดงตัวอย่างเท่านั้น",
     "view.collapseFamily": "ยุบฟอนต์ในตระกูล",
     "scan.variableFonts": "กำลังตรวจหาฟอนต์แปรผัน",
     "scan.variableDone": "สแกนฟอนต์แปรผันเสร็จสิ้น",
@@ -8373,7 +8387,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "Ukuran kartu tunggal",
     "view.sizeAria": "Ukuran kartu tunggal",
     "view.options": "Opsi tampilan",
-    "view.focusMode": "Tampilan fokus",
+    "view.focusMode": "Pratinjau saja",
     "view.collapseFamily": "Ciutkan keluarga font",
     "scan.variableFonts": "Mendeteksi font variabel",
     "scan.variableDone": "Pemindaian font variabel selesai",
@@ -8585,7 +8599,7 @@ function registerExtraLocales() {
     "view.sizeTitle": "حجم البطاقة الواحدة",
     "view.sizeAria": "حجم البطاقة الواحدة",
     "view.options": "خيارات العرض",
-    "view.focusMode": "عرض مركّز",
+    "view.focusMode": "المعاينة فقط",
     "view.collapseFamily": "طي عائلات الخطوط",
     "scan.variableFonts": "جارٍ اكتشاف الخطوط المتغيرة",
     "scan.variableDone": "اكتمل فحص الخطوط المتغيرة",
@@ -8795,7 +8809,7 @@ const CARD_ROWS_MAX = 12;
 const CARD_ROWS_DEFAULT = 4;
 
 function normalizeView(view) {
-  return view === "list" ? "grid" : view;
+  return view === "list" || view === "focus" ? "grid" : view;
 }
 
 function clampCardColumns(value, max = CARD_COLUMNS_MAX) {
@@ -8865,7 +8879,7 @@ function syncCardGridLayoutVars() {
   ui.list.style.setProperty("--card-grid-sample-height", `${sampleHeight}px`);
   ui.list.style.setProperty("--card-grid-min-height", `${cardHeight}px`);
   ui.list.style.setProperty("--card-grid-row-pitch", `${rowPitch}px`);
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     ui.list.style.setProperty("--card-grid-max-height", `${getCardGridMaxHeight()}px`);
   } else {
     ui.list.style.removeProperty("--card-grid-max-height");
@@ -9007,6 +9021,7 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelWidth: null,
   favoriteSidebarWidth: null,
   favoriteCategoryView: "all",
+  distractionFree: false,
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
   cardPreviewStylePresets: [],
@@ -9391,6 +9406,10 @@ function loadUiSettings() {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     const settings = normalizeLayoutSettings({ ...UI_SETTINGS_DEFAULTS, ...parsed });
+    if (parsed.view === "focus") {
+      settings.view = "grid";
+      settings.distractionFree = true;
+    }
     if ((Number(parsed.builtInCardPreviewStylePresetVersion) || 0) < BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION) {
       const existingPresets = Array.isArray(settings.cardPreviewStylePresets) ? settings.cardPreviewStylePresets : [];
       const existingIds = new Set(existingPresets.map(preset => String(preset?.id || "")));
@@ -9451,6 +9470,7 @@ function collectUiSettings() {
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
     favoriteSidebarWidth: ui.favoriteSidebar?.dataset.openWidth ? Number(ui.favoriteSidebar.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
+    distractionFree: state.distractionFree,
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
     cardPreviewStylePresets: state.cardPreviewStylePresets,
@@ -9537,7 +9557,7 @@ const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSetting
 const state = {
   fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), searchBrandCounts: new Map(), magnifier: uiSettings.magnifier,
   view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
-  familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
+  familyIndex: new Map(), pendingSelectionId: null, distractionFree: Boolean(uiSettings.distractionFree), collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
   activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
@@ -14518,7 +14538,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   state.prefetchCards.clear();
   state.singleCardSize = clampSingleCardSize(state.singleCardSize);
   ui.list.classList.toggle("single-view", state.view === "single");
-  ui.list.classList.toggle("focus-view", state.view === "focus");
+  ui.list.classList.toggle("focus-view", state.distractionFree);
   ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   state.pageSize = calculatePageSize();
   state.totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
@@ -14558,7 +14578,7 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   };
   const finishRender = () => {
     if (renderToken !== state.renderVersion) return;
-    if (remeasure && ["grid", "focus"].includes(state.view)) {
+    if (remeasure && state.view === "grid") {
       const nextPageSize = calculatePageSize();
       if (nextPageSize !== state.pageSize) {
         renderFontList({ deferFonts, remeasure: false });
@@ -14938,7 +14958,7 @@ function applyCardSampleSize({ fit = false } = {}) {
 }
 
 function refreshCardGridPageIfNeeded() {
-  if (!["grid", "focus"].includes(state.view)) return;
+  if (state.view !== "grid") return;
   const nextPageSize = calculatePageSize();
   if (nextPageSize === state.pageSize) return;
   state.page = 0;
@@ -16428,12 +16448,16 @@ document.querySelectorAll(".chip").forEach(button => button.addEventListener("cl
 $("#gridViewButton").addEventListener("click", () => setView("grid"));
 $("#singleViewButton").addEventListener("click", () => setView("single"));
 $("#focusViewToggle")?.addEventListener("change", event => {
-  setView(event.target.checked ? "focus" : "grid");
+  state.distractionFree = event.target.checked;
+  updateHeaderCardPreviewFocus();
+  updateFilterControls();
+  renderFontList();
+  persistUiSettings();
 });
 $("#cardColumns")?.addEventListener("input", event => {
   state.cardColumns = clampCardColumns(event.target.value, getCardGridCapacity().maxColumns);
   syncCardGridControls();
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     state.page = 0;
     renderFontList();
   }
@@ -16442,7 +16466,7 @@ $("#cardColumns")?.addEventListener("input", event => {
 $("#cardRows")?.addEventListener("input", event => {
   state.cardRows = clampCardRows(event.target.value, getCardGridCapacity().maxRows);
   syncCardGridControls();
-  if (["grid", "focus"].includes(state.view)) {
+  if (state.view === "grid") {
     state.page = 0;
     renderFontList();
   }
@@ -16503,8 +16527,8 @@ function updateFilterControls() {
   const collapseFamilyFonts = $("#collapseFamilyFonts");
   const focusViewToggle = $("#focusViewToggle");
   if (collapseFamilyFonts) collapseFamilyFonts.checked = state.collapseFamilyFonts;
-  if (focusViewToggle) focusViewToggle.checked = state.view === "focus";
-  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.distractionFree;
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.distractionFree);
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
   $("#languageBadge").textContent = supportCount ? t("filter.badgeItems", { count: supportCount }) : t("filter.badgeAll");
   $("#weightBadge").textContent = state.weightFilters.size
@@ -16520,8 +16544,8 @@ function setView(view) {
   $("#gridViewButton").classList.toggle("active", view === "grid");
   $("#singleViewButton").classList.toggle("active", view === "single");
   const focusViewToggle = $("#focusViewToggle");
-  if (focusViewToggle) focusViewToggle.checked = view === "focus";
-  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || view === "focus");
+  if (focusViewToggle) focusViewToggle.checked = state.distractionFree;
+  $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.distractionFree);
   syncCardGridControls();
   updateCardSampleSizeControl();
   renderFontList();
@@ -16779,7 +16803,7 @@ if ("ResizeObserver" in window) {
     scheduleCardFit();
     clearTimeout(ui.list.pageResizeTimer);
     ui.list.pageResizeTimer = setTimeout(() => {
-      if (["grid", "focus"].includes(state.view)) syncCardGridControls();
+      if (state.view === "grid") syncCardGridControls();
       if (calculatePageSize() !== state.pageSize) renderFontList();
     }, 120);
   };
