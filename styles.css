@@ -1094,16 +1094,11 @@ body.header-card-preview-focus .preview-input-history {
   flex: none;
   white-space: nowrap;
 }
-.toolbar-view .grid-layout-control input,
+.toolbar-view .grid-layout-control:not(.single-size-control) input,
 .toolbar-view .columns-control input {
   width: clamp(36px, 12cqi, 56px);
   min-width: 36px;
   max-width: 56px;
-}
-.toolbar-view .single-size-control input {
-  width: 100%;
-  min-width: 48px;
-  max-width: none;
 }
 .single-size-range-wrap {
   position: relative;
@@ -1490,12 +1485,12 @@ body.header-card-preview-focus .preview-input-history {
   box-sizing: border-box;
 }
 .view-button svg {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   display: block;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1523,12 +1518,19 @@ body.header-card-preview-focus .preview-input-history {
 .columns-control[hidden] {
   display: none !important;
 }
-.grid-layout-control input,
+.grid-layout-control:not(.single-size-control) input,
 .columns-control input {
   width: clamp(36px, 12cqi, 56px);
   min-width: 36px;
   max-width: 56px;
   flex: 1 1 36px;
+}
+.single-size-control input,
+.toolbar-view .single-size-control input {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 auto;
 }
 .grid-layout-control output,
 .columns-control output { min-width: 1.2em; color: var(--ink); font-size: 9px; text-align: left; font-variant-numeric: tabular-nums; }
@@ -3918,9 +3920,9 @@ body.dark .preview-controls { background: #1a1917; }
 }
 
 @container card-toolbar (min-width: 981px) and (max-width: 1200px) {
-  .grid-layout-control input,
+  .grid-layout-control:not(.single-size-control) input,
   .columns-control input,
-  .toolbar-view .grid-layout-control input,
+  .toolbar-view .grid-layout-control:not(.single-size-control) input,
   .toolbar-view .columns-control input {
     width: clamp(32px, 10cqi, 48px);
     max-width: 48px;
@@ -3935,9 +3937,9 @@ body.dark .preview-controls { background: #1a1917; }
     min-width: 120px;
     max-width: 150px;
   }
-  .grid-layout-control input,
+  .grid-layout-control:not(.single-size-control) input,
   .columns-control input,
-  .toolbar-view .grid-layout-control input,
+  .toolbar-view .grid-layout-control:not(.single-size-control) input,
   .toolbar-view .columns-control input {
     width: clamp(32px, 10cqi, 48px);
     max-width: 48px;
@@ -3952,9 +3954,9 @@ body.dark .preview-controls { background: #1a1917; }
   .toolbar-filters .chip { padding: 0 8px; }
   .toolbar-view .grid-layout-control,
   .toolbar-view .columns-control { gap: 3px; }
-  .toolbar-view .grid-layout-control input,
+  .toolbar-view .grid-layout-control:not(.single-size-control) input,
   .toolbar-view .columns-control input,
-  .grid-layout-control input,
+  .grid-layout-control:not(.single-size-control) input,
   .columns-control input {
     width: clamp(32px, 16cqi, 44px);
     min-width: 32px;
