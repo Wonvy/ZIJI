@@ -8,10 +8,14 @@ const PREVIEW_TEXT_HISTORY_KEY = "font-preview-text-history";
 const PREVIEW_TEXT_HISTORY_LIMIT = 10;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
 const DEFAULT_CHINESE_BRANDS = ["思源", "方正", "汉仪", "华文", "阿里巴巴", "站酷", "霞鹜", "鸿蒙", "小米", "文泉驿"];
+const SEARCH_BRANDS_CACHE_KEY = "font-search-brands-v3";
+const MIN_CHINESE_BRAND_LENGTH = 2;
+const MAX_CHINESE_BRAND_LENGTH = 4;
+const MIN_CHINESE_BRAND_OCCURRENCES = 2;
 function loadCachedSearchBrands() {
   try {
-    const value = JSON.parse(localStorage.getItem("font-search-brands") || "[]");
-    return Array.isArray(value) ? value : [];
+    const value = JSON.parse(localStorage.getItem(SEARCH_BRANDS_CACHE_KEY) || "[]");
+    return Array.isArray(value) ? normalizeChineseBrandList(value) : [];
   } catch { return []; }
 }
 function loadCachedFavorites() {
@@ -783,7 +787,7 @@ const uiSettings = loadUiSettings();
 document.body.classList.toggle("dark", uiSettings.theme === "dark");
 const loadedCardPreviewStylePresets = normalizeCardPreviewStylePresets(uiSettings.cardPreviewStylePresets);
 const state = {
-  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), magnifier: uiSettings.magnifier,
+  fonts: [], filtered: [], selected: null, previewed: null, hovered: null, categoryTarget: null, contextFont: null, editingCategoryId: null, draggingCategoryId: null, draggingFontId: null, favoriteCategoryView: uiSettings.favoriteCategoryView, pointerInFontView: false, brandScanRunning: false, prefetchCards: new Set(), filters: new Set(uiSettings.filters), languageFilters: uiSettings.languageFilter === "all" ? new Set() : new Set([uiSettings.languageFilter]), weightFilters: new Set(uiSettings.weightFilters), weightOptions: [], searchBrands: new Set([...DEFAULT_CHINESE_BRANDS, ...loadCachedSearchBrands()]), searchBrandCounts: new Map(), magnifier: uiSettings.magnifier,
   view: normalizeView(uiSettings.view), sort: uiSettings.sort, cardColumns: resolveCardColumns(uiSettings), cardRows: resolveCardRows(uiSettings), cardSampleSize: uiSettings.cardSampleSize, singleCardSize: uiSettings.singleCardSize, page: 0, pageSize: 1, totalPages: 1, preloadVersion: 0, renderVersion: 0, filterVersion: 0, aspectCharacter: "字", selectionVersion: 0, scanningVariables: false, scanningCapabilities: false, scanningShapes: false,
   familyIndex: new Map(), pendingSelectionId: null, collapseFamilyFonts: uiSettings.collapseFamilyFonts,
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
@@ -1051,34 +1055,81 @@ function syncSearchClearVisibility() {
 function renderSearchSuggestions() {
   const current = ui.search.value.trim();
   const renderTags = terms => terms.map(term => `<button type="button" class="suggestion-tag${current === term ? " active" : ""}" data-search-term="${escapeHtml(term)}">${escapeHtml(term)}</button>`).join("");
+  const renderBrandTags = brands => brands.map(brand => {
+    const count = state.searchBrandCounts.get(brand) || 0;
+    const countHtml = count > 0 ? `<span class="suggestion-tag-count">${count}</span>` : "";
+    return `<button type="button" class="suggestion-tag brand-suggestion-tag${current === brand ? " active" : ""}" data-search-term="${escapeHtml(brand)}"><span>${escapeHtml(brand)}</span>${countHtml}</button>`;
+  }).join("");
   ui.commonSearchTags.innerHTML = renderTags(COMMON_SEARCH_TERMS);
-  const brands = [...state.searchBrands].sort((a, b) => a.localeCompare(b, "zh-CN"));
-  ui.brandSearchTags.innerHTML = brands.length ? renderTags(brands) : `<span class="suggestion-empty">正在扫描中文字体品牌…</span>`;
+  const brands = normalizeChineseBrandList(state.searchBrands).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  ui.brandSearchTags.innerHTML = brands.length ? renderBrandTags(brands) : `<span class="suggestion-empty">正在扫描中文字体品牌…</span>`;
   ui.searchSuggestions.querySelectorAll("[data-search-term]").forEach(button => {
     button.addEventListener("mousedown", event => event.preventDefault());
     button.addEventListener("click", () => setSearchTerm(button.dataset.searchTerm));
   });
 }
 
-function inferChineseBrands(names) {
-  const inferred = new Set();
-  const typePattern = /^(.{2,8}?)(?:黑体|宋体|楷体|圆体|仿宋|等线|明朝体|书体|隶书|行书|草书|魏碑)/;
-  const prefixCounts = new Map();
-  const ignored = new Set(["中文", "简体", "繁体", "字体", "新字", "常用"]);
+function isValidChineseBrandCandidate(value) {
+  const length = [...String(value || "")].length;
+  return length >= MIN_CHINESE_BRAND_LENGTH && length <= MAX_CHINESE_BRAND_LENGTH && /^\p{Script=Han}+$/u.test(value);
+}
+
+function normalizeChineseBrandList(brands) {
+  const validBrands = [...new Set([...brands].map(brand => String(brand || "").trim()).filter(isValidChineseBrandCandidate))];
+  const defaultBrands = new Set(DEFAULT_CHINESE_BRANDS);
+  return validBrands.filter(brand =>
+    defaultBrands.has(brand)
+    || !DEFAULT_CHINESE_BRANDS.some(defaultBrand => brand !== defaultBrand && brand.startsWith(defaultBrand))
+      && !validBrands.some(other => other !== brand && other.startsWith(brand) && [...other].length > [...brand].length)
+  );
+}
+
+function normalizeChineseFontName(name) {
+  return String(name || "").replace(/[\s·・_-]/g, "");
+}
+
+function countChineseBrands(names, brands) {
+  const counts = new Map();
+  const normalizedBrands = normalizeChineseBrandList(brands);
   for (const rawName of names) {
-    const name = rawName.replace(/[\s·・_-]/g, "");
-    const matched = name.match(typePattern);
-    if (matched && !ignored.has(matched[1])) inferred.add(matched[1]);
-    for (let length = 2; length <= Math.min(6, [...name].length); length++) {
-      const prefix = [...name].slice(0, length).join("");
-      if (!/^\p{Script=Han}+$/u.test(prefix) || ignored.has(prefix)) continue;
-      prefixCounts.set(prefix, (prefixCounts.get(prefix) || 0) + 1);
-    }
+    const name = normalizeChineseFontName(rawName);
+    normalizedBrands.forEach(brand => {
+      if (name.startsWith(brand)) counts.set(brand, (counts.get(brand) || 0) + 1);
+    });
   }
-  [...prefixCounts].filter(([, count]) => count >= 2).map(([prefix]) => prefix).sort((a, b) => a.length - b.length).forEach(prefix => {
-    if (![...inferred].some(existing => prefix.startsWith(existing))) inferred.add(prefix);
-  });
-  return inferred;
+  return counts;
+}
+
+function inferChineseBrands(names) {
+  const brandCounts = new Map();
+  const typePattern = /^(.{2,4}?)(?:黑体|宋体|楷体|圆体|仿宋|等线|明朝体|书体|隶书|行书|草书|魏碑)/;
+  const ignored = new Set(["中文", "简体", "繁体", "字体", "新字", "常用"]);
+  const addCandidate = (candidates, candidate) => {
+    if (!isValidChineseBrandCandidate(candidate) || ignored.has(candidate)) return;
+    candidates.add(candidate);
+  };
+  for (const rawName of names) {
+    const name = normalizeChineseFontName(rawName);
+    const candidates = new Set();
+    const matched = name.match(typePattern);
+    if (matched) addCandidate(candidates, matched[1]);
+    for (let length = MIN_CHINESE_BRAND_LENGTH; length <= Math.min(MAX_CHINESE_BRAND_LENGTH, [...name].length); length++) {
+      const prefix = [...name].slice(0, length).join("");
+      addCandidate(candidates, prefix);
+    }
+    candidates.forEach(candidate => {
+      brandCounts.set(candidate, (brandCounts.get(candidate) || 0) + 1);
+    });
+  }
+  const repeatedBrands = [...brandCounts]
+    .filter(([, count]) => count >= MIN_CHINESE_BRAND_OCCURRENCES)
+    .map(([brand]) => brand)
+    .sort((a, b) => [...b].length - [...a].length || a.localeCompare(b, "zh-CN"));
+  const inferred = [];
+  for (const brand of repeatedBrands) {
+    if (!inferred.some(existing => existing.startsWith(brand))) inferred.push(brand);
+  }
+  return new Set(inferred);
 }
 
 async function scanChineseSearchBrands() {
@@ -1091,12 +1142,16 @@ async function scanChineseSearchBrands() {
     names.filter(name => /\p{Script=Han}/u.test(name || "")).forEach(name => chineseNames.add(name));
     if (index % 30 === 0) {
       inferChineseBrands(chineseNames).forEach(brand => state.searchBrands.add(brand));
+      state.searchBrands = new Set(normalizeChineseBrandList(state.searchBrands));
+      state.searchBrandCounts = countChineseBrands(chineseNames, state.searchBrands);
       renderSearchSuggestions();
     }
     await new Promise(resolve => setTimeout(resolve, 12));
   }
   inferChineseBrands(chineseNames).forEach(brand => state.searchBrands.add(brand));
-  localStorage.setItem("font-search-brands", JSON.stringify([...state.searchBrands]));
+  state.searchBrands = new Set(normalizeChineseBrandList(state.searchBrands));
+  state.searchBrandCounts = countChineseBrands(chineseNames, state.searchBrands);
+  localStorage.setItem(SEARCH_BRANDS_CACHE_KEY, JSON.stringify([...state.searchBrands]));
   renderSearchSuggestions();
   state.brandScanRunning = false;
   console.debug(`[字体品牌扫描 ${new Date().toISOString()}] 完成`, { chineseFonts: chineseNames.size, brands: [...state.searchBrands] });

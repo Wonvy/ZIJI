@@ -943,7 +943,11 @@ kbd,
 .suggestion-group > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
 .suggestion-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .suggestion-tag { min-height: 28px; padding: 4px 10px; cursor: pointer; border: 0; border-radius: 20px; color: var(--muted); background: var(--paper); font-size: 12px; }
+.brand-suggestion-tag { display: inline-flex; align-items: center; gap: 6px; }
+.suggestion-tag-count { min-width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--ink) 8%, transparent); font-size: 10px; line-height: 1; box-sizing: border-box; }
 .suggestion-tag:hover, .suggestion-tag.active { color: white; background: var(--accent); }
+.suggestion-tag:hover .suggestion-tag-count,
+.suggestion-tag.active .suggestion-tag-count { color: var(--accent); background: white; }
 .suggestion-empty { color: var(--muted); font-size: 12px; }
 .card-preview-input {
   display: flex;
@@ -1062,7 +1066,6 @@ body.header-card-preview-focus .preview-input-history {
 .toolbar-view .view-button {
   width: var(--toolbar-control-height);
   height: var(--toolbar-control-height);
-  font-size: 14px;
 }
 .toolbar-view .grid-layout-control,
 .toolbar-view .columns-control { margin-left: 2px; gap: 4px; font-size: 9px; }
@@ -1484,8 +1487,17 @@ body.header-card-preview-focus .preview-input-history {
   border-radius: 4px;
   color: var(--muted);
   background: var(--paper);
-  font-size: 14px;
   box-sizing: border-box;
+}
+.view-button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .view-controls > .view-button:first-of-type {
   border-radius: 4px 0 0 4px;
@@ -1494,11 +1506,6 @@ body.header-card-preview-focus .preview-input-history {
   margin-left: -7px;
   border-radius: 0 4px 4px 0;
 }
-#singleViewButton {
-  font-family: Georgia, "Songti SC", serif !important;
-  font-size: 15px;
-}
-#gridViewButton { font-size: 13px; }
 .view-button.active { z-index: 1; color: #fff; border-color: var(--accent); background: var(--accent); }
 .grid-layout-control,
 .columns-control {

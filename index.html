@@ -104,7 +104,7 @@
                 <span class="eyebrow" data-i18n="toolbar.fontLibrary">字体库</span>
                 <strong id="fontCount"><span class="font-count-value">0</span><span class="font-count-suffix" data-i18n="toolbar.fontCountSuffix"> 款字体</span></strong>
                 <button id="reloadButton" class="toolbar-icon-button" type="button" data-i18n-title="toolbar.reload" data-i18n-aria="toolbar.reload" title="刷新字体" aria-label="刷新字体">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v4h-4"></path><path d="M4 17v-4h4"></path><path d="M18.4 7.6A7 7 0 0 0 6.5 6.5L4 9"></path><path d="M5.6 16.4A7 7 0 0 0 17.5 17.5L20 15"></path></svg>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 8.5A7 7 0 0 0 6 6.5L4.5 8"></path><path d="M5 15.5a7 7 0 0 0 13 2l1.5-1.5"></path><path d="M19 4.5v4h-4"></path><path d="M5 19.5v-4h4"></path></svg>
                 </button>
               </div>
 
@@ -178,8 +178,12 @@
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" data-i18n-aria="toolbar.viewControlsAria" aria-label="视图控制栏">
-                <button id="gridViewButton" class="view-button active" data-i18n-title="view.grid" data-i18n-aria="view.grid" title="网格视图" aria-label="网格视图">▦</button>
-                <button id="singleViewButton" class="view-button" data-i18n-title="view.single" data-i18n-aria="view.single" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <button id="gridViewButton" class="view-button active" data-i18n-title="view.grid" data-i18n-aria="view.grid" title="网格视图" aria-label="网格视图">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="5" width="5.5" height="5.5" rx="1"></rect><rect x="13.5" y="5" width="5.5" height="5.5" rx="1"></rect><rect x="5" y="13.5" width="5.5" height="5.5" rx="1"></rect><rect x="13.5" y="13.5" width="5.5" height="5.5" rx="1"></rect></svg>
+                </button>
+                <button id="singleViewButton" class="view-button" data-i18n-title="view.single" data-i18n-aria="view.single" title="单字极简视图" aria-label="单字极简视图">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="5" width="12" height="14" rx="2"></rect><path d="M9 9h6"></path><path d="M12 9v6"></path><path d="M9.5 15h5"></path></svg>
+                </button>
                 <label class="grid-layout-control" data-i18n-title="view.columnsTitle"><output id="cardColumnsOutput">7</output> <span data-i18n="view.columns">列</span> <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" data-i18n-aria="view.columnsAria" aria-label="每行显示列数" /></label>
                 <label class="grid-layout-control" data-i18n-title="view.rowsTitle"><output id="cardRowsOutput">4</output> <span data-i18n="view.rows">行</span> <input id="cardRows" type="range" min="1" max="8" step="1" value="4" data-i18n-aria="view.rowsAria" aria-label="每页显示行数" /></label>
                 <label id="singleCardSizeControl" class="grid-layout-control single-size-control" data-i18n-title="view.sizeTitle" title="单字卡片大小" hidden><span class="control-label-text" data-i18n="view.size">大小</span> <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" data-i18n-aria="view.sizeAria" aria-label="单字卡片大小" /></span><output id="singleCardSizeOutput">82</output></label>

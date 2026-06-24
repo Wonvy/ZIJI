@@ -664,6 +664,8 @@ const I18N_LOCALE_ALIASES = {
   "zh-hant": "zh-TW",
   "zh-tw": "zh-TW",
   "zh-hk": "zh-TW",
+  "zh-mo": "zh-TW",
+  "zh-sg": "zh-CN",
   jp: "ja",
   kr: "ko",
   pt: "pt-BR",
@@ -687,9 +689,31 @@ function normalizeLocale(locale) {
   return "zh-CN";
 }
 
+function getLocaleDetectionCandidates() {
+  const candidates = [];
+  const add = locale => {
+    const value = String(locale || "").trim();
+    if (value && !candidates.includes(value)) candidates.push(value);
+  };
+  const browserLanguages = navigator.languages?.length ? navigator.languages : [navigator.language];
+  browserLanguages.forEach(add);
+  add(navigator.language);
+  try {
+    add(Intl.DateTimeFormat().resolvedOptions().locale);
+  } catch {}
+  [...candidates].forEach(locale => {
+    try {
+      const maximized = new Intl.Locale(locale).maximize();
+      add(maximized.toString());
+      if (maximized.language && maximized.region) add(`${maximized.language}-${maximized.region}`);
+      if (maximized.language && maximized.script) add(`${maximized.language}-${maximized.script}`);
+    } catch {}
+  });
+  return candidates;
+}
+
 function detectDefaultLocale() {
-  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
-  for (const language of languages) {
+  for (const language of getLocaleDetectionCandidates()) {
     const normalized = normalizeLocale(language);
     if (I18N_MESSAGES[normalized]) return normalized;
   }
