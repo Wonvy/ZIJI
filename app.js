@@ -795,7 +795,7 @@ const ui = {
   welcome: $("#welcome"), workspace: $("#workspace"), load: $("#loadFontsButton"), reload: $("#reloadButton"),
   loadProgress: $("#loadProgress"), progressBar: $("#progressBar"), progressText: $("#progressText"), progressValue: $("#progressValue"),
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
-  support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
+  support: $("#supportNote"), search: $("#searchInput"), searchClear: $("#searchClearButton"), list: $("#fontList"), count: $("#fontCount"),
   pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeBubble: $("#cardSampleSizeBubble"),
   empty: $("#emptyState"), previewInput: $("#previewInput"), previewInputHistory: $("#previewInputHistory"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
@@ -1010,7 +1010,13 @@ function setSearchTerm(term) {
   applyFilter();
   suppressSearchSuggestions = true;
   hideSearchSuggestions();
+  syncSearchClearVisibility();
   ui.search.focus();
+}
+
+function syncSearchClearVisibility() {
+  if (!ui.searchClear) return;
+  ui.searchClear.hidden = !ui.search.value.length;
 }
 
 function renderSearchSuggestions() {
@@ -7249,8 +7255,18 @@ ui.load.addEventListener("click", loadFonts);
 ui.reload.addEventListener("click", loadFonts);
 ui.search.addEventListener("input", () => {
   suppressSearchSuggestions = false;
+  syncSearchClearVisibility();
   applyFilter();
   renderSearchSuggestions();
+});
+ui.searchClear?.addEventListener("mousedown", event => event.preventDefault());
+ui.searchClear?.addEventListener("click", () => {
+  ui.search.value = "";
+  suppressSearchSuggestions = false;
+  syncSearchClearVisibility();
+  applyFilter();
+  renderSearchSuggestions();
+  ui.search.focus();
 });
 searchControl?.addEventListener("mouseenter", () => {
   suppressSearchSuggestions = false;
@@ -7259,7 +7275,7 @@ searchControl?.addEventListener("mouseenter", () => {
 searchControl?.addEventListener("mouseleave", hideSearchSuggestions);
 ui.search.addEventListener("focus", showSearchSuggestions);
 searchControl?.querySelector(".search-box")?.addEventListener("click", event => {
-  if (event.target.closest("#searchSuggestions")) return;
+  if (event.target.closest("#searchSuggestions, #searchClearButton")) return;
   suppressSearchSuggestions = true;
   hideSearchSuggestions();
 });
@@ -7798,6 +7814,7 @@ if ("ResizeObserver" in window) {
 
 renderCategoryUI();
 renderSearchSuggestions();
+syncSearchClearVisibility();
 applyStoredUiSettings(uiSettings);
 updateVisualSettings();
 updatePreview();
