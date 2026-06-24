@@ -372,6 +372,15 @@ body:not(.workspace-active) .topbar { display: none; }
 }
 .toolbar-filters::-webkit-scrollbar { display: none; }
 .toolbar-filters > * { flex: none; }
+.toolbar-filter-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin-inline: auto;
+  padding-inline: 6px;
+}
 .toolbar-filters .chip {
   height: var(--toolbar-control-height);
   display: inline-flex;
@@ -3679,6 +3688,7 @@ body.dark .preview-controls { background: #1a1917; }
   .toolbar-meta .eyebrow,
   .toolbar-meta .font-count-suffix { display: none; }
   .toolbar-filters .filter-divider { display: none; }
+  .toolbar-filter-group { margin-inline: 0; padding-inline: 0; gap: 4px; }
   .toolbar-filters .filter-menu-label { display: none; }
   .toolbar-filters .filter-menu summary { padding: 0 6px; gap: 2px; }
   .toolbar-filters .chip { padding: 0 8px; }
@@ -3863,48 +3873,50 @@ body.dark .preview-controls { background: #1a1917; }
                       <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
                     </div>
                   </div>
-                  <details class="filter-menu" id="languageMenu">
-                    <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
-                    <div class="filter-popover">
-                      <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
-                      <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
-                      <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
-                      <span class="popover-divider"></span>
-                      <label><input type="checkbox" data-capability="variable"> 可变字体</label>
-                    </div>
-                  </details>
-                  <details class="filter-menu" id="weightMenu">
-                    <summary><span class="filter-menu-label">字重</span> <b id="weightBadge">全部</b></summary>
-                    <div class="filter-popover weight-filter-popover" id="weightFilterList">
-                      <span class="filter-empty">正在扫描字重…</span>
-                    </div>
-                  </details>
-                  <details class="filter-menu" id="sortMenu">
-                    <summary><span class="filter-menu-label">排序</span> <b id="sortBadge">名称</b></summary>
-                    <div class="filter-popover sort-filter-popover">
-                      <span class="filter-group-label">常规</span>
-                      <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
-                      <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
-                      <span class="popover-divider"></span>
-                      <span class="filter-group-label">语言</span>
-                      <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
-                      <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
-                      <span class="popover-divider"></span>
-                      <span class="filter-group-label">字形比例</span>
-                      <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
-                      <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
-                      <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
-                    </div>
-                  </details>
-                  <div class="card-preview-style-menu">
-                    <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                      <summary aria-label="预览样式" title="预览样式">
-                        <span class="filter-menu-label">样式</span>
-                        <b id="cardPreviewStyleBadge">默认</b>
-                        <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
-                      </summary>
-                      <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
+                  <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
+                    <details class="filter-menu" id="languageMenu">
+                      <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
+                      <div class="filter-popover">
+                        <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
+                        <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
+                        <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                        <span class="popover-divider"></span>
+                        <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                      </div>
                     </details>
+                    <details class="filter-menu" id="weightMenu">
+                      <summary><span class="filter-menu-label">字重</span> <b id="weightBadge">全部</b></summary>
+                      <div class="filter-popover weight-filter-popover" id="weightFilterList">
+                        <span class="filter-empty">正在扫描字重…</span>
+                      </div>
+                    </details>
+                    <details class="filter-menu" id="sortMenu">
+                      <summary><span class="filter-menu-label">排序</span> <b id="sortBadge">名称</b></summary>
+                      <div class="filter-popover sort-filter-popover">
+                        <span class="filter-group-label">常规</span>
+                        <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
+                        <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
+                        <span class="popover-divider"></span>
+                        <span class="filter-group-label">语言</span>
+                        <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
+                        <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
+                        <span class="popover-divider"></span>
+                        <span class="filter-group-label">字形比例</span>
+                        <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
+                        <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
+                        <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
+                      </div>
+                    </details>
+                    <div class="card-preview-style-menu">
+                      <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
+                        <summary aria-label="预览样式" title="预览样式">
+                          <span class="filter-menu-label">样式</span>
+                          <b id="cardPreviewStyleBadge">默认</b>
+                          <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                        </summary>
+                        <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
+                      </details>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4412,7 +4424,8 @@ const UI_SETTINGS_DEFAULTS = {
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
   cardPreviewStylePresets: [],
-  activeCardPreviewStylePresetId: null
+  activeCardPreviewStylePresetId: null,
+  builtInCardPreviewStylePresetVersion: 0
 };
 
 const LEGACY_LIGHT_PREVIEW_BG = "#f3efe7";
@@ -4473,6 +4486,7 @@ const DEFAULT_LINEAR_GRADIENT_STOPS = [
 ];
 const PREVIEW_STYLE_FILL_LAYER_ID = "__fill__";
 const MANAGE_PRESET_PREVIEW_CHAR = "永";
+const BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION = 1;
 const PREVIEW_EFFECT_TYPES = {
   dropShadow: {
     label: "投影",
@@ -4514,6 +4528,98 @@ const PREVIEW_EFFECT_TYPES = {
     }
   }
 };
+const BUILT_IN_CARD_PREVIEW_STYLE_PRESETS = [
+  {
+    id: "built-in-douyin",
+    name: "抖音字",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#ffffff", opacity: 100 },
+      layers: [
+        { id: "built-in-douyin-cyan", type: "dropShadow", enabled: true, color: "#00f5ff", opacity: 95, angle: 225, distance: 3, blur: 0 },
+        { id: "built-in-douyin-red", type: "dropShadow", enabled: true, color: "#ff2d55", opacity: 95, angle: 45, distance: 3, blur: 0 },
+        { id: "built-in-douyin-stroke", type: "stroke", enabled: true, color: "#101014", opacity: 100, width: 2, blur: 0, position: "outside" }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-douyin-red", "built-in-douyin-cyan", "built-in-douyin-stroke"]
+    }
+  },
+  {
+    id: "built-in-hollow",
+    name: "空心字",
+    style: {
+      fill: { enabled: false, mode: "solid", color: "#ffffff", opacity: 0 },
+      layers: [
+        { id: "built-in-hollow-stroke", type: "stroke", enabled: true, color: "#e85832", opacity: 100, width: 3, blur: 0, position: "center" }
+      ],
+      layerOrder: ["built-in-hollow-stroke", PREVIEW_STYLE_FILL_LAYER_ID]
+    }
+  },
+  {
+    id: "built-in-neon",
+    name: "霓虹描边",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#101014", opacity: 100 },
+      layers: [
+        { id: "built-in-neon-stroke", type: "stroke", enabled: true, color: "#7c3cff", opacity: 100, width: 2, blur: 0, position: "outside" },
+        { id: "built-in-neon-glow", type: "dropShadow", enabled: true, color: "#00d8ff", opacity: 80, angle: 90, distance: 0, blur: 12 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-neon-stroke", "built-in-neon-glow"]
+    }
+  },
+  {
+    id: "built-in-metal",
+    name: "金属渐变",
+    style: {
+      fill: {
+        enabled: true,
+        mode: "gradient",
+        angle: 90,
+        opacity: 100,
+        stops: [
+          { color: "#2a2c31", opacity: 100, offset: 0 },
+          { color: "#ffffff", opacity: 100, offset: 42 },
+          { color: "#7b7f88", opacity: 100, offset: 100 }
+        ]
+      },
+      layers: [
+        { id: "built-in-metal-shadow", type: "dropShadow", enabled: true, color: "#000000", opacity: 28, angle: 60, distance: 4, blur: 5 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-metal-shadow"]
+    }
+  },
+  {
+    id: "built-in-soft-shadow",
+    name: "柔和投影",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#e85832", opacity: 100 },
+      layers: [
+        { id: "built-in-soft-shadow-layer", type: "dropShadow", enabled: true, color: "#000000", opacity: 24, angle: 56, distance: 8, blur: 12 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-soft-shadow-layer"]
+    }
+  },
+  {
+    id: "built-in-candy",
+    name: "糖果渐变",
+    style: {
+      fill: {
+        enabled: true,
+        mode: "gradient",
+        angle: 35,
+        opacity: 100,
+        stops: [
+          { color: "#ff4fd8", opacity: 100, offset: 0 },
+          { color: "#ffe66d", opacity: 100, offset: 52 },
+          { color: "#32d6ff", opacity: 100, offset: 100 }
+        ]
+      },
+      layers: [
+        { id: "built-in-candy-stroke", type: "stroke", enabled: true, color: "#ffffff", opacity: 100, width: 2, blur: 0, position: "outside" },
+        { id: "built-in-candy-shadow", type: "dropShadow", enabled: true, color: "#000000", opacity: 20, angle: 60, distance: 3, blur: 4 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-candy-stroke", "built-in-candy-shadow"]
+    }
+  }
+];
 let cardPreviewStyleLayerCounter = 0;
 let cardPreviewStylePresetCounter = 0;
 
@@ -4688,14 +4794,36 @@ function loadUiSettings() {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     const settings = normalizeLayoutSettings({ ...UI_SETTINGS_DEFAULTS, ...parsed });
+    if ((Number(parsed.builtInCardPreviewStylePresetVersion) || 0) < BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION) {
+      const existingPresets = Array.isArray(settings.cardPreviewStylePresets) ? settings.cardPreviewStylePresets : [];
+      const existingIds = new Set(existingPresets.map(preset => String(preset?.id || "")));
+      settings.cardPreviewStylePresets = [
+        ...existingPresets,
+        ...cloneBuiltInCardPreviewStylePresets().filter(preset => !existingIds.has(preset.id))
+      ];
+      settings.builtInCardPreviewStylePresetVersion = BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION;
+    }
     if (!raw) {
       const legacyCardSize = localStorage.getItem("card-sample-size");
       if (legacyCardSize !== null) settings.cardSampleSize = Number(legacyCardSize) || settings.cardSampleSize;
     }
     return settings;
   } catch {
-    return { ...UI_SETTINGS_DEFAULTS };
+    return {
+      ...UI_SETTINGS_DEFAULTS,
+      cardPreviewStylePresets: cloneBuiltInCardPreviewStylePresets(),
+      builtInCardPreviewStylePresetVersion: BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION
+    };
   }
+}
+
+function cloneBuiltInCardPreviewStylePresets() {
+  return BUILT_IN_CARD_PREVIEW_STYLE_PRESETS.map(preset => ({
+    id: preset.id,
+    name: preset.name,
+    style: cloneCardPreviewStyle(preset.style),
+    updatedAt: 0
+  }));
 }
 function collectUiSettings() {
   const detailPanel = $("#detailPanel");
@@ -4727,7 +4855,8 @@ function collectUiSettings() {
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
     cardPreviewStylePresets: state.cardPreviewStylePresets,
-    activeCardPreviewStylePresetId: state.activeCardPreviewStylePresetId
+    activeCardPreviewStylePresetId: state.activeCardPreviewStylePresetId,
+    builtInCardPreviewStylePresetVersion: BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION
   };
 }
 let persistUiSettingsTimer;

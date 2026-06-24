@@ -109,48 +109,50 @@
                       <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
                     </div>
                   </div>
-                  <details class="filter-menu" id="languageMenu">
-                    <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
-                    <div class="filter-popover">
-                      <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
-                      <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
-                      <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
-                      <span class="popover-divider"></span>
-                      <label><input type="checkbox" data-capability="variable"> 可变字体</label>
-                    </div>
-                  </details>
-                  <details class="filter-menu" id="weightMenu">
-                    <summary><span class="filter-menu-label">字重</span> <b id="weightBadge">全部</b></summary>
-                    <div class="filter-popover weight-filter-popover" id="weightFilterList">
-                      <span class="filter-empty">正在扫描字重…</span>
-                    </div>
-                  </details>
-                  <details class="filter-menu" id="sortMenu">
-                    <summary><span class="filter-menu-label">排序</span> <b id="sortBadge">名称</b></summary>
-                    <div class="filter-popover sort-filter-popover">
-                      <span class="filter-group-label">常规</span>
-                      <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
-                      <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
-                      <span class="popover-divider"></span>
-                      <span class="filter-group-label">语言</span>
-                      <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
-                      <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
-                      <span class="popover-divider"></span>
-                      <span class="filter-group-label">字形比例</span>
-                      <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
-                      <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
-                      <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
-                    </div>
-                  </details>
-                  <div class="card-preview-style-menu">
-                    <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                      <summary aria-label="预览样式" title="预览样式">
-                        <span class="filter-menu-label">样式</span>
-                        <b id="cardPreviewStyleBadge">默认</b>
-                        <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
-                      </summary>
-                      <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
+                  <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
+                    <details class="filter-menu" id="languageMenu">
+                      <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
+                      <div class="filter-popover">
+                        <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
+                        <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
+                        <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                        <span class="popover-divider"></span>
+                        <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                      </div>
                     </details>
+                    <details class="filter-menu" id="weightMenu">
+                      <summary><span class="filter-menu-label">字重</span> <b id="weightBadge">全部</b></summary>
+                      <div class="filter-popover weight-filter-popover" id="weightFilterList">
+                        <span class="filter-empty">正在扫描字重…</span>
+                      </div>
+                    </details>
+                    <details class="filter-menu" id="sortMenu">
+                      <summary><span class="filter-menu-label">排序</span> <b id="sortBadge">名称</b></summary>
+                      <div class="filter-popover sort-filter-popover">
+                        <span class="filter-group-label">常规</span>
+                        <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
+                        <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
+                        <span class="popover-divider"></span>
+                        <span class="filter-group-label">语言</span>
+                        <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
+                        <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
+                        <span class="popover-divider"></span>
+                        <span class="filter-group-label">字形比例</span>
+                        <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
+                        <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
+                        <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
+                      </div>
+                    </details>
+                    <div class="card-preview-style-menu">
+                      <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
+                        <summary aria-label="预览样式" title="预览样式">
+                          <span class="filter-menu-label">样式</span>
+                          <b id="cardPreviewStyleBadge">默认</b>
+                          <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                        </summary>
+                        <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
+                      </details>
+                    </div>
                   </div>
                 </div>
               </div>

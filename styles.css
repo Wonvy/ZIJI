@@ -364,6 +364,15 @@ body:not(.workspace-active) .topbar { display: none; }
 }
 .toolbar-filters::-webkit-scrollbar { display: none; }
 .toolbar-filters > * { flex: none; }
+.toolbar-filter-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin-inline: auto;
+  padding-inline: 6px;
+}
 .toolbar-filters .chip {
   height: var(--toolbar-control-height);
   display: inline-flex;
@@ -3671,6 +3680,7 @@ body.dark .preview-controls { background: #1a1917; }
   .toolbar-meta .eyebrow,
   .toolbar-meta .font-count-suffix { display: none; }
   .toolbar-filters .filter-divider { display: none; }
+  .toolbar-filter-group { margin-inline: 0; padding-inline: 0; gap: 4px; }
   .toolbar-filters .filter-menu-label { display: none; }
   .toolbar-filters .filter-menu summary { padding: 0 6px; gap: 2px; }
   .toolbar-filters .chip { padding: 0 8px; }
