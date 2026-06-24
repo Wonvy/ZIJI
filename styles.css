@@ -177,7 +177,30 @@ body.workspace-active .version-badge { font-size: 9px; }
 .version-badge:focus-visible .credit-text { opacity: 1; transform: translateY(0); }
 .header-actions { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .workspace-header-actions { display: none; }
-.workspace-active .workspace-header-actions { display: flex; }
+.workspace-active .workspace-header-actions { display: flex; align-items: center; gap: 6px; }
+.header-actions .locale-menu { position: relative; }
+.header-actions .locale-popover,
+.welcome-footer .locale-popover {
+  right: 0;
+  left: auto;
+  min-width: 148px;
+  padding: 6px;
+}
+.locale-option {
+  width: 100%;
+  display: block;
+  padding: 7px 10px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+.locale-option:hover { background: var(--paper); }
+.locale-option.active { color: var(--accent); font-weight: 600; }
+.welcome-footer .welcome-locale-menu summary { color: var(--muted); }
 .header-preview {
   position: absolute;
   left: 50%;
@@ -201,16 +224,6 @@ body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input {
   position: relative;
   padding-right: 28px;
-  height: auto;
-  min-height: var(--toolbar-control-height);
-  max-height: calc(var(--topbar-height) - 12px);
-  align-items: center;
-  padding-block: 6px;
-  box-sizing: border-box;
-}
-.header-preview-input input {
-  line-height: 1.35;
-  align-self: center;
 }
 .preview-input-history-toggle {
   position: absolute;
@@ -685,6 +698,11 @@ body.dark .search-clear-button:hover {
   font-size: 12px;
   opacity: .88;
 }
+.welcome-footer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .welcome-footer {
   flex: none;
   display: flex;
@@ -950,6 +968,18 @@ kbd,
   font-size: 16px;
   line-height: 1.2;
 }
+.header-preview-input.card-preview-input {
+  height: auto;
+  min-height: var(--toolbar-control-height);
+  max-height: calc(var(--topbar-height) - 12px);
+  align-items: center;
+  padding-block: 6px;
+  box-sizing: border-box;
+}
+.header-preview-input.card-preview-input input {
+  line-height: 1.35;
+  align-self: center;
+}
 .magnifier-toolbar-button {
   flex: none;
   width: var(--toolbar-control-height);
@@ -1052,6 +1082,11 @@ body.header-card-preview-focus .preview-input-history {
   padding-right: 10px;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
+  white-space: nowrap;
+}
+.single-size-control .control-label-text {
+  flex: none;
+  white-space: nowrap;
 }
 .toolbar-view .grid-layout-control input,
 .toolbar-view .columns-control input {

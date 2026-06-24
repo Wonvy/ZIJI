@@ -1,11 +1,9 @@
 const $ = (selector) => document.querySelector(selector);
-const LOAD_BUTTON_LABEL = "读取系统字体";
 const DEFAULT_DETAIL_PREVIEW = `天地玄黄 宇宙洪荒
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
 0123456789
 ，。！？；：“”「」`;
-const DEFAULT_CARD_PREVIEW_TEXT = "字体有光";
 const PREVIEW_TEXT_HISTORY_KEY = "font-preview-text-history";
 const PREVIEW_TEXT_HISTORY_LIMIT = 10;
 const COMMON_SEARCH_TERMS = ["黑", "宋", "楷", "圆", "仿宋", "等线", "手写", "书法", "像素"];
@@ -44,14 +42,14 @@ function loadFavoriteData() {
 const cachedFavoriteData = loadFavoriteData();
 const UI_SETTINGS_KEY = "webfonts-ui-settings";
 const UI_SETTINGS_VERSION = 1;
-const SORT_LABELS = {
-  name: "名称",
-  favorite: "收藏",
-  "chinese-first": "中文",
-  "latin-first": "英文",
-  square: "方形",
-  narrow: "瘦→宽",
-  wide: "宽→瘦"
+const SORT_I18N_KEYS = {
+  name: "sort.name",
+  favorite: "sort.favorite",
+  "chinese-first": "sort.chineseFirst",
+  "latin-first": "sort.latinFirst",
+  square: "sort.square",
+  narrow: "sort.narrow",
+  wide: "sort.wide"
 };
 const CARD_GRID_GAP = 14;
 const CARD_GRID_PADDING_BLOCK = 24;
@@ -227,7 +225,30 @@ function syncCardGridControls() {
 }
 
 function sortLabel(sort) {
-  return SORT_LABELS[sort] || "名称";
+  return t(SORT_I18N_KEYS[sort] || "sort.name");
+}
+
+function defaultCardPreviewText() {
+  return t("defaults.cardPreviewText");
+}
+
+function updateDynamicTranslations() {
+  applyStaticTranslations();
+  syncMagnifierControl();
+  syncDetailPanelToggle($("#detailPanel")?.classList.contains("collapsed"));
+  syncCardAreaToggle($("#cardArea")?.classList.contains("collapsed"));
+  if (ui.load) ui.load.textContent = t("welcome.loadFonts");
+  if (!("queryLocalFonts" in window) && ui.support && !ui.support.dataset.errorMessage) {
+    ui.support.textContent = t("welcome.supportNoApi");
+  }
+  updateFilterControls();
+  updateFontStatus(state.previewed || null);
+  renderCardPreviewStyleQuickMenu();
+  if (!ui.workspace.hidden && state.filtered.length >= 0) {
+    const start = state.page * state.pageSize;
+    const pageFonts = state.filtered.slice(start, start + state.pageSize);
+    renderPaginationSummary(pageFonts.length, start);
+  }
 }
 const UI_SETTINGS_DEFAULTS = {
   theme: "light",
@@ -661,6 +682,7 @@ function collectUiSettings() {
   const detailPanel = $("#detailPanel");
   return {
     version: UI_SETTINGS_VERSION,
+    uiLocale: getLocale(),
     theme: document.body.classList.contains("dark") ? "dark" : "light",
     view: state.view,
     cardColumns: state.cardColumns,
@@ -701,17 +723,20 @@ function persistUiSettings() {
 }
 function syncMagnifierControl() {
   ui.magnifierButton.classList.toggle("active", state.magnifier);
-  ui.magnifierButton.title = state.magnifier ? "关闭放大镜" : "开启放大镜";
-  ui.magnifierButton.setAttribute("aria-label", ui.magnifierButton.title);
+  const labelKey = state.magnifier ? "header.magnifierOff" : "header.magnifierOn";
+  ui.magnifierButton.title = t(labelKey);
+  ui.magnifierButton.setAttribute("aria-label", t(labelKey));
   ui.magnifierButton.setAttribute("aria-pressed", String(state.magnifier));
 }
 function syncDetailPanelToggle(collapsed) {
-  $("#detailToggle").title = collapsed ? "展开详情" : "折叠详情";
-  $("#detailToggle").setAttribute("aria-label", collapsed ? "展开详情" : "折叠详情");
+  const key = collapsed ? "panel.expandDetail" : "panel.collapseDetail";
+  $("#detailToggle").title = t(key);
+  $("#detailToggle").setAttribute("aria-label", t(key));
 }
 function syncCardAreaToggle(collapsed) {
-  $("#cardAreaToggle").title = collapsed ? "展开字体库" : "折叠字体库";
-  $("#cardAreaToggle").setAttribute("aria-label", collapsed ? "展开字体库" : "折叠字体库");
+  const key = collapsed ? "panel.expandLibrary" : "panel.collapseLibrary";
+  $("#cardAreaToggle").title = t(key);
+  $("#cardAreaToggle").setAttribute("aria-label", t(key));
 }
 function applyStoredUiSettings(settings) {
   document.body.classList.toggle("dark", settings.theme === "dark");
@@ -966,7 +991,10 @@ async function copyValue(value, label) {
     document.execCommand("copy");
     input.remove();
   }
-  toast(`已复制${label}：${value.replace(/\s+/g, " ").trim().slice(0, 40)}${value.replace(/\s+/g, " ").trim().length > 40 ? "…" : ""}`);
+  toast(t("toast.copied", {
+    label,
+    value: `${value.replace(/\s+/g, " ").trim().slice(0, 40)}${value.replace(/\s+/g, " ").trim().length > 40 ? "…" : ""}`
+  }));
 }
 
 function copyDetailValue(element, label) {
@@ -1230,7 +1258,8 @@ function registerFont(font) {
 
 async function loadFonts() {
   if (!("queryLocalFonts" in window)) {
-    ui.support.textContent = "当前浏览器不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
+    ui.support.textContent = t("welcome.supportBlocked");
+    toast(t("toast.noLocalFontApi"));
     toast("当前浏览器不支持 Local Font Access API");
     return;
   }
@@ -1267,13 +1296,14 @@ async function loadFonts() {
     clearPreview();
     setTimeout(scanChineseSearchBrands, 800);
   } catch (error) {
-    const message = error?.name === "NotAllowedError" ? "未获得字体访问权限，请在浏览器设置中允许后重试。" : `读取失败：${error.message}`;
+    const message = error?.name === "NotAllowedError" ? t("welcome.supportDenied") : t("welcome.supportFailed", { message: error.message });
     ui.support.textContent = message;
+    ui.support.dataset.errorMessage = "1";
     setLoadProgress(message, 0);
     toast(message);
   } finally {
     ui.load.disabled = false;
-    ui.load.textContent = LOAD_BUTTON_LABEL;
+    ui.load.textContent = t("welcome.loadFonts");
   }
 }
 
@@ -2972,7 +3002,9 @@ function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
   if (!sample) return;
   const card = sample.closest(".font-card");
   if (!style || !hasActiveCardPreviewStyle(style)) {
+    const text = getPreviewSampleText(sample) || cardPreviewText();
     clearCardPreviewStyleOnElement(sample);
+    flattenPreviewStyleStackHost(sample, text);
     card?.classList.remove("has-preview-style");
     return;
   }
@@ -2985,6 +3017,7 @@ function applyCardPreviewStyleToAllCards() {
   scheduleCardSampleFit();
   renderCardPreviewStyleModalPreview();
   syncHeaderPreviewFocusDisplay();
+  if (ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) showHoverPreviewOverlay(state.hovered || state.previewed);
 }
 
 function clearCardPreviewStyleOnElement(element) {
@@ -4258,12 +4291,12 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
     persistUiSettings();
     renderCardPreviewStyleQuickMenu();
     if (cardPreviewStyleModalTab === "manage") renderCardPreviewStyleManagePanel();
-    if (showToast) toast("已恢复默认预览");
+    if (showToast) toast(t("toast.styleRestored"));
     return true;
   }
   const preset = findCardPreviewStylePreset(presetId);
   if (!preset) {
-    if (showToast) toast("样式不存在");
+    if (showToast) toast(t("toast.styleNotFound"));
     return false;
   }
   state.cardPreviewStyle = hasActiveCardPreviewStyle(preset.style)
@@ -4277,7 +4310,7 @@ function applyCardPreviewStylePresetById(presetId, { showToast = true } = {}) {
     cardPreviewStyleManagePresetId = preset.id;
     renderCardPreviewStyleManagePanel();
   }
-  if (showToast) toast(`已应用「${preset.name}」`);
+  if (showToast) toast(t("toast.styleApplied", { name: preset.name }));
   return true;
 }
 
@@ -4336,8 +4369,8 @@ function syncCardPreviewStyleMenuLabel() {
   const preset = state.activeCardPreviewStylePresetId
     ? findCardPreviewStylePreset(state.activeCardPreviewStylePresetId)
     : null;
-  const name = preset?.name || "默认";
-  const label = preset ? `预览样式：${name}` : "预览样式";
+  const name = preset?.name || t("filter.styleDefault");
+  const label = preset ? t("filter.styleMenuNamed", { name }) : t("filter.styleMenu");
   if (badge) badge.textContent = name;
   summary.title = label;
   summary.setAttribute("aria-label", label);
@@ -4348,14 +4381,14 @@ function renderCardPreviewStyleQuickMenu() {
   if (!menu) return;
   const activeId = state.activeCardPreviewStylePresetId || "";
   let html = `<div class="card-preview-style-preset-list">`;
-  html += renderQuickPresetMenuItem("", { active: !activeId, name: "默认" });
+  html += renderQuickPresetMenuItem("", { active: !activeId, name: t("filter.styleDefault") });
   html += state.cardPreviewStylePresets.map(preset =>
     renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
   html += `</div><span class="popover-divider"></span>
     <div class="card-preview-style-preset-footer">
-      <button type="button" class="card-preview-style-preset-action card-preview-style-preset-action-new" data-preset-action="new" aria-label="新建样式" title="新建样式"><span class="card-preview-style-preset-action-icon" aria-hidden="true">+</span></button>
-      <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式</button>
+      <button type="button" class="card-preview-style-preset-action card-preview-style-preset-action-new" data-preset-action="new" aria-label="${escapeHtml(t("previewStyle.newStyle"))}" title="${escapeHtml(t("previewStyle.newStyle"))}"><span class="card-preview-style-preset-action-icon" aria-hidden="true">+</span></button>
+      <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">${escapeHtml(t("previewStyle.manageStyles"))}</button>
     </div>`;
   menu.innerHTML = html;
   applyQuickPresetMenuStyles();
@@ -5689,13 +5722,12 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   } else {
     ui.list.style.gridTemplateColumns = `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`;
   }
-  ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span><span class="font-count-suffix"> 款字体</span>`;
+  ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span><span class="font-count-suffix">${t("toolbar.fontCountSuffix")}</span>`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
-  ui.pageInfo.innerHTML = `第 <span class="page-current">${state.page + 1}</span> / ${state.totalPages} 页`;
+  renderPaginationSummary(pageFonts.length, start);
   ui.previousPage.disabled = state.page === 0;
   ui.nextPage.disabled = state.page >= state.totalPages - 1;
-  ui.viewStatus.innerHTML = `本页 <span class="view-status-count">${pageFonts.length ? start + pageFonts.length : start}</span> / ${state.filtered.length} 款`;
   const hydratePage = () => {
     if (renderToken !== state.renderVersion) return;
     setupLazyFontLoading();
@@ -5726,21 +5758,33 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   else requestAnimationFrame(finishRender);
 }
 
+function renderPaginationSummary(pageCount, startIndex = 0) {
+  if (!ui.pageInfo || !ui.viewStatus) return;
+  ui.pageInfo.innerHTML = t("status.page", {
+    current: `<span class="page-current">${state.page + 1}</span>`,
+    total: state.totalPages
+  });
+  ui.viewStatus.innerHTML = t("status.pageCount", {
+    shown: `<span class="view-status-count">${pageCount ? startIndex + pageCount : startIndex}</span>`,
+    total: state.filtered.length
+  });
+}
+
 function updateFontStatus(font) {
   if (!font) {
-    ui.fontStatus.textContent = "将鼠标移到字体卡片查看信息";
+    ui.fontStatus.textContent = t("status.hoverHint");
     return;
   }
   const details = font.details;
   const weight = details?.weight || font.weightClass || 400;
   const parts = [
-    font.style || "Regular",
+    font.style || t("fontStyle.regular"),
     `W${weight}`,
-    font.variable === true ? "可变字体" : font.variable === false ? "标准字体" : "待检测",
+    font.variable === true ? t("detail.variableFont") : font.variable === false ? t("detail.standardFont") : t("detail.pendingDetect"),
     details?.format || "OpenType",
     Number.isFinite(font.aspectRatio) ? `${font.aspectRatio.toFixed(2)}:1` : null
   ].filter(Boolean);
-  ui.fontStatus.innerHTML = `<strong>${escapeHtml(font.displayName || font.family)}</strong>${parts.map(item => `<span>${escapeHtml(String(item))}</span>`).join("")}${state.favorites.has(font.postscriptName) ? `<span class="favorite-status">★ 已收藏</span>` : ""}`;
+  ui.fontStatus.innerHTML = `<strong>${escapeHtml(font.displayName || font.family)}</strong>${parts.map(item => `<span>${escapeHtml(String(item))}</span>`).join("")}${state.favorites.has(font.postscriptName) ? `<span class="favorite-status">${escapeHtml(t("status.favorited"))}</span>` : ""}`;
 }
 
 function calculatePageSize() {
@@ -7594,10 +7638,10 @@ function updateFilterControls() {
   if (focusViewToggle) focusViewToggle.checked = state.view === "focus";
   $("#viewOptionsMenu")?.classList.toggle("is-active", state.collapseFamilyFonts || state.view === "focus");
   const supportCount = state.languageFilters.size + Number(state.filters.has("variable"));
-  $("#languageBadge").textContent = supportCount ? `${supportCount} 项` : "全部";
+  $("#languageBadge").textContent = supportCount ? t("filter.badgeItems", { count: supportCount }) : t("filter.badgeAll");
   $("#weightBadge").textContent = state.weightFilters.size
     ? [...state.weightFilters].sort((a, b) => weightLabelOrder(a) - weightLabelOrder(b)).join(" · ")
-    : "全部";
+    : t("filter.badgeAll");
   $("#sortBadge").textContent = sortLabel(state.sort);
   document.querySelectorAll("[data-sort]").forEach(input => { input.checked = input.dataset.sort === state.sort; });
 }
@@ -7624,7 +7668,7 @@ ui.list.addEventListener("wheel", event => {
     syncCardGridControls();
     state.page = 0;
     renderFontList();
-    toast(`单字卡片 ${state.singleCardSize} × ${state.singleCardSize}`);
+    toast(t("toast.singleCardSize", { size: state.singleCardSize }));
     persistUiSettings();
   } else {
     const capacity = getCardGridCapacity();
@@ -7632,7 +7676,7 @@ ui.list.addEventListener("wheel", event => {
     syncCardGridControls();
     state.page = 0;
     renderFontList();
-    toast(`${state.cardRows} 行 × ${state.cardColumns} 列`);
+    toast(t("toast.gridLayout", { rows: state.cardRows, columns: state.cardColumns }));
     persistUiSettings();
   }
 }, { passive: false });
@@ -7850,10 +7894,14 @@ if ("ResizeObserver" in window) {
   else gridResizeObserver.observe(ui.list);
 }
 
+initLocaleFromSettings(uiSettings);
+applyStaticTranslations();
+wireLocaleMenu();
 renderCategoryUI();
 renderSearchSuggestions();
 syncSearchClearVisibility();
 applyStoredUiSettings(uiSettings);
+updateDynamicTranslations();
 updateVisualSettings();
 updatePreview();
 syncDetailPreviewStage();
@@ -7861,4 +7909,6 @@ updateCardSampleSizeControl();
 syncCardGridLayoutVars();
 wireCardPreviewStyleModal();
 wireCardPreviewStyleQuickMenu();
-if (!("queryLocalFonts" in window)) ui.support.textContent = "当前浏览器可能不支持系统字体读取，请使用最新版 Chrome 或 Edge。";
+if (!("queryLocalFonts" in window)) {
+  ui.support.textContent = t("welcome.supportNoApi");
+}

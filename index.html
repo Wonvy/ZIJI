@@ -11,7 +11,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-row topbar-main">
-        <div class="brand" aria-label="字己">
+        <div class="brand" data-i18n-aria="brand.name" aria-label="字己">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 48 48" focusable="false">
               <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
@@ -22,7 +22,7 @@
           </span>
           <span class="brand-copy">
             <span class="brand-title-row">
-              <strong>字己</strong>
+              <strong data-i18n="brand.name">字己</strong>
               <a class="version-badge" href="https://wonvy.cn/" target="_blank" rel="noopener noreferrer" title="By wonvy">
                 <span class="version-badge-text version-text">v1.0.25</span>
                 <span class="version-badge-text credit-text">By wonvy</span>
@@ -33,24 +33,30 @@
         <div class="header-preview">
           <div class="header-preview-input-wrap search-control">
             <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
-              <span class="preview-control-label">预览文字</span>
-              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" aria-label="卡片预览文字" title="双击清空预览文字" />
-              <button id="previewInputHistoryToggle" class="preview-input-history-toggle" type="button" tabindex="-1" aria-label="最近预览文字" aria-expanded="false" aria-controls="previewInputHistory" title="悬停查看最近输入">
+              <span class="preview-control-label" data-i18n="header.previewLabel">预览文字</span>
+              <input id="previewInput" type="text" value="字体有光" maxlength="80" spellcheck="false" autocomplete="off" data-i18n-aria="header.previewInputAria" data-i18n-title="header.previewInputTitle" aria-label="卡片预览文字" title="双击清空预览文字" />
+              <button id="previewInputHistoryToggle" class="preview-input-history-toggle" type="button" tabindex="-1" data-i18n-aria="header.previewHistoryAria" data-i18n-title="header.previewHistoryTitle" aria-label="最近预览文字" aria-expanded="false" aria-controls="previewInputHistory" title="悬停查看最近输入">
                 <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </label>
-            <div id="previewInputHistory" class="preview-input-history" hidden aria-label="预览文字历史"></div>
+            <div id="previewInputHistory" class="preview-input-history" hidden data-i18n-aria="header.previewHistoryPanelAria" aria-label="预览文字历史"></div>
           </div>
           <div id="headerPreviewFocusDisplay" class="header-preview-focus-display" hidden aria-hidden="true"></div>
-          <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
+          <button id="magnifierButton" class="icon-button magnifier-toolbar-button active" type="button" data-i18n-title="header.magnifierOff" data-i18n-aria="header.magnifierOff" title="关闭放大镜" aria-label="关闭放大镜" aria-pressed="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21"></path><path d="M8 10.5h5"></path><path d="M10.5 8v5"></path></svg>
           </button>
         </div>
         <div class="header-actions workspace-header-actions">
-          <button id="themeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
+          <details class="filter-menu filter-menu-icon locale-menu" id="localeMenu">
+            <summary data-i18n-aria="meta.langMenu" data-i18n-title="meta.langMenu" aria-label="界面语言" title="界面语言">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3 12h18M12 3c2.8 3.1 4.2 6.4 4.2 9s-1.4 5.9-4.2 9M12 3c-2.8 3.1-4.2 6.4-4.2 9s1.4 5.9 4.2 9"></path></svg>
+            </summary>
+            <div id="localeMenuPopover" class="filter-popover locale-popover" role="menu" hidden></div>
+          </details>
+          <button id="themeButton" class="icon-button" type="button" data-i18n-title="header.themeToggle" data-i18n-aria="header.themeToggle" title="切换主题" aria-label="切换主题">◐</button>
         </div>
       </div>
-      <div id="topbarResizeHandle" class="topbar-resize-handle" title="拖动调整顶部栏高度" aria-hidden="true"></div>
+      <div id="topbarResizeHandle" class="topbar-resize-handle" data-i18n-title="header.resizeTopbar" title="拖动调整顶部栏高度" aria-hidden="true"></div>
     </header>
 
     <main>
@@ -64,20 +70,28 @@
               <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
             </svg>
           </span>
-          <h1>字己<span class="welcome-accent">找字体，也找自己</span></h1>
-          <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
-          <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
+          <h1><span data-i18n="brand.name">字己</span><span class="welcome-accent" data-i18n="brand.tagline">找字体，也找自己</span></h1>
+          <p class="welcome-lead" data-i18n="welcome.lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
+          <button id="loadFontsButton" class="primary-button" type="button" data-i18n="welcome.loadFonts">读取系统字体</button>
           <div class="welcome-actions">
-            <span class="privacy"><i></i> 字体仅在本机处理</span>
+            <span class="privacy"><i></i> <span data-i18n="welcome.privacy">字体仅在本机处理</span></span>
           </div>
           <div id="loadProgress" class="load-progress" hidden aria-live="polite">
             <div class="progress-track"><i id="progressBar"></i></div>
-            <div class="progress-copy"><span id="progressText">准备读取字体…</span><strong id="progressValue"></strong></div>
+            <div class="progress-copy"><span id="progressText" data-i18n="welcome.progressPreparing">准备读取字体…</span><strong id="progressValue"></strong></div>
           </div>
         </div>
         <div class="welcome-footer">
-          <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
-          <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+          <div class="welcome-footer-controls">
+            <details class="filter-menu filter-menu-icon locale-menu welcome-locale-menu" id="welcomeLocaleMenu">
+              <summary data-i18n-aria="meta.langMenu" data-i18n-title="meta.langMenu" aria-label="界面语言" title="界面语言">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3 12h18M12 3c2.8 3.1 4.2 6.4 4.2 9s-1.4 5.9-4.2 9M12 3c-2.8 3.1-4.2 6.4-4.2 9s1.4 5.9 4.2 9"></path></svg>
+              </summary>
+              <div id="welcomeLocaleMenuPopover" class="filter-popover locale-popover" role="menu" hidden></div>
+            </details>
+            <button id="welcomeThemeButton" class="icon-button" type="button" data-i18n-title="header.themeToggle" data-i18n-aria="header.themeToggle" title="切换主题" aria-label="切换主题">◐</button>
+          </div>
+          <p id="supportNote" class="support-note welcome-footer-note" data-i18n="welcome.supportNote">推荐使用最新版 Chrome 或 Edge</p>
           <a class="welcome-footer-link" href="https://wonvy.cn/" target="_blank" rel="noopener noreferrer">By wonvy</a>
         </div>
       </section>
@@ -87,72 +101,72 @@
           <section class="card-area">
             <div class="card-toolbar">
               <div class="toolbar-section toolbar-meta">
-                <span class="eyebrow">字体库</span>
-                <strong id="fontCount"><span class="font-count-value">0</span><span class="font-count-suffix"> 款字体</span></strong>
-                <button id="reloadButton" class="toolbar-icon-button" type="button" title="刷新字体" aria-label="刷新字体">
+                <span class="eyebrow" data-i18n="toolbar.fontLibrary">字体库</span>
+                <strong id="fontCount"><span class="font-count-value">0</span><span class="font-count-suffix" data-i18n="toolbar.fontCountSuffix"> 款字体</span></strong>
+                <button id="reloadButton" class="toolbar-icon-button" type="button" data-i18n-title="toolbar.reload" data-i18n-aria="toolbar.reload" title="刷新字体" aria-label="刷新字体">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v4h-4"></path><path d="M4 17v-4h4"></path><path d="M18.4 7.6A7 7 0 0 0 6.5 6.5L4 9"></path><path d="M5.6 16.4A7 7 0 0 0 17.5 17.5L20 15"></path></svg>
                 </button>
               </div>
 
               <div class="toolbar-section toolbar-center">
-                <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
+                <div class="toolbar-filters filter-row" role="group" data-i18n-aria="toolbar.filtersAria" aria-label="字体筛选">
                   <div class="toolbar-filters-leading">
-                    <button class="chip active" data-filter="all">全部</button>
-                    <button class="chip" data-filter="favorite">收藏</button>
+                    <button class="chip active" data-filter="all" data-i18n="filter.all">全部</button>
+                    <button class="chip" data-filter="favorite" data-i18n="filter.favorite">收藏</button>
                   </div>
                   <div class="toolbar-filters-stack">
                     <div class="toolbar-search-wrap search-control">
                       <label class="search-box toolbar-search">
                         <span class="search-icon" aria-hidden="true">⌕</span>
-                        <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                        <button id="searchClearButton" class="search-clear-button" type="button" hidden aria-label="清除搜索">
+                        <input id="searchInput" type="search" data-i18n-placeholder="filter.searchPlaceholder" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                        <button id="searchClearButton" class="search-clear-button" type="button" hidden data-i18n-aria="filter.clearSearch" aria-label="清除搜索">
                           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M8 8l8 8M16 8l-8 8"/></svg>
                         </button>
                       </label>
                       <div id="searchSuggestions" class="search-suggestions" hidden>
-                        <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                        <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                        <div class="suggestion-group"><span data-i18n="filter.suggestCommon">常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                        <div class="suggestion-group"><span data-i18n="filter.suggestBrands">中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
                       </div>
                     </div>
-                    <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
+                    <div class="toolbar-filter-group" role="group" data-i18n-aria="toolbar.filterSortStyleAria" aria-label="筛选排序样式">
                     <details class="filter-menu" id="languageMenu">
-                      <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.language">语言</span> <b id="languageBadge">全部</b></summary>
                       <div class="filter-popover">
-                        <label><input type="radio" name="language-filter" data-language="all" checked> 不限语言</label>
-                        <label><input type="radio" name="language-filter" data-language="chinese"> 中文字体</label>
-                        <label><input type="radio" name="language-filter" data-language="latin"> 英文字体</label>
+                        <label><input type="radio" name="language-filter" data-language="all" checked> <span data-i18n="filter.languageAll">不限语言</span></label>
+                        <label><input type="radio" name="language-filter" data-language="chinese"> <span data-i18n="filter.languageChinese">中文字体</span></label>
+                        <label><input type="radio" name="language-filter" data-language="latin"> <span data-i18n="filter.languageLatin">英文字体</span></label>
                         <span class="popover-divider"></span>
-                        <label><input type="checkbox" data-capability="variable"> 可变字体</label>
+                        <label><input type="checkbox" data-capability="variable"> <span data-i18n="filter.variable">可变字体</span></label>
                       </div>
                     </details>
                     <details class="filter-menu" id="weightMenu">
-                      <summary><span class="filter-menu-label">字重</span> <b id="weightBadge">全部</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.weight">字重</span> <b id="weightBadge">全部</b></summary>
                       <div class="filter-popover weight-filter-popover" id="weightFilterList">
-                        <span class="filter-empty">正在扫描字重…</span>
+                        <span class="filter-empty" data-i18n="filter.weightScanning">正在扫描字重…</span>
                       </div>
                     </details>
                     <details class="filter-menu" id="sortMenu">
-                      <summary><span class="filter-menu-label">排序</span> <b id="sortBadge">名称</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.sort">排序</span> <b id="sortBadge">名称</b></summary>
                       <div class="filter-popover sort-filter-popover">
-                        <span class="filter-group-label">常规</span>
-                        <label><input type="radio" name="sort-filter" data-sort="name" checked> 名称排序</label>
-                        <label><input type="radio" name="sort-filter" data-sort="favorite"> 收藏优先</label>
+                        <span class="filter-group-label" data-i18n="filter.sortGeneral">常规</span>
+                        <label><input type="radio" name="sort-filter" data-sort="name" checked> <span data-i18n="filter.sortByName">名称排序</span></label>
+                        <label><input type="radio" name="sort-filter" data-sort="favorite"> <span data-i18n="filter.sortByFavorite">收藏优先</span></label>
                         <span class="popover-divider"></span>
-                        <span class="filter-group-label">语言</span>
-                        <label><input type="radio" name="sort-filter" data-sort="chinese-first"> 中文优先</label>
-                        <label><input type="radio" name="sort-filter" data-sort="latin-first"> 英文优先</label>
+                        <span class="filter-group-label" data-i18n="filter.sortLanguageGroup">语言</span>
+                        <label><input type="radio" name="sort-filter" data-sort="chinese-first"> <span data-i18n="filter.sortChineseFirst">中文优先</span></label>
+                        <label><input type="radio" name="sort-filter" data-sort="latin-first"> <span data-i18n="filter.sortLatinFirst">英文优先</span></label>
                         <span class="popover-divider"></span>
-                        <span class="filter-group-label">字形比例</span>
-                        <label><input type="radio" name="sort-filter" data-sort="square"> 首字接近正方形</label>
-                        <label><input type="radio" name="sort-filter" data-sort="narrow"> 首字由瘦到宽</label>
-                        <label><input type="radio" name="sort-filter" data-sort="wide"> 首字由宽到瘦</label>
+                        <span class="filter-group-label" data-i18n="filter.sortShapeGroup">字形比例</span>
+                        <label><input type="radio" name="sort-filter" data-sort="square"> <span data-i18n="filter.sortSquare">首字接近正方形</span></label>
+                        <label><input type="radio" name="sort-filter" data-sort="narrow"> <span data-i18n="filter.sortNarrow">首字由瘦到宽</span></label>
+                        <label><input type="radio" name="sort-filter" data-sort="wide"> <span data-i18n="filter.sortWide">首字由宽到瘦</span></label>
                       </div>
                     </details>
                     <div class="card-preview-style-menu">
                       <details class="filter-menu card-preview-style-preset-dropdown" id="cardPreviewStylePresetDropdown">
-                        <summary aria-label="预览样式" title="预览样式">
-                          <span class="filter-menu-label">样式</span>
-                          <b id="cardPreviewStyleBadge">默认</b>
+                        <summary data-i18n-aria="filter.styleMenu" data-i18n-title="filter.styleMenu" aria-label="预览样式" title="预览样式">
+                          <span class="filter-menu-label" data-i18n="filter.style">样式</span>
+                          <b id="cardPreviewStyleBadge" data-i18n="filter.styleDefault">默认</b>
                           <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
                         </summary>
                         <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
@@ -163,110 +177,110 @@
                 </div>
               </div>
 
-              <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
-                <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
-                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
-                <label class="grid-layout-control" title="每行显示列数"><output id="cardColumnsOutput">7</output> 列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /></label>
-                <label class="grid-layout-control" title="每页显示行数"><output id="cardRowsOutput">4</output> 行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /></label>
-                <label id="singleCardSizeControl" class="grid-layout-control single-size-control" title="单字卡片大小" hidden>大小 <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" aria-label="单字卡片大小" /></span><output id="singleCardSizeOutput">82</output></label>
+              <div class="toolbar-section toolbar-view view-controls" data-i18n-aria="toolbar.viewControlsAria" aria-label="视图控制栏">
+                <button id="gridViewButton" class="view-button active" data-i18n-title="view.grid" data-i18n-aria="view.grid" title="网格视图" aria-label="网格视图">▦</button>
+                <button id="singleViewButton" class="view-button" data-i18n-title="view.single" data-i18n-aria="view.single" title="单字极简视图" aria-label="单字极简视图">字</button>
+                <label class="grid-layout-control" data-i18n-title="view.columnsTitle"><output id="cardColumnsOutput">7</output> <span data-i18n="view.columns">列</span> <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" data-i18n-aria="view.columnsAria" aria-label="每行显示列数" /></label>
+                <label class="grid-layout-control" data-i18n-title="view.rowsTitle"><output id="cardRowsOutput">4</output> <span data-i18n="view.rows">行</span> <input id="cardRows" type="range" min="1" max="8" step="1" value="4" data-i18n-aria="view.rowsAria" aria-label="每页显示行数" /></label>
+                <label id="singleCardSizeControl" class="grid-layout-control single-size-control" data-i18n-title="view.sizeTitle" title="单字卡片大小" hidden><span class="control-label-text" data-i18n="view.size">大小</span> <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" data-i18n-aria="view.sizeAria" aria-label="单字卡片大小" /></span><output id="singleCardSizeOutput">82</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
-                  <summary aria-label="视图选项" title="视图选项">
+                  <summary data-i18n-aria="view.options" data-i18n-title="view.options" aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
-                    <label class="check-option"><input type="checkbox" id="focusViewToggle">无干扰视图</label>
-                    <label class="check-option"><input type="checkbox" id="collapseFamilyFonts">折叠家族字体</label>
+                    <label class="check-option"><input type="checkbox" id="focusViewToggle"> <span data-i18n="view.focusMode">无干扰视图</span></label>
+                    <label class="check-option"><input type="checkbox" id="collapseFamilyFonts"> <span data-i18n="view.collapseFamily">折叠家族字体</span></label>
                   </div>
                 </details>
               </div>
             </div>
             <div id="scanProgress" class="scan-progress" hidden>
-              <span id="scanText">正在识别可变字体</span>
+              <span id="scanText" data-i18n="scan.variableFonts">正在识别可变字体</span>
               <div class="progress-track"><i id="scanBar"></i></div>
             </div>
             <div class="font-view-shell">
               <aside id="favoriteSidebar" class="favorite-sidebar" hidden>
-                <div class="favorite-sidebar-header"><span>收藏分类</span><button id="addCategoryButton" type="button" title="新建分类">＋</button></div>
+                <div class="favorite-sidebar-header"><span data-i18n="favorite.categories">收藏分类</span><button id="addCategoryButton" type="button" data-i18n-title="favorite.newCategory" title="新建分类">＋</button></div>
                 <div id="favoriteCategoryList" class="favorite-category-list"></div>
                 <div class="favorite-sidebar-data">
-                  <button id="exportFavorites" class="data-button" type="button">导出</button>
-                  <button id="importFavorites" class="data-button" type="button">导入</button>
+                  <button id="exportFavorites" class="data-button" type="button" data-i18n="favorite.export">导出</button>
+                  <button id="importFavorites" class="data-button" type="button" data-i18n="favorite.import">导入</button>
                   <input id="favoritesFile" type="file" accept="application/json,.json" hidden />
                 </div>
               </aside>
               <div class="font-page-area">
                 <div id="fontList" class="font-list card-grid" aria-live="polite"></div>
-                <div id="emptyState" class="empty-state" hidden>没有找到匹配的字体</div>
+                <div id="emptyState" class="empty-state" hidden data-i18n="empty.noFonts">没有找到匹配的字体</div>
               </div>
             </div>
             <footer id="statusBar" class="status-bar">
-              <div id="fontStatus" class="font-status">将鼠标移到字体卡片查看信息</div>
-              <nav id="paginationBar" class="pagination-bar" aria-label="字体分页">
-                <button id="previousPage" class="page-button page-button-icon" type="button" title="上一页" aria-label="上一页">‹</button>
-                <span id="pageInfo" class="page-info">第 <span class="page-current">1</span> / 1 页</span>
-                <button id="nextPage" class="page-button page-button-icon" type="button" title="下一页" aria-label="下一页">›</button>
+              <div id="fontStatus" class="font-status" data-i18n="status.hoverHint">将鼠标移到字体卡片查看信息</div>
+              <nav id="paginationBar" class="pagination-bar" data-i18n-aria="pagination.aria" aria-label="字体分页">
+                <button id="previousPage" class="page-button page-button-icon" type="button" data-i18n-title="pagination.prev" data-i18n-aria="pagination.prev" title="上一页" aria-label="上一页">‹</button>
+                <span id="pageInfo" class="page-info"></span>
+                <button id="nextPage" class="page-button page-button-icon" type="button" data-i18n-title="pagination.next" data-i18n-aria="pagination.next" title="下一页" aria-label="下一页">›</button>
               </nav>
               <div class="view-status-wrap">
-                <div id="viewStatus" class="view-status">本页 0 / 0 款</div>
-                <label class="card-sample-size-control" title="卡片预览字号">
-                  <span>字号</span>
-                  <button id="cardSampleSizeDecrease" class="step-button" type="button" aria-label="减小字号">−</button>
+                <div id="viewStatus" class="view-status"></div>
+                <label class="card-sample-size-control" data-i18n-title="status.sampleSizeAria">
+                  <span data-i18n="status.sampleSize">字号</span>
+                  <button id="cardSampleSizeDecrease" class="step-button" type="button" data-i18n-aria="status.decreaseSize" aria-label="减小字号">−</button>
                   <span class="card-sample-size-range-wrap">
                     <span id="cardSampleSizeBubble" class="card-sample-size-bubble" hidden aria-hidden="true"></span>
-                    <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" aria-label="卡片预览字号" />
+                    <input id="cardSampleSize" type="range" min="16" max="72" step="1" value="49" data-i18n-aria="status.sampleSizeAria" aria-label="卡片预览字号" />
                   </span>
-                  <button id="cardSampleSizeIncrease" class="step-button" type="button" aria-label="增大字号">+</button>
+                  <button id="cardSampleSizeIncrease" class="step-button" type="button" data-i18n-aria="status.increaseSize" aria-label="增大字号">+</button>
                 </label>
               </div>
             </footer>
-            <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" title="折叠字体库" aria-label="折叠字体库">‹</button>
+            <button id="cardAreaToggle" class="panel-toggle card-area-toggle" type="button" data-i18n-title="panel.collapseLibrary" data-i18n-aria="panel.collapseLibrary" title="折叠字体库" aria-label="折叠字体库">‹</button>
           </section>
 
           <aside id="detailPanel" class="detail-panel">
-            <div id="resizeHandle" class="resize-handle" title="拖动调整栏宽" aria-hidden="true"></div>
-            <button id="detailToggle" class="panel-toggle detail-toggle" type="button" title="折叠详情" aria-label="折叠详情"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l6 7-6 7"/></svg></button>
+            <div id="resizeHandle" class="resize-handle" data-i18n-title="panel.resizeDetail" title="拖动调整栏宽" aria-hidden="true"></div>
+            <button id="detailToggle" class="panel-toggle detail-toggle" type="button" data-i18n-title="panel.collapseDetail" data-i18n-aria="panel.collapseDetail" title="折叠详情" aria-label="折叠详情"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l6 7-6 7"/></svg></button>
             <div class="detail-content">
               <div class="font-meta-row">
                 <div>
-                  <h2 id="selectedName">请选择字体</h2>
+                  <h2 id="selectedName" data-i18n="detail.selectFont">请选择字体</h2>
                   <span id="selectedStyle" class="eyebrow">REGULAR</span>
                 </div>
                 <div class="meta-actions">
-                  <button id="categoryAssignmentButton" class="icon-button" title="设置收藏分类" aria-label="设置收藏分类">≡</button>
-                  <button id="favoriteButton" class="icon-button" title="收藏字体" aria-label="收藏字体">☆</button>
+                  <button id="categoryAssignmentButton" class="icon-button" data-i18n-title="detail.category" data-i18n-aria="detail.category" title="设置收藏分类" aria-label="设置收藏分类">≡</button>
+                  <button id="favoriteButton" class="icon-button" data-i18n-title="detail.favorite" data-i18n-aria="detail.favorite" title="收藏字体" aria-label="收藏字体">☆</button>
                 </div>
               </div>
 
-              <div class="detail-tabs" role="tablist" aria-label="详情面板">
-                <button id="previewTabButton" class="detail-tab active" type="button" role="tab" aria-selected="true" aria-controls="previewTabPanel">预览</button>
-                <button id="infoTabButton" class="detail-tab" type="button" role="tab" aria-selected="false" aria-controls="infoTabPanel">信息</button>
+              <div class="detail-tabs" role="tablist" data-i18n-aria="detail.tabsAria" aria-label="详情面板">
+                <button id="previewTabButton" class="detail-tab active" type="button" role="tab" aria-selected="true" aria-controls="previewTabPanel" data-i18n="detail.previewTab">预览</button>
+                <button id="infoTabButton" class="detail-tab" type="button" role="tab" aria-selected="false" aria-controls="infoTabPanel" data-i18n="detail.infoTab">信息</button>
               </div>
 
               <div class="detail-tab-panels">
                 <div id="previewTabPanel" class="detail-tab-panel active" role="tabpanel" aria-labelledby="previewTabButton">
                   <div id="previewStage" class="preview-stage">
-                    <div id="previewText" class="preview-text" contenteditable="false" spellcheck="false" role="textbox" aria-label="预览文字" data-placeholder="双击编辑预览文字"></div>
+                    <div id="previewText" class="preview-text" contenteditable="false" spellcheck="false" role="textbox" data-i18n-aria="detail.previewTextAria" aria-label="预览文字" data-placeholder="双击编辑预览文字"></div>
                     <div id="magnifier" class="magnifier" hidden><span id="magnifiedText"></span></div>
-                    <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
+                    <div class="stage-hint" data-i18n="detail.stageHint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
                     <div class="stage-color-controls">
-                      <label class="stage-color-swatch" title="背景颜色">
-                        <input id="backgroundColor" type="color" value="#eee8dc" aria-label="背景颜色" />
+                      <label class="stage-color-swatch" data-i18n-title="detail.bgColor" title="背景颜色">
+                        <input id="backgroundColor" type="color" value="#eee8dc" data-i18n-aria="detail.bgColor" aria-label="背景颜色" />
                       </label>
-                      <label class="stage-color-swatch stage-color-text" title="文字颜色">
+                      <label class="stage-color-swatch stage-color-text" data-i18n-title="detail.textColor" title="文字颜色">
                         <span class="stage-color-mark" aria-hidden="true">A</span>
-                        <input id="textColor" type="color" value="#181816" aria-label="文字颜色" />
+                        <input id="textColor" type="color" value="#181816" data-i18n-aria="detail.textColor" aria-label="文字颜色" />
                       </label>
                     </div>
                   </div>
                   <div class="preview-controls">
                     <div class="preview-controls-head">
-                      <span id="axisStatus" class="axis-status">正在检测可变轴…</span>
-                      <button id="resetButton" class="text-button" type="button">恢复默认</button>
+                      <span id="axisStatus" class="axis-status" data-i18n="detail.axisDetecting">正在检测可变轴…</span>
+                      <button id="resetButton" class="text-button" type="button" data-i18n="detail.reset">恢复默认</button>
                     </div>
                     <div id="standardControls" class="standard-controls standard-controls-compact">
-                      <label class="size-control"><span>字号 <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
-                      <label><span>字间距 <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
-                      <label><span>行高 <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
+                      <label class="size-control"><span><span data-i18n="detail.fontSize">字号</span> <output id="fontSizeOutput">28</output></span><input id="fontSize" type="range" min="18" max="160" value="28" /></label>
+                      <label><span><span data-i18n="detail.letterSpacing">字间距</span> <output id="spacingOutput">0</output></span><input id="letterSpacing" type="range" min="-5" max="20" step="0.5" value="0" /></label>
+                      <label><span><span data-i18n="detail.lineHeight">行高</span> <output id="lineHeightOutput">1.2</output></span><input id="lineHeight" type="range" min="0.8" max="2" step="0.05" value="1.2" /></label>
                     </div>
                     <div id="axisControls" class="axis-controls"></div>
                   </div>
@@ -274,39 +288,39 @@
 
                 <div id="infoTabPanel" class="detail-tab-panel" role="tabpanel" aria-labelledby="infoTabButton" hidden>
                   <dl class="font-info-grid">
-                    <div class="info-section-label">基础信息</div>
-                    <div><dt>字体家族</dt><dd id="infoFamily" class="copyable" role="button" tabindex="0" title="点击复制字体名称">—</dd></div>
-                    <div><dt>PostScript</dt><dd id="infoPostscript" class="copyable" role="button" tabindex="0" title="点击复制 PostScript 名称">—</dd></div>
-                    <div><dt>子族名称</dt><dd id="infoSubfamily">—</dd></div>
-                    <div><dt>轮廓格式</dt><dd id="infoFormat">—</dd></div>
-                    <div><dt>文件大小</dt><dd id="infoSize">—</dd></div>
-                    <div><dt>字形数量</dt><dd id="infoGlyphs">—</dd></div>
-                    <div><dt>Units per em</dt><dd id="infoUpm">—</dd></div>
-                    <div><dt>内部字重</dt><dd id="infoWeight">—</dd></div>
-                    <div><dt>内部宽度</dt><dd id="infoWidth">—</dd></div>
-                    <div><dt>字符支持</dt><dd id="infoLanguage">—</dd></div>
-                    <div><dt>首字宽高比</dt><dd id="infoAspect">—</dd></div>
-                    <div class="span-2"><dt>数据表</dt><dd id="infoTables" class="wrap">—</dd></div>
-                    <div class="info-section-label">命名与版权</div>
-                    <div><dt>版本</dt><dd id="infoVersion">—</dd></div>
-                    <div><dt>设计师</dt><dd id="infoDesigner" class="copyable" role="button" tabindex="0" title="点击复制设计师">—</dd></div>
-                    <div><dt>厂商</dt><dd id="infoManufacturer">—</dd></div>
-                    <div class="span-2"><dt>版权</dt><dd id="infoCopyright" class="copyable wrap" role="button" tabindex="0" title="点击复制版权信息">—</dd></div>
-                    <div class="span-2"><dt>许可证</dt><dd id="infoLicense" class="copyable wrap" role="button" tabindex="0" title="点击复制许可证">—</dd></div>
-                    <div class="info-section-label">度量与样式</div>
-                    <div><dt>升部</dt><dd id="infoAscender">—</dd></div>
-                    <div><dt>降部</dt><dd id="infoDescender">—</dd></div>
-                    <div><dt>行距</dt><dd id="infoLineGap">—</dd></div>
-                    <div><dt>Cap 高度</dt><dd id="infoCapHeight">—</dd></div>
-                    <div><dt>x 高度</dt><dd id="infoXHeight">—</dd></div>
-                    <div><dt>斜体角度</dt><dd id="infoItalicAngle">—</dd></div>
-                    <div><dt>等宽字体</dt><dd id="infoFixedPitch">—</dd></div>
-                    <div><dt>创建日期</dt><dd id="infoCreated">—</dd></div>
-                    <div><dt>修改日期</dt><dd id="infoModified">—</dd></div>
-                    <div class="span-2"><dt>边界框</dt><dd id="infoBBox">—</dd></div>
+                    <div class="info-section-label" data-i18n="info.basic">基础信息</div>
+                    <div><dt data-i18n="info.family">字体家族</dt><dd id="infoFamily" class="copyable" role="button" tabindex="0" data-i18n-title="info.copyFamily" title="点击复制字体名称">—</dd></div>
+                    <div><dt data-i18n="info.postscript">PostScript</dt><dd id="infoPostscript" class="copyable" role="button" tabindex="0" data-i18n-title="info.copyPostscript" title="点击复制 PostScript 名称">—</dd></div>
+                    <div><dt data-i18n="info.subfamily">子族名称</dt><dd id="infoSubfamily">—</dd></div>
+                    <div><dt data-i18n="info.format">轮廓格式</dt><dd id="infoFormat">—</dd></div>
+                    <div><dt data-i18n="info.fileSize">文件大小</dt><dd id="infoSize">—</dd></div>
+                    <div><dt data-i18n="info.glyphs">字形数量</dt><dd id="infoGlyphs">—</dd></div>
+                    <div><dt data-i18n="info.upm">Units per em</dt><dd id="infoUpm">—</dd></div>
+                    <div><dt data-i18n="info.weight">内部字重</dt><dd id="infoWeight">—</dd></div>
+                    <div><dt data-i18n="info.width">内部宽度</dt><dd id="infoWidth">—</dd></div>
+                    <div><dt data-i18n="info.languageSupport">字符支持</dt><dd id="infoLanguage">—</dd></div>
+                    <div><dt data-i18n="info.aspect">首字宽高比</dt><dd id="infoAspect">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.tables">数据表</dt><dd id="infoTables" class="wrap">—</dd></div>
+                    <div class="info-section-label" data-i18n="info.naming">命名与版权</div>
+                    <div><dt data-i18n="info.version">版本</dt><dd id="infoVersion">—</dd></div>
+                    <div><dt data-i18n="info.designer">设计师</dt><dd id="infoDesigner" class="copyable" role="button" tabindex="0" data-i18n-title="info.copyDesigner" title="点击复制设计师">—</dd></div>
+                    <div><dt data-i18n="info.manufacturer">厂商</dt><dd id="infoManufacturer">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.copyright">版权</dt><dd id="infoCopyright" class="copyable wrap" role="button" tabindex="0" data-i18n-title="info.copyCopyright" title="点击复制版权信息">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.license">许可证</dt><dd id="infoLicense" class="copyable wrap" role="button" tabindex="0" data-i18n-title="info.copyLicense" title="点击复制许可证">—</dd></div>
+                    <div class="info-section-label" data-i18n="info.metrics">度量与样式</div>
+                    <div><dt data-i18n="info.ascender">升部</dt><dd id="infoAscender">—</dd></div>
+                    <div><dt data-i18n="info.descender">降部</dt><dd id="infoDescender">—</dd></div>
+                    <div><dt data-i18n="info.lineGap">行距</dt><dd id="infoLineGap">—</dd></div>
+                    <div><dt data-i18n="info.capHeight">Cap 高度</dt><dd id="infoCapHeight">—</dd></div>
+                    <div><dt data-i18n="info.xHeight">x 高度</dt><dd id="infoXHeight">—</dd></div>
+                    <div><dt data-i18n="info.italicAngle">斜体角度</dt><dd id="infoItalicAngle">—</dd></div>
+                    <div><dt data-i18n="info.fixedPitch">等宽字体</dt><dd id="infoFixedPitch">—</dd></div>
+                    <div><dt data-i18n="info.created">创建日期</dt><dd id="infoCreated">—</dd></div>
+                    <div><dt data-i18n="info.modified">修改日期</dt><dd id="infoModified">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.bbox">边界框</dt><dd id="infoBBox">—</dd></div>
                     <div class="info-section-label">OpenType</div>
-                    <div class="span-2"><dt>嵌入限制</dt><dd id="infoEmbedding" class="wrap">—</dd></div>
-                    <div class="span-2"><dt>特性表</dt><dd id="infoFeatures" class="wrap">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.embedding">嵌入限制</dt><dd id="infoEmbedding" class="wrap">—</dd></div>
+                    <div class="span-2"><dt data-i18n="info.features">特性表</dt><dd id="infoFeatures" class="wrap">—</dd></div>
                   </dl>
                 </div>
               </div>
@@ -319,10 +333,10 @@
 
   <div id="cardMagnifier" class="card-magnifier" hidden><span id="cardMagnifiedText"></span></div>
   <div id="hoverPreviewOverlay" class="hover-preview-overlay" hidden>
-    <div class="hover-preview-window" role="dialog" aria-modal="true" aria-label="字体预览">
-      <button id="hoverPreviewClose" class="hover-preview-close" type="button" aria-label="关闭预览">×</button>
+    <div class="hover-preview-window" role="dialog" aria-modal="true" data-i18n-aria="hover.previewAria" aria-label="字体预览">
+      <button id="hoverPreviewClose" class="hover-preview-close" type="button" data-i18n-aria="hover.close" aria-label="关闭预览">×</button>
       <div id="hoverPreviewSample" class="hover-preview-sample"></div>
-      <div id="hoverPreviewSubsamples" class="hover-preview-subsamples" aria-label="附加样张">
+      <div id="hoverPreviewSubsamples" class="hover-preview-subsamples" data-i18n-aria="hover.subsamplesAria" aria-label="附加样张">
         <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
         <div>abcdefghijklmnopqrstuvwxyz</div>
         <div>0123456789</div>
@@ -339,27 +353,27 @@
   <div id="cardPreviewStyleModal" class="modal-backdrop" hidden>
     <div class="preview-style-modal" role="dialog" aria-modal="true" aria-labelledby="cardPreviewStyleTitle">
       <div class="modal-header preview-style-header">
-        <h3 id="cardPreviewStyleTitle">预览样式</h3>
-        <button id="cardPreviewStyleClose" class="icon-button preview-style-close-button" type="button" aria-label="关闭">×</button>
+        <h3 id="cardPreviewStyleTitle" data-i18n="previewStyle.title">预览样式</h3>
+        <button id="cardPreviewStyleClose" class="icon-button preview-style-close-button" type="button" data-i18n-aria="previewStyle.close" aria-label="关闭">×</button>
       </div>
       <div class="preview-style-preview-top">
         <label class="preview-style-font-field" data-preview-status-hint="切换预览字体，悬停时滚轮可快速切换">
-          <span class="preview-style-field-label">预览字体</span>
-          <select id="cardPreviewStyleFont" class="preview-style-font-select" aria-label="预览字体"></select>
+          <span class="preview-style-field-label" data-i18n="previewStyle.fontLabel">预览字体</span>
+          <select id="cardPreviewStyleFont" class="preview-style-font-select" data-i18n-aria="previewStyle.fontAria" aria-label="预览字体"></select>
         </label>
         <div id="cardPreviewStyleStage" class="preview-style-stage" data-preview-status-hint="实时预览当前样式效果">
           <span id="cardPreviewStyleSample" class="preview-style-sample">字体有光</span>
         </div>
       </div>
-      <div class="preview-style-tabs" role="tablist" aria-label="预览样式面板">
-        <button id="cardPreviewStyleEditTab" class="preview-style-tab active" type="button" role="tab" aria-selected="true" aria-controls="cardPreviewStyleEditPanel">编辑样式</button>
-        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel">样式管理</button>
+      <div class="preview-style-tabs" role="tablist" data-i18n-aria="previewStyle.tabsAria" aria-label="预览样式面板">
+        <button id="cardPreviewStyleEditTab" class="preview-style-tab active" type="button" role="tab" aria-selected="true" aria-controls="cardPreviewStyleEditPanel" data-i18n="previewStyle.editTab">编辑样式</button>
+        <button id="cardPreviewStyleManageTab" class="preview-style-tab" type="button" role="tab" aria-selected="false" aria-controls="cardPreviewStyleManagePanel" data-i18n="previewStyle.manageTab">样式管理</button>
       </div>
       <div class="preview-style-body">
         <div id="cardPreviewStyleEditPanel" class="preview-style-tab-panel" role="tabpanel">
           <div class="preview-style-workspace">
             <aside class="preview-style-sidebar ps-scroll">
-              <div class="preview-style-sidebar-head">图层</div>
+              <div class="preview-style-sidebar-head" data-i18n="previewStyle.layers">图层</div>
               <ul id="cardPreviewStyleLayerList" class="preview-style-style-list"></ul>
               <div id="cardPreviewStyleLayerToolbar" class="preview-style-layer-toolbar">
                 <button id="cardPreviewStyleLayerMoveUp" class="preview-style-layer-tool-btn" type="button" aria-label="上移图层" data-preview-status-hint="上移选中图层" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M6 11l6-6 6 6"/></svg></button>
@@ -380,25 +394,25 @@
       </div>
       <div class="preview-style-bottom" data-tab="edit">
         <div id="cardPreviewStylePresetRenameWrap" class="preview-style-preset-rename" hidden>
-          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" aria-label="样式名称" />
-          <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button">确定</button>
-          <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button">取消</button>
+          <input id="cardPreviewStylePresetRenameInput" type="text" maxlength="48" data-i18n-aria="previewStyle.rename" aria-label="样式名称" />
+          <button id="cardPreviewStylePresetRenameConfirm" class="text-button" type="button" data-i18n="previewStyle.confirm">确定</button>
+          <button id="cardPreviewStylePresetRenameCancel" class="text-button" type="button" data-i18n="previewStyle.cancel">取消</button>
         </div>
         <div id="cardPreviewStyleFooterEdit" class="modal-footer preview-style-footer">
           <div class="preview-style-footer-right">
-            <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>
-            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式到样式库，不关闭窗口也不应用到卡片">保存</button>
+            <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭" data-i18n="previewStyle.cancel">取消</button>
+            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式到样式库，不关闭窗口也不应用到卡片" data-i18n="previewStyle.save">保存</button>
           </div>
         </div>
         <div id="cardPreviewStyleFooterManage" class="modal-footer preview-style-footer preview-style-footer-manage" hidden>
           <div class="preview-style-manage-actions">
             <div class="preview-style-manage-actions-primary">
-              <button id="cardPreviewStyleManageNew" class="preview-style-preset-icon-button" type="button" aria-label="新建预览样式" data-preview-status-hint="新建预览样式"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></button>
+              <button id="cardPreviewStyleManageNew" class="preview-style-preset-icon-button" type="button" data-i18n-aria="previewStyle.newStyle" data-preview-status-hint="新建预览样式" aria-label="新建预览样式"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></button>
               <button id="cardPreviewStyleManageDelete" class="preview-style-preset-icon-button danger" type="button" aria-label="删除样式" data-preview-status-hint="删除样式" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5h6v2M6 7l1 12h10l1-12"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M10 11v6M14 11v6"/></svg></button>
             </div>
             <div class="preview-style-manage-actions-io">
-              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式">导出</button>
-              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式">导入</button>
+              <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式" data-i18n="previewStyle.export">导出</button>
+              <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式" data-i18n="previewStyle.import">导入</button>
               <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
             </div>
           </div>
@@ -408,6 +422,7 @@
     </div>
   </div>
   <div id="toast" class="toast" role="status"></div>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
