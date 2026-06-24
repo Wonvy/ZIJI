@@ -255,7 +255,8 @@ const UI_SETTINGS_DEFAULTS = {
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
   cardPreviewStylePresets: [],
-  activeCardPreviewStylePresetId: null
+  activeCardPreviewStylePresetId: null,
+  builtInCardPreviewStylePresetVersion: 0
 };
 
 const LEGACY_LIGHT_PREVIEW_BG = "#f3efe7";
@@ -316,6 +317,7 @@ const DEFAULT_LINEAR_GRADIENT_STOPS = [
 ];
 const PREVIEW_STYLE_FILL_LAYER_ID = "__fill__";
 const MANAGE_PRESET_PREVIEW_CHAR = "永";
+const BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION = 1;
 const PREVIEW_EFFECT_TYPES = {
   dropShadow: {
     label: "投影",
@@ -357,6 +359,98 @@ const PREVIEW_EFFECT_TYPES = {
     }
   }
 };
+const BUILT_IN_CARD_PREVIEW_STYLE_PRESETS = [
+  {
+    id: "built-in-douyin",
+    name: "抖音字",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#ffffff", opacity: 100 },
+      layers: [
+        { id: "built-in-douyin-cyan", type: "dropShadow", enabled: true, color: "#00f5ff", opacity: 95, angle: 225, distance: 3, blur: 0 },
+        { id: "built-in-douyin-red", type: "dropShadow", enabled: true, color: "#ff2d55", opacity: 95, angle: 45, distance: 3, blur: 0 },
+        { id: "built-in-douyin-stroke", type: "stroke", enabled: true, color: "#101014", opacity: 100, width: 2, blur: 0, position: "outside" }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-douyin-red", "built-in-douyin-cyan", "built-in-douyin-stroke"]
+    }
+  },
+  {
+    id: "built-in-hollow",
+    name: "空心字",
+    style: {
+      fill: { enabled: false, mode: "solid", color: "#ffffff", opacity: 0 },
+      layers: [
+        { id: "built-in-hollow-stroke", type: "stroke", enabled: true, color: "#e85832", opacity: 100, width: 3, blur: 0, position: "center" }
+      ],
+      layerOrder: ["built-in-hollow-stroke", PREVIEW_STYLE_FILL_LAYER_ID]
+    }
+  },
+  {
+    id: "built-in-neon",
+    name: "霓虹描边",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#101014", opacity: 100 },
+      layers: [
+        { id: "built-in-neon-stroke", type: "stroke", enabled: true, color: "#7c3cff", opacity: 100, width: 2, blur: 0, position: "outside" },
+        { id: "built-in-neon-glow", type: "dropShadow", enabled: true, color: "#00d8ff", opacity: 80, angle: 90, distance: 0, blur: 12 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-neon-stroke", "built-in-neon-glow"]
+    }
+  },
+  {
+    id: "built-in-metal",
+    name: "金属渐变",
+    style: {
+      fill: {
+        enabled: true,
+        mode: "gradient",
+        angle: 90,
+        opacity: 100,
+        stops: [
+          { color: "#2a2c31", opacity: 100, offset: 0 },
+          { color: "#ffffff", opacity: 100, offset: 42 },
+          { color: "#7b7f88", opacity: 100, offset: 100 }
+        ]
+      },
+      layers: [
+        { id: "built-in-metal-shadow", type: "dropShadow", enabled: true, color: "#000000", opacity: 28, angle: 60, distance: 4, blur: 5 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-metal-shadow"]
+    }
+  },
+  {
+    id: "built-in-soft-shadow",
+    name: "柔和投影",
+    style: {
+      fill: { enabled: true, mode: "solid", color: "#e85832", opacity: 100 },
+      layers: [
+        { id: "built-in-soft-shadow-layer", type: "dropShadow", enabled: true, color: "#000000", opacity: 24, angle: 56, distance: 8, blur: 12 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-soft-shadow-layer"]
+    }
+  },
+  {
+    id: "built-in-candy",
+    name: "糖果渐变",
+    style: {
+      fill: {
+        enabled: true,
+        mode: "gradient",
+        angle: 35,
+        opacity: 100,
+        stops: [
+          { color: "#ff4fd8", opacity: 100, offset: 0 },
+          { color: "#ffe66d", opacity: 100, offset: 52 },
+          { color: "#32d6ff", opacity: 100, offset: 100 }
+        ]
+      },
+      layers: [
+        { id: "built-in-candy-stroke", type: "stroke", enabled: true, color: "#ffffff", opacity: 100, width: 2, blur: 0, position: "outside" },
+        { id: "built-in-candy-shadow", type: "dropShadow", enabled: true, color: "#000000", opacity: 20, angle: 60, distance: 3, blur: 4 }
+      ],
+      layerOrder: [PREVIEW_STYLE_FILL_LAYER_ID, "built-in-candy-stroke", "built-in-candy-shadow"]
+    }
+  }
+];
 let cardPreviewStyleLayerCounter = 0;
 let cardPreviewStylePresetCounter = 0;
 
@@ -531,14 +625,36 @@ function loadUiSettings() {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     const settings = normalizeLayoutSettings({ ...UI_SETTINGS_DEFAULTS, ...parsed });
+    if ((Number(parsed.builtInCardPreviewStylePresetVersion) || 0) < BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION) {
+      const existingPresets = Array.isArray(settings.cardPreviewStylePresets) ? settings.cardPreviewStylePresets : [];
+      const existingIds = new Set(existingPresets.map(preset => String(preset?.id || "")));
+      settings.cardPreviewStylePresets = [
+        ...existingPresets,
+        ...cloneBuiltInCardPreviewStylePresets().filter(preset => !existingIds.has(preset.id))
+      ];
+      settings.builtInCardPreviewStylePresetVersion = BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION;
+    }
     if (!raw) {
       const legacyCardSize = localStorage.getItem("card-sample-size");
       if (legacyCardSize !== null) settings.cardSampleSize = Number(legacyCardSize) || settings.cardSampleSize;
     }
     return settings;
   } catch {
-    return { ...UI_SETTINGS_DEFAULTS };
+    return {
+      ...UI_SETTINGS_DEFAULTS,
+      cardPreviewStylePresets: cloneBuiltInCardPreviewStylePresets(),
+      builtInCardPreviewStylePresetVersion: BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION
+    };
   }
+}
+
+function cloneBuiltInCardPreviewStylePresets() {
+  return BUILT_IN_CARD_PREVIEW_STYLE_PRESETS.map(preset => ({
+    id: preset.id,
+    name: preset.name,
+    style: cloneCardPreviewStyle(preset.style),
+    updatedAt: 0
+  }));
 }
 function collectUiSettings() {
   const detailPanel = $("#detailPanel");
@@ -570,7 +686,8 @@ function collectUiSettings() {
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
     cardPreviewStylePresets: state.cardPreviewStylePresets,
-    activeCardPreviewStylePresetId: state.activeCardPreviewStylePresetId
+    activeCardPreviewStylePresetId: state.activeCardPreviewStylePresetId,
+    builtInCardPreviewStylePresetVersion: BUILT_IN_CARD_PREVIEW_STYLE_PRESET_VERSION
   };
 }
 let persistUiSettingsTimer;
