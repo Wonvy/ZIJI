@@ -35,9 +35,10 @@ function loadFavoriteData() {
     }
     assignments.forEach((_, font) => cachedFavorites.add(font));
     const recentCategories = Array.isArray(data.recentCategories) ? data.recentCategories : [];
-    return { categories, assignments, recentCategories };
+    const collapsedCategoryIds = Array.isArray(data.collapsedCategoryIds) ? data.collapsedCategoryIds : [];
+    return { categories, assignments, recentCategories, collapsedCategoryIds };
   } catch {
-    return { categories: [], assignments: new Map(), recentCategories: [] };
+    return { categories: [], assignments: new Map(), recentCategories: [], collapsedCategoryIds: [] };
   }
 }
 const cachedFavoriteData = loadFavoriteData();
@@ -764,7 +765,7 @@ const state = {
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
   activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
   previewColorsCustomized: resolvePreviewColorsCustomized(uiSettings),
-  favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
+  favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories, collapsedCategoryIds: new Set(cachedFavoriteData.collapsedCategoryIds || []),
   axes: {}, objectUrls: []
 };
 if (state.activeCardPreviewStylePresetId) {
@@ -6809,7 +6810,13 @@ function toggleFavoriteFor(font) {
 function persistFavorites() {
   localStorage.setItem("font-favorites", JSON.stringify([...state.favorites]));
   const assignments = Object.fromEntries([...state.categoryAssignments].map(([font, ids]) => [font, [...ids]]));
-  localStorage.setItem("font-favorite-data", JSON.stringify({ version: 2, categories: state.categories, assignments, recentCategories: state.recentCategories }));
+  localStorage.setItem("font-favorite-data", JSON.stringify({
+    version: 2,
+    categories: state.categories,
+    assignments,
+    recentCategories: state.recentCategories,
+    collapsedCategoryIds: [...state.collapsedCategoryIds]
+  }));
 }
 
 function touchRecentCategory(id) {
@@ -6830,9 +6837,30 @@ function setFontCategory(font, categoryId, enabled) {
   persistFavorites();
 }
 
-function orderedCategories() {
-  const roots = state.categories.filter(item => !item.parentId);
-  return roots.flatMap(root => [root, ...state.categories.filter(item => item.parentId === root.id)]);
+function categoryHasChildren(categoryId) {
+  return state.categories.some(item => item.parentId === categoryId);
+}
+
+function isCategoryCollapsed(categoryId) {
+  return state.collapsedCategoryIds.has(categoryId);
+}
+
+function toggleCategoryCollapsed(categoryId) {
+  if (state.collapsedCategoryIds.has(categoryId)) state.collapsedCategoryIds.delete(categoryId);
+  else state.collapsedCategoryIds.add(categoryId);
+  persistFavorites();
+  renderFavoriteSidebar();
+}
+
+function visibleCategories() {
+  const items = [];
+  state.categories.filter(item => !item.parentId).forEach(root => {
+    items.push(root);
+    if (!isCategoryCollapsed(root.id)) {
+      state.categories.filter(item => item.parentId === root.id).forEach(child => items.push(child));
+    }
+  });
+  return items;
 }
 
 function expandedFavoriteCategoryView() {
@@ -6859,18 +6887,27 @@ function renderFavoriteSidebar() {
   const items = [
     { id: "all", name: "全部收藏", parentId: null },
     { id: "uncategorized", name: "未分类", parentId: null },
-    ...orderedCategories()
+    ...visibleCategories()
   ];
   ui.favoriteCategoryList.innerHTML = items.map(item => {
     if (state.editingCategoryId === item.id) return `<div class="favorite-category-row" data-category-id="${escapeHtml(item.id)}"><input class="category-inline-input" value="${escapeHtml(item.name)}" maxlength="30" aria-label="分类名称"></div>`;
-    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? "↳ " : ""}${escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
+    const hasChildren = !item.parentId && categoryHasChildren(item.id);
+    const collapsed = hasChildren && isCategoryCollapsed(item.id);
+    const toggle = hasChildren
+      ? `<button type="button" class="favorite-category-toggle${collapsed ? " collapsed" : ""}" data-category-toggle="${escapeHtml(item.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "展开子分类" : "折叠子分类"}" title="${collapsed ? "展开子分类" : "折叠子分类"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 10l4 4 4-4"/></svg></button>`
+      : "";
+    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? escapeHtml(item.name) : escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
     if (["all", "uncategorized"].includes(item.id)) return button;
-    return `<div class="favorite-category-row" draggable="true" data-category-id="${escapeHtml(item.id)}">${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
+    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
   }).join("");
   ui.favoriteCategoryList.querySelectorAll("[data-favorite-category]").forEach(button => button.addEventListener("click", () => {
     state.favoriteCategoryView = button.dataset.favoriteCategory;
     applyFilter();
     persistUiSettings();
+  }));
+  ui.favoriteCategoryList.querySelectorAll("[data-category-toggle]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleCategoryCollapsed(button.dataset.categoryToggle);
   }));
   ui.favoriteCategoryList.querySelectorAll("[data-category-action]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
@@ -6907,6 +6944,7 @@ function addCategory() {
   while (state.categories.some(item => item.parentId === parentId && item.name === name)) name = `${base} (${index++})`;
   const category = { id: `cat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`, name, parentId };
   state.categories.push(category);
+  if (parentId && state.collapsedCategoryIds.has(parentId)) state.collapsedCategoryIds.delete(parentId);
   state.favoriteCategoryView = category.id;
   state.editingCategoryId = category.id;
   persistFavorites();

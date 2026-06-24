@@ -198,7 +198,7 @@ body.workspace-active .version-badge { font-size: 9px; }
   max-width: 520px;
   transform: translate(-50%, -50%);
 }
-body.workspace-active .header-preview { display: flex; align-items: flex-start; }
+body.workspace-active .header-preview { display: flex; align-items: center; }
 body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input { flex: 1; min-width: 0; background: var(--panel); }
 .header-preview-input-wrap {
@@ -209,6 +209,16 @@ body:not(.workspace-active) .topbar { display: none; }
 .header-preview-input {
   position: relative;
   padding-right: 28px;
+  height: auto;
+  min-height: var(--toolbar-control-height);
+  max-height: calc(var(--topbar-height) - 12px);
+  align-items: center;
+  padding-block: 6px;
+  box-sizing: border-box;
+}
+.header-preview-input input {
+  line-height: 1.35;
+  align-self: center;
 }
 .preview-input-history-toggle {
   position: absolute;
@@ -333,22 +343,24 @@ body:not(.workspace-active) .topbar { display: none; }
   background: var(--paper);
 }
 .toolbar-center {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: stretch;
   gap: 8px;
   min-width: 0;
+  width: 100%;
   justify-self: stretch;
   grid-column: 2;
   overflow: visible;
 }
 .toolbar-search-wrap {
   position: relative;
-  flex: 1 1 200px;
-  width: auto;
-  min-width: 140px;
-  max-width: 300px;
+  flex: none;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
   z-index: 12;
 }
 .toolbar-search-wrap:focus-within {
@@ -421,20 +433,48 @@ body.dark .search-clear-button:hover {
   background: color-mix(in srgb, var(--accent) 18%, var(--panel));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
 }
-.toolbar-filters {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  min-width: 0;
+.card-toolbar .toolbar-filters.filter-row {
+  display: block;
+  position: relative;
   width: 100%;
+  min-height: var(--toolbar-control-height);
+  align-items: center;
+  gap: 8px 10px;
+  padding: 0;
+  border-bottom: 0;
   overflow: visible;
 }
-.toolbar-filters::-webkit-scrollbar { display: none; }
-.toolbar-filters > * { flex: none; }
+.toolbar-filters-leading {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+}
+.toolbar-filters-stack {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(100%, calc(100% - 120px));
+  transform: translate(-50%, -50%);
+}
+.toolbar-filters-stack > .toolbar-search-wrap {
+  flex: none;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+.toolbar-filters-stack > .toolbar-filter-group {
+  flex: none;
+  margin-inline: 0;
+  padding-inline: 0;
+}
 .toolbar-filter-group {
   display: inline-flex;
   align-items: center;
@@ -466,13 +506,6 @@ body.dark .search-clear-button:hover {
   border-color: var(--accent);
   background: var(--accent);
 }
-.toolbar-filters .toolbar-search-wrap {
-  flex: 1 1 180px;
-  width: auto;
-  min-width: 130px;
-  max-width: 280px;
-}
-.toolbar-filters .filter-divider { height: calc(var(--toolbar-control-height) - 12px); margin: 0 1px; }
 .toolbar-view { flex: none; justify-self: end; grid-column: 3; margin-left: auto; }
 .toolbar-view .filter-menu { position: relative; z-index: 1; }
 .toolbar-view .filter-menu[open] { z-index: 40; }
@@ -693,7 +726,6 @@ body.dark .search-clear-button:hover {
 .search-box input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 13px; }
 kbd { color: var(--muted); font-size: 10px; }
 .filter-row { display: flex; gap: 6px; padding: 13px 0; }
-.card-toolbar .toolbar-filters.filter-row { border-bottom: 0; padding: 0; }
 .chip { padding: 6px 10px; border-radius: 30px; color: var(--muted); font-size: 11px; }
 .chip.active { color: white; background: var(--accent); }
 .font-list { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent; }
@@ -953,14 +985,16 @@ kbd,
   flex: 1;
   align-items: center;
   justify-content: center;
+  align-self: center;
   min-width: 0;
-  min-height: 0;
-  max-height: calc(var(--topbar-height) - 22px);
-  padding: 10px 16px;
+  min-height: var(--toolbar-control-height);
+  max-height: calc(var(--topbar-height) - 12px);
+  padding: 8px 16px;
   overflow: hidden;
   pointer-events: none;
-  font-size: clamp(26px, calc(var(--topbar-height) * .58), 96px);
-  line-height: .92;
+  box-sizing: border-box;
+  font-size: clamp(18px, calc((var(--topbar-height) - 32px) * 0.72), 88px);
+  line-height: 1.15;
   letter-spacing: 0;
   text-align: center;
   white-space: nowrap;
@@ -970,7 +1004,9 @@ body.header-card-preview-browsing .header-preview,
 body.header-card-preview-focus .header-preview {
   z-index: 3;
   align-items: center;
+  justify-content: center;
   width: min(calc(100vw - 180px), 980px);
+  min-height: calc(var(--topbar-height) - 12px);
   max-height: calc(var(--topbar-height) - 12px);
 }
 body.header-card-preview-browsing .header-preview-input-wrap,
@@ -1208,6 +1244,51 @@ body.header-card-preview-focus .preview-input-history {
   line-height: 1;
 }
 .filter-menu-label { white-space: nowrap; }
+
+@media (max-width: 1200px) {
+  .toolbar-filter-group .filter-menu-label { display: none; }
+  .toolbar-filter-group .filter-menu summary { padding-inline: 6px; gap: 3px; }
+  .toolbar-filter-group .filter-menu summary b {
+    max-width: 5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary .filter-menu-label,
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary .card-preview-style-icon { display: none; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary b { display: inline-flex; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary::after { display: inline-flex; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary {
+    width: auto;
+    min-width: 0;
+    padding: 0 6px;
+    gap: 2px;
+    justify-content: center;
+  }
+}
+
+@container card-toolbar (max-width: 1100px) {
+  .toolbar-filter-group .filter-menu-label { display: none; }
+  .toolbar-filter-group .filter-menu summary { padding-inline: 6px; gap: 3px; }
+  .toolbar-filter-group .filter-menu summary b {
+    max-width: 5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary .filter-menu-label,
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary .card-preview-style-icon { display: none; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary b { display: inline-flex; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary::after { display: inline-flex; }
+  .toolbar-filter-group .card-preview-style-preset-dropdown summary {
+    width: auto;
+    min-width: 0;
+    padding: 0 6px;
+    gap: 2px;
+    justify-content: center;
+  }
+}
+
 .filter-menu-icon summary {
   width: var(--toolbar-control-height);
   height: var(--toolbar-control-height);
@@ -1246,8 +1327,64 @@ body.header-card-preview-focus .preview-input-history {
 }
 .data-button { height: 28px; padding: 0 8px; cursor: pointer; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: transparent; font-size: 12px; }
 .data-button:hover { color: var(--accent); border-color: var(--accent); background: var(--panel); }
-.filter-popover label { display: block; padding: 7px 8px; cursor: pointer; border-radius: 3px; font-size: 11px; white-space: nowrap; }
+.filter-popover label {
+  display: flex;
+  align-items: center;
+  padding: 7px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+}
 .filter-popover label:hover { background: var(--paper); }
+.filter-popover input[type="checkbox"],
+.filter-popover input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 7px 0 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, var(--muted));
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.filter-popover input[type="checkbox"]:hover,
+.filter-popover input[type="radio"]:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+}
+.filter-popover input[type="checkbox"]:checked,
+.filter-popover input[type="radio"]:checked {
+  border-color: var(--accent);
+  background: transparent;
+}
+.filter-popover input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.filter-popover input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.filter-popover input[type="checkbox"]:focus-visible,
+.filter-popover input[type="radio"]:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .view-options-popover { min-width: 168px; padding: 6px; }
 .view-options-popover .check-option {
   display: flex;
@@ -1262,31 +1399,40 @@ body.header-card-preview-focus .preview-input-history {
 .view-options-popover .check-option input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
+  position: relative;
   width: 14px;
   height: 14px;
   margin: 0 8px 0 0;
   padding: 0;
   flex: none;
-  border: 0;
-  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, var(--muted));
+  border-radius: 4px;
   background: transparent;
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.view-options-popover .check-option input[type="checkbox"]::before {
-  content: "";
-  display: block;
-  width: 14px;
-  height: 14px;
+.view-options-popover .check-option input[type="checkbox"]:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
 }
-.view-options-popover .check-option input[type="checkbox"]:checked::before {
+.view-options-popover .check-option input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: transparent;
+}
+.view-options-popover .check-option input[type="checkbox"]:checked::after {
   content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
-.filter-popover input { margin: 0 7px 0 0; accent-color: var(--accent); }
-.view-options-popover .check-option input[type="checkbox"] { margin: 0 8px 0 0; accent-color: transparent; }
+.view-options-popover .check-option input[type="checkbox"]:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .popover-divider { display: block; height: 1px; margin: 5px 4px; background: var(--line); }
 .category-filter-popover { min-width: 190px; }
 .category-filter-popover label { display: flex; align-items: center; gap: 3px; padding: 6px; font-size: 12px; }
@@ -1421,6 +1567,31 @@ body.header-card-preview-focus .preview-input-history {
 .favorite-category-item.active { color: var(--paper); background: var(--ink); }
 .favorite-category-item.active b { color: color-mix(in srgb, var(--paper) 65%, transparent); }
 .favorite-category-row { display: flex; align-items: center; }
+.favorite-category-row.is-child { padding-left: 4px; }
+.favorite-category-toggle {
+  flex: none;
+  width: 22px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.favorite-category-toggle svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  transition: transform .18s ease;
+}
+.favorite-category-toggle.collapsed svg { transform: rotate(-90deg); }
+.favorite-category-toggle:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
 .favorite-category-row.dragging { opacity: .35; }
 .favorite-category-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .favorite-category-row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
@@ -3710,12 +3881,6 @@ body.dark .preview-controls { background: #1a1917; }
 }
 
 @container card-toolbar (min-width: 981px) and (max-width: 1200px) {
-  .toolbar-search-wrap,
-  .toolbar-filters .toolbar-search-wrap {
-    flex: 1 1 100px;
-    min-width: 80px;
-    max-width: 180px;
-  }
   .grid-layout-control input,
   .columns-control input,
   .toolbar-view .grid-layout-control input,
@@ -3726,29 +3891,12 @@ body.dark .preview-controls { background: #1a1917; }
 }
 
 @container card-toolbar (max-width: 980px) {
-  .card-preview-style-preset-dropdown summary .filter-menu-label,
-  .card-preview-style-preset-dropdown summary b,
-  .card-preview-style-preset-dropdown summary::after {
-    display: none;
-  }
-  .card-preview-style-preset-dropdown summary {
-    width: var(--toolbar-control-height);
-    min-width: var(--toolbar-control-height);
-    padding: 0;
-    justify-content: center;
-    gap: 0;
-  }
-  .card-preview-style-preset-dropdown summary .card-preview-style-icon {
-    display: block;
-  }
-  .toolbar-filters {
-    gap: 4px;
-  }
-  .toolbar-filters .toolbar-search-wrap {
-    flex: 1 1 88px;
-    min-width: 72px;
-    max-width: 180px;
-    width: auto;
+  .toolbar-filter-group .filter-menu summary b { max-width: 4em; font-size: 8px; }
+  .card-toolbar .toolbar-filters.filter-row { gap: 4px; }
+  .toolbar-filters-stack > .toolbar-search-wrap {
+    width: min(150px, 100%);
+    min-width: 120px;
+    max-width: 150px;
   }
   .grid-layout-control input,
   .columns-control input,
@@ -3762,9 +3910,7 @@ body.dark .preview-controls { background: #1a1917; }
 @container card-toolbar (max-width: 900px) {
   .toolbar-meta .eyebrow,
   .toolbar-meta .font-count-suffix { display: none; }
-  .toolbar-filters .filter-divider { display: none; }
-  .toolbar-filter-group { margin-inline: 0; padding-inline: 0; gap: 4px; }
-  .toolbar-filters .filter-menu-label { display: none; }
+  .toolbar-filter-group { padding-inline: 0; gap: 4px; }
   .toolbar-filters .filter-menu summary { padding: 0 6px; gap: 2px; }
   .toolbar-filters .chip { padding: 0 8px; }
   .toolbar-view .grid-layout-control,
@@ -3807,6 +3953,27 @@ body.dark .preview-controls { background: #1a1917; }
     justify-self: end;
     flex-wrap: nowrap;
   }
+  .card-toolbar .toolbar-filters.filter-row {
+    min-height: var(--toolbar-control-height);
+  }
+  .toolbar-filters-leading {
+    align-self: center;
+  }
+  .card-toolbar .toolbar-filters-stack {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .toolbar-filters-stack::-webkit-scrollbar { display: none; }
   .toolbar-filters .chip { padding: 0 6px; font-size: 9px; }
   .toolbar-filters .filter-menu summary { padding: 0 5px; }
   .toolbar-filters .filter-menu summary b { font-size: 8px; }
@@ -3935,23 +4102,25 @@ body.dark .preview-controls { background: #1a1917; }
 
               <div class="toolbar-section toolbar-center">
                 <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
-                  <button class="chip active" data-filter="all">全部</button>
-                  <button class="chip" data-filter="favorite">收藏</button>
-                  <span class="filter-divider"></span>
-                  <div class="toolbar-search-wrap search-control">
-                    <label class="search-box toolbar-search">
-                      <span class="search-icon" aria-hidden="true">⌕</span>
-                      <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                      <button id="searchClearButton" class="search-clear-button" type="button" hidden aria-label="清除搜索">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M8 8l8 8M16 8l-8 8"/></svg>
-                      </button>
-                    </label>
-                    <div id="searchSuggestions" class="search-suggestions" hidden>
-                      <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                      <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
-                    </div>
+                  <div class="toolbar-filters-leading">
+                    <button class="chip active" data-filter="all">全部</button>
+                    <button class="chip" data-filter="favorite">收藏</button>
                   </div>
-                  <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
+                  <div class="toolbar-filters-stack">
+                    <div class="toolbar-search-wrap search-control">
+                      <label class="search-box toolbar-search">
+                        <span class="search-icon" aria-hidden="true">⌕</span>
+                        <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                        <button id="searchClearButton" class="search-clear-button" type="button" hidden aria-label="清除搜索">
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M8 8l8 8M16 8l-8 8"/></svg>
+                        </button>
+                      </label>
+                      <div id="searchSuggestions" class="search-suggestions" hidden>
+                        <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                        <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                      </div>
+                    </div>
+                    <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
                     <details class="filter-menu" id="languageMenu">
                       <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
                       <div class="filter-popover">
@@ -3995,6 +4164,7 @@ body.dark .preview-controls { background: #1a1917; }
                         <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                       </details>
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -4282,9 +4452,10 @@ function loadFavoriteData() {
     }
     assignments.forEach((_, font) => cachedFavorites.add(font));
     const recentCategories = Array.isArray(data.recentCategories) ? data.recentCategories : [];
-    return { categories, assignments, recentCategories };
+    const collapsedCategoryIds = Array.isArray(data.collapsedCategoryIds) ? data.collapsedCategoryIds : [];
+    return { categories, assignments, recentCategories, collapsedCategoryIds };
   } catch {
-    return { categories: [], assignments: new Map(), recentCategories: [] };
+    return { categories: [], assignments: new Map(), recentCategories: [], collapsedCategoryIds: [] };
   }
 }
 const cachedFavoriteData = loadFavoriteData();
@@ -5011,7 +5182,7 @@ const state = {
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
   activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
   previewColorsCustomized: resolvePreviewColorsCustomized(uiSettings),
-  favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
+  favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories, collapsedCategoryIds: new Set(cachedFavoriteData.collapsedCategoryIds || []),
   axes: {}, objectUrls: []
 };
 if (state.activeCardPreviewStylePresetId) {
@@ -11056,7 +11227,13 @@ function toggleFavoriteFor(font) {
 function persistFavorites() {
   localStorage.setItem("font-favorites", JSON.stringify([...state.favorites]));
   const assignments = Object.fromEntries([...state.categoryAssignments].map(([font, ids]) => [font, [...ids]]));
-  localStorage.setItem("font-favorite-data", JSON.stringify({ version: 2, categories: state.categories, assignments, recentCategories: state.recentCategories }));
+  localStorage.setItem("font-favorite-data", JSON.stringify({
+    version: 2,
+    categories: state.categories,
+    assignments,
+    recentCategories: state.recentCategories,
+    collapsedCategoryIds: [...state.collapsedCategoryIds]
+  }));
 }
 
 function touchRecentCategory(id) {
@@ -11077,9 +11254,30 @@ function setFontCategory(font, categoryId, enabled) {
   persistFavorites();
 }
 
-function orderedCategories() {
-  const roots = state.categories.filter(item => !item.parentId);
-  return roots.flatMap(root => [root, ...state.categories.filter(item => item.parentId === root.id)]);
+function categoryHasChildren(categoryId) {
+  return state.categories.some(item => item.parentId === categoryId);
+}
+
+function isCategoryCollapsed(categoryId) {
+  return state.collapsedCategoryIds.has(categoryId);
+}
+
+function toggleCategoryCollapsed(categoryId) {
+  if (state.collapsedCategoryIds.has(categoryId)) state.collapsedCategoryIds.delete(categoryId);
+  else state.collapsedCategoryIds.add(categoryId);
+  persistFavorites();
+  renderFavoriteSidebar();
+}
+
+function visibleCategories() {
+  const items = [];
+  state.categories.filter(item => !item.parentId).forEach(root => {
+    items.push(root);
+    if (!isCategoryCollapsed(root.id)) {
+      state.categories.filter(item => item.parentId === root.id).forEach(child => items.push(child));
+    }
+  });
+  return items;
 }
 
 function expandedFavoriteCategoryView() {
@@ -11106,18 +11304,27 @@ function renderFavoriteSidebar() {
   const items = [
     { id: "all", name: "全部收藏", parentId: null },
     { id: "uncategorized", name: "未分类", parentId: null },
-    ...orderedCategories()
+    ...visibleCategories()
   ];
   ui.favoriteCategoryList.innerHTML = items.map(item => {
     if (state.editingCategoryId === item.id) return `<div class="favorite-category-row" data-category-id="${escapeHtml(item.id)}"><input class="category-inline-input" value="${escapeHtml(item.name)}" maxlength="30" aria-label="分类名称"></div>`;
-    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? "↳ " : ""}${escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
+    const hasChildren = !item.parentId && categoryHasChildren(item.id);
+    const collapsed = hasChildren && isCategoryCollapsed(item.id);
+    const toggle = hasChildren
+      ? `<button type="button" class="favorite-category-toggle${collapsed ? " collapsed" : ""}" data-category-toggle="${escapeHtml(item.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "展开子分类" : "折叠子分类"}" title="${collapsed ? "展开子分类" : "折叠子分类"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 10l4 4 4-4"/></svg></button>`
+      : "";
+    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? escapeHtml(item.name) : escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
     if (["all", "uncategorized"].includes(item.id)) return button;
-    return `<div class="favorite-category-row" draggable="true" data-category-id="${escapeHtml(item.id)}">${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
+    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
   }).join("");
   ui.favoriteCategoryList.querySelectorAll("[data-favorite-category]").forEach(button => button.addEventListener("click", () => {
     state.favoriteCategoryView = button.dataset.favoriteCategory;
     applyFilter();
     persistUiSettings();
+  }));
+  ui.favoriteCategoryList.querySelectorAll("[data-category-toggle]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleCategoryCollapsed(button.dataset.categoryToggle);
   }));
   ui.favoriteCategoryList.querySelectorAll("[data-category-action]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
@@ -11154,6 +11361,7 @@ function addCategory() {
   while (state.categories.some(item => item.parentId === parentId && item.name === name)) name = `${base} (${index++})`;
   const category = { id: `cat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`, name, parentId };
   state.categories.push(category);
+  if (parentId && state.collapsedCategoryIds.has(parentId)) state.collapsedCategoryIds.delete(parentId);
   state.favoriteCategoryView = category.id;
   state.editingCategoryId = category.id;
   persistFavorites();
@@ -11522,7 +11730,7 @@ searchControl?.addEventListener("mouseenter", () => {
 searchControl?.addEventListener("mouseleave", hideSearchSuggestions);
 ui.search.addEventListener("focus", showSearchSuggestions);
 searchControl?.querySelector(".search-box")?.addEventListener("click", event => {
-  if (event.target.closest("#searchSuggestions")) return;
+  if (event.target.closest("#searchSuggestions, #searchClearButton")) return;
   suppressSearchSuggestions = true;
   hideSearchSuggestions();
 });

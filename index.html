@@ -96,23 +96,25 @@
 
               <div class="toolbar-section toolbar-center">
                 <div class="toolbar-filters filter-row" role="group" aria-label="字体筛选">
-                  <button class="chip active" data-filter="all">全部</button>
-                  <button class="chip" data-filter="favorite">收藏</button>
-                  <span class="filter-divider"></span>
-                  <div class="toolbar-search-wrap search-control">
-                    <label class="search-box toolbar-search">
-                      <span class="search-icon" aria-hidden="true">⌕</span>
-                      <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
-                      <button id="searchClearButton" class="search-clear-button" type="button" hidden aria-label="清除搜索">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M8 8l8 8M16 8l-8 8"/></svg>
-                      </button>
-                    </label>
-                    <div id="searchSuggestions" class="search-suggestions" hidden>
-                      <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
-                      <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
-                    </div>
+                  <div class="toolbar-filters-leading">
+                    <button class="chip active" data-filter="all">全部</button>
+                    <button class="chip" data-filter="favorite">收藏</button>
                   </div>
-                  <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
+                  <div class="toolbar-filters-stack">
+                    <div class="toolbar-search-wrap search-control">
+                      <label class="search-box toolbar-search">
+                        <span class="search-icon" aria-hidden="true">⌕</span>
+                        <input id="searchInput" type="search" placeholder="搜索字体 / 拼音" autocomplete="off" />
+                        <button id="searchClearButton" class="search-clear-button" type="button" hidden aria-label="清除搜索">
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M8 8l8 8M16 8l-8 8"/></svg>
+                        </button>
+                      </label>
+                      <div id="searchSuggestions" class="search-suggestions" hidden>
+                        <div class="suggestion-group"><span>常见类型</span><div id="commonSearchTags" class="suggestion-tags"></div></div>
+                        <div class="suggestion-group"><span>中文品牌</span><div id="brandSearchTags" class="suggestion-tags"></div></div>
+                      </div>
+                    </div>
+                    <div class="toolbar-filter-group" role="group" aria-label="筛选排序样式">
                     <details class="filter-menu" id="languageMenu">
                       <summary><span class="filter-menu-label">语言</span> <b id="languageBadge">全部</b></summary>
                       <div class="filter-popover">
@@ -156,6 +158,7 @@
                         <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                       </details>
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
