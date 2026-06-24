@@ -11,7 +11,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-row topbar-main">
-        <a class="brand" href="#" aria-label="字己首页">
+        <div class="brand" aria-label="字己">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 48 48" focusable="false">
               <rect class="logo-frame" x="6" y="6" width="36" height="36" rx="8"></rect>
@@ -23,10 +23,13 @@
           <span class="brand-copy">
             <span class="brand-title-row">
               <strong>字己</strong>
-              <span class="version-badge" title="当前版本">v1.0.24</span>
+              <a class="version-badge" href="https://wonvy.cn/" target="_blank" rel="noopener noreferrer" title="By wonvy">
+                <span class="version-badge-text version-text">v1.0.24</span>
+                <span class="version-badge-text credit-text">By wonvy</span>
+              </a>
             </span>
           </span>
-        </a>
+        </div>
         <div class="header-preview">
           <div class="header-preview-input-wrap search-control">
             <label id="previewInputWrap" class="preview-input-wrap card-preview-input header-preview-input">
@@ -75,6 +78,7 @@
         <div class="welcome-footer">
           <button id="welcomeThemeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
           <p id="supportNote" class="support-note welcome-footer-note">推荐使用最新版 Chrome 或 Edge</p>
+          <a class="welcome-footer-link" href="https://wonvy.cn/" target="_blank" rel="noopener noreferrer">By wonvy</a>
         </div>
       </section>
 
@@ -317,8 +321,8 @@
         <div>，。！？；：“”「」,.?!;:()[]{}@#$%&*</div>
       </div>
       <div class="hover-preview-meta">
-        <strong id="hoverPreviewName"></strong>
-        <span id="hoverPreviewStyle"></span>
+        <strong id="hoverPreviewName" role="button" tabindex="0"></strong>
+        <span id="hoverPreviewStyle" role="button" tabindex="0"></span>
       </div>
     </div>
   </div>

@@ -1029,6 +1029,9 @@ function hideHoverPreviewOverlay() {
 function showHoverPreviewOverlay(font = state.hovered) {
   if (!font || !ui.hoverPreviewOverlay || !ui.hoverPreviewSample) return;
   const text = fullCardPreviewText() || "字体有光";
+  const displayName = font.displayName || font.family || "";
+  const styleName = font.style || "Regular";
+  const fullName = font.fullName || [displayName, styleName].filter(Boolean).join(" ");
   registerFont(font);
   ui.hoverPreviewSample.textContent = text;
   ui.hoverPreviewSample.style.fontFamily = cssName(font);
@@ -1046,14 +1049,27 @@ function showHoverPreviewOverlay(font = state.hovered) {
     ui.hoverPreviewSample.style.fontVariationSettings = toolbarVariationSettings();
     ui.hoverPreviewSample.style.color = "var(--ink)";
   }
-  if (ui.hoverPreviewName) ui.hoverPreviewName.textContent = font.displayName || font.fullName || font.family || "";
-  if (ui.hoverPreviewStyle) ui.hoverPreviewStyle.textContent = font.style || "Regular";
+  if (ui.hoverPreviewName) {
+    ui.hoverPreviewName.textContent = displayName;
+    ui.hoverPreviewName.dataset.copyValue = displayName;
+    ui.hoverPreviewName.title = "点击复制字体名称";
+  }
+  if (ui.hoverPreviewStyle) {
+    ui.hoverPreviewStyle.textContent = styleName;
+    ui.hoverPreviewStyle.dataset.copyValue = fullName;
+    ui.hoverPreviewStyle.title = "点击复制完整字体名称";
+  }
   ui.hoverPreviewOverlay.hidden = false;
   ensureFontLoaded(font, text).then(() => {
     if (ui.hoverPreviewOverlay?.hidden) return;
     ui.hoverPreviewSample.style.fontFamily = cssName(font);
     if (ui.hoverPreviewSubsamples) ui.hoverPreviewSubsamples.style.fontFamily = cssName(font);
   });
+}
+
+function copyHoverPreviewMeta(target) {
+  if (!target?.dataset?.copyValue) return;
+  copyValue(target.dataset.copyValue.trim(), target === ui.hoverPreviewStyle ? "完整字体名称" : "字体名称");
 }
 
 function toggleHoverPreviewOverlay() {
@@ -7048,6 +7064,22 @@ document.addEventListener("keydown", event => {
 });
 ui.hoverPreviewOverlay?.addEventListener("click", event => {
   if (event.target === ui.hoverPreviewOverlay) hideHoverPreviewOverlay();
+});
+ui.hoverPreviewName?.addEventListener("click", event => {
+  event.stopPropagation();
+  copyHoverPreviewMeta(ui.hoverPreviewName);
+});
+ui.hoverPreviewStyle?.addEventListener("click", event => {
+  event.stopPropagation();
+  copyHoverPreviewMeta(ui.hoverPreviewStyle);
+});
+[ui.hoverPreviewName, ui.hoverPreviewStyle].forEach(element => {
+  element?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    copyHoverPreviewMeta(element);
+  });
 });
 $("#hoverPreviewClose")?.addEventListener("click", hideHoverPreviewOverlay);
 ui.previewInput.addEventListener("input", () => {
