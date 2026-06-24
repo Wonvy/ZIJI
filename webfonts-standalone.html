@@ -7,14 +7,14 @@
   <title>字己 · 本地字体预览</title>
   <style>
 :root {
-  --paper: #f5f1e9;
-  --panel: #fbf9f4;
-  --ink: #181816;
-  --muted: #77736a;
-  --line: #d9d3c8;
+  --paper: #f3f4f6;
+  --panel: #fbfcfd;
+  --ink: #20242a;
+  --muted: #7b838e;
+  --line: #d8dde5;
   --accent: #e85832;
-  --stage: #eee8dc;
-  --shadow: 0 18px 60px rgba(38, 31, 21, .11);
+  --stage: #eceff3;
+  --shadow: 0 18px 60px rgba(31, 38, 48, .1);
   --topbar-height: 88px;
   --toolbar-control-height: 34px;
 }
@@ -26,9 +26,26 @@ body {
   min-height: 100%;
   margin: 0;
   color: var(--ink);
-  background: var(--paper);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,.72), transparent 28%),
+    radial-gradient(circle at 78% 0%, rgba(225,229,236,.72), transparent 30%),
+    var(--paper);
   font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
   overflow: hidden;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: .32;
+  background-image:
+    radial-gradient(circle, rgba(32,36,42,.08) .45px, transparent .7px),
+    radial-gradient(circle, rgba(255,255,255,.8) .35px, transparent .7px);
+  background-position: 0 0, 7px 9px;
+  background-size: 13px 13px, 17px 17px;
+  mix-blend-mode: multiply;
 }
 button, input { font: inherit; }
 button { color: inherit; }
@@ -644,7 +661,8 @@ input[type="range"]::-moz-range-thumb {
 .standard-controls input[type="color"] { width: 100%; height: 22px; padding: 0; cursor: pointer; border: 0; background: transparent; }
 .toast { position: fixed; left: 50%; bottom: 25px; z-index: 100; padding: 11px 17px; opacity: 0; color: var(--paper); border-radius: 3px; background: var(--ink); transform: translate(-50%, 20px); transition: .2s; pointer-events: none; font-size: 12px; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-body.dark { --paper: #181816; --panel: #201f1c; --ink: #f4efe6; --muted: #aaa49a; --line: #3b3934; --stage: #2b2924; }
+body.dark { --paper: #181816; --panel: #201f1c; --ink: #f4efe6; --muted: #aaa49a; --line: #3b3934; --stage: #2b2924; --shadow: 0 18px 60px rgba(0,0,0,.28); background: var(--paper); }
+body.dark::before { display: none; }
 body.dark .stage-hint { color: rgba(255,255,255,.42); }
 body.dark .magnifier { border-color: rgba(40,39,35,.9); }
 body.dark .card-magnifier { border-color: rgba(40,39,35,.92); }
@@ -825,8 +843,8 @@ kbd,
   padding: 10px 16px;
   overflow: hidden;
   pointer-events: none;
-  font-size: clamp(26px, 4.2vw, 56px);
-  line-height: 1.08;
+  font-size: clamp(26px, calc(var(--topbar-height) * .58), 96px);
+  line-height: .92;
   letter-spacing: 0;
   text-align: center;
   white-space: nowrap;
@@ -898,14 +916,20 @@ body.header-card-preview-focus .preview-input-history {
   max-width: 56px;
 }
 .toolbar-view .single-size-control input {
-  width: clamp(48px, 14cqi, 72px);
+  width: 100%;
   min-width: 48px;
-  max-width: 72px;
+  max-width: none;
 }
 .single-size-range-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.single-size-control output {
+  min-width: 2.2em;
+  text-align: right;
 }
 .single-size-bubble {
   position: absolute;
@@ -1568,8 +1592,8 @@ body.header-card-preview-focus .preview-input-history {
   --single-card-size: 82px;
   grid-auto-rows: var(--single-card-size);
   gap: 0;
-  padding: 24px 24px 32px;
-  align-content: start;
+  padding: 24px;
+  align-content: center;
   justify-content: center;
   justify-items: stretch;
 }
@@ -3833,11 +3857,11 @@ body.dark .preview-controls { background: #1a1917; }
               </div>
 
               <div class="toolbar-section toolbar-view view-controls" aria-label="视图控制栏">
-                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
+                <button id="singleViewButton" class="view-button" title="单字极简视图" aria-label="单字极简视图">字</button>
                 <label class="grid-layout-control" title="每行显示列数"><output id="cardColumnsOutput">7</output> 列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /></label>
                 <label class="grid-layout-control" title="每页显示行数"><output id="cardRowsOutput">4</output> 行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /></label>
-                <label id="singleCardSizeControl" class="grid-layout-control single-size-control" title="单字卡片大小" hidden><output id="singleCardSizeOutput">82</output> 大小 <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" aria-label="单字卡片大小" /></span></label>
+                <label id="singleCardSizeControl" class="grid-layout-control single-size-control" title="单字卡片大小" hidden>大小 <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" aria-label="单字卡片大小" /></span><output id="singleCardSizeOutput">82</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>
@@ -5053,7 +5077,7 @@ function syncToolbarPreview(font) {
 }
 
 function shouldHeaderCardPreviewBrowsing() {
-  return ["grid", "focus"].includes(state.view) && state.pointerInFontView;
+  return ["grid", "focus", "single"].includes(state.view) && state.pointerInFontView;
 }
 
 function shouldHeaderCardPreviewFocus() {
@@ -5079,7 +5103,7 @@ function syncHeaderPreviewFocusDisplay() {
     return;
   }
   const font = state.previewed;
-  const text = cardPreviewText();
+  const text = fullCardPreviewText();
   display.hidden = false;
   display.textContent = text;
   registerFont(font);
@@ -5108,7 +5132,7 @@ function hideHoverPreviewOverlay() {
 
 function showHoverPreviewOverlay(font = state.hovered) {
   if (!font || !ui.hoverPreviewOverlay || !ui.hoverPreviewSample) return;
-  const text = cardPreviewText() || "字体有光";
+  const text = fullCardPreviewText() || "字体有光";
   registerFont(font);
   ui.hoverPreviewSample.textContent = text;
   ui.hoverPreviewSample.style.fontFamily = cssName(font);
@@ -9713,6 +9737,10 @@ function cardPreviewText() {
   return state.view === "single" ? ([...text.trim()][0] || "字") : text;
 }
 
+function fullCardPreviewText() {
+  return ui.previewInput.value || "字";
+}
+
 function loadCardFont(card) {
   const font = state.fonts.find(item => item.id === Number(card.dataset.id));
   if (!font) return;
@@ -11396,7 +11424,7 @@ ui.list.addEventListener("wheel", event => {
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
 ui.nextPage.addEventListener("click", () => goToPage(state.page + 1));
 ui.list.addEventListener("pointerenter", () => {
-  if (!["grid", "focus"].includes(state.view)) return;
+  if (!["grid", "focus", "single"].includes(state.view)) return;
   state.pointerInFontView = true;
   updateHeaderCardPreviewFocus();
 });

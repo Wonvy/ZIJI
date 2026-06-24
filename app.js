@@ -973,7 +973,7 @@ function syncToolbarPreview(font) {
 }
 
 function shouldHeaderCardPreviewBrowsing() {
-  return ["grid", "focus"].includes(state.view) && state.pointerInFontView;
+  return ["grid", "focus", "single"].includes(state.view) && state.pointerInFontView;
 }
 
 function shouldHeaderCardPreviewFocus() {
@@ -999,7 +999,7 @@ function syncHeaderPreviewFocusDisplay() {
     return;
   }
   const font = state.previewed;
-  const text = cardPreviewText();
+  const text = fullCardPreviewText();
   display.hidden = false;
   display.textContent = text;
   registerFont(font);
@@ -1028,7 +1028,7 @@ function hideHoverPreviewOverlay() {
 
 function showHoverPreviewOverlay(font = state.hovered) {
   if (!font || !ui.hoverPreviewOverlay || !ui.hoverPreviewSample) return;
-  const text = cardPreviewText() || "字体有光";
+  const text = fullCardPreviewText() || "字体有光";
   registerFont(font);
   ui.hoverPreviewSample.textContent = text;
   ui.hoverPreviewSample.style.fontFamily = cssName(font);
@@ -5633,6 +5633,10 @@ function cardPreviewText() {
   return state.view === "single" ? ([...text.trim()][0] || "字") : text;
 }
 
+function fullCardPreviewText() {
+  return ui.previewInput.value || "字";
+}
+
 function loadCardFont(card) {
   const font = state.fonts.find(item => item.id === Number(card.dataset.id));
   if (!font) return;
@@ -7316,7 +7320,7 @@ ui.list.addEventListener("wheel", event => {
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
 ui.nextPage.addEventListener("click", () => goToPage(state.page + 1));
 ui.list.addEventListener("pointerenter", () => {
-  if (!["grid", "focus"].includes(state.view)) return;
+  if (!["grid", "focus", "single"].includes(state.view)) return;
   state.pointerInFontView = true;
   updateHeaderCardPreviewFocus();
 });
