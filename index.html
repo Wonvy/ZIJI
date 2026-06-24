@@ -47,6 +47,7 @@
           <button id="themeButton" class="icon-button" type="button" title="切换主题" aria-label="切换主题">◐</button>
         </div>
       </div>
+      <div id="topbarResizeHandle" class="topbar-resize-handle" title="拖动调整顶部栏高度" aria-hidden="true"></div>
     </header>
 
     <main>
@@ -155,6 +156,7 @@
                 <button id="gridViewButton" class="view-button active" title="网格视图" aria-label="网格视图">▦</button>
                 <label class="grid-layout-control" title="每行显示列数"><output id="cardColumnsOutput">7</output> 列 <input id="cardColumns" type="range" min="1" max="12" step="1" value="7" aria-label="每行显示列数" /></label>
                 <label class="grid-layout-control" title="每页显示行数"><output id="cardRowsOutput">4</output> 行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /></label>
+                <label id="singleCardSizeControl" class="grid-layout-control single-size-control" title="单字卡片大小" hidden><output id="singleCardSizeOutput">82</output> 大小 <span class="single-size-range-wrap"><span id="singleCardSizeBubble" class="single-size-bubble" hidden aria-hidden="true"></span><input id="singleCardSize" type="range" min="48" max="180" step="2" value="82" aria-label="单字卡片大小" /></span></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>

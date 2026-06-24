@@ -75,6 +75,14 @@ function clampCardRows(value, max = CARD_ROWS_MAX) {
   return Math.max(CARD_ROWS_MIN, Math.min(max, Math.round(Number(value) || CARD_ROWS_DEFAULT)));
 }
 
+function clampSingleCardSize(value) {
+  return Math.max(48, Math.min(180, Math.round(Number(value) || UI_SETTINGS_DEFAULTS.singleCardSize)));
+}
+
+function clampTopbarHeight(value) {
+  return Math.max(58, Math.min(160, Math.round(Number(value) || UI_SETTINGS_DEFAULTS.topbarHeight)));
+}
+
 function deriveCardColumnsFromWidth(cardWidth, containerWidth = 1100) {
   return clampCardColumns(Math.floor((containerWidth + CARD_GRID_GAP) / (Number(cardWidth) + CARD_GRID_GAP)));
 }
@@ -169,29 +177,52 @@ function getCardGridLayout() {
   return { ...capacity, columns, rows, cardWidth };
 }
 
+function getSingleViewGridLayout() {
+  const { width, height } = getFontGridViewportSize();
+  const size = clampSingleCardSize(state.singleCardSize);
+  const columns = Math.max(1, Math.floor(width / size));
+  const rows = Math.max(1, Math.floor(height / size));
+  return { width, height, size, columns, rows };
+}
+
 function syncCardGridControls() {
   const capacity = getCardGridCapacity();
-  const disabled = state.view === "single";
+  const isSingle = state.view === "single";
   state.cardColumns = clampCardColumns(state.cardColumns, capacity.maxColumns);
   state.cardRows = clampCardRows(state.cardRows, capacity.maxRows);
+  state.singleCardSize = clampSingleCardSize(state.singleCardSize);
   const colInput = $("#cardColumns");
   const rowInput = $("#cardRows");
   const colOutput = $("#cardColumnsOutput");
   const rowOutput = $("#cardRowsOutput");
+  const colControl = colInput?.closest(".grid-layout-control");
+  const rowControl = rowInput?.closest(".grid-layout-control");
+  const singleControl = $("#singleCardSizeControl");
+  const singleInput = $("#singleCardSize");
+  const singleOutput = $("#singleCardSizeOutput");
+  if (colControl) colControl.hidden = isSingle;
+  if (rowControl) rowControl.hidden = isSingle;
+  if (singleControl) singleControl.hidden = !isSingle;
   if (colInput) {
-    colInput.disabled = disabled;
+    colInput.disabled = isSingle;
     colInput.min = String(CARD_COLUMNS_MIN);
     colInput.max = String(capacity.maxColumns);
     colInput.value = String(state.cardColumns);
   }
   if (rowInput) {
-    rowInput.disabled = disabled;
+    rowInput.disabled = isSingle;
     rowInput.min = String(CARD_ROWS_MIN);
     rowInput.max = String(capacity.maxRows);
     rowInput.value = String(state.cardRows);
   }
+  if (singleInput) {
+    singleInput.disabled = !isSingle;
+    singleInput.value = String(state.singleCardSize);
+  }
   if (colOutput) colOutput.textContent = String(state.cardColumns);
   if (rowOutput) rowOutput.textContent = String(state.cardRows);
+  if (singleOutput) singleOutput.textContent = String(state.singleCardSize);
+  if (!isSingle) syncSingleCardSizeBubble(false);
 }
 
 function sortLabel(sort) {
@@ -203,6 +234,7 @@ const UI_SETTINGS_DEFAULTS = {
   cardColumns: 7,
   cardRows: 4,
   singleCardSize: 82,
+  topbarHeight: 88,
   cardSampleSize: 49,
   sort: "name",
   magnifier: true,
@@ -485,8 +517,13 @@ function normalizeLayoutSettings(settings) {
   if (normalized.detailPanelWidth) {
     normalized.detailPanelWidth = Math.max(320, Math.min(normalized.detailPanelWidth, getMaxDetailPanelWidth()));
   }
+  normalized.topbarHeight = clampTopbarHeight(normalized.topbarHeight);
   normalized.cardAreaCollapsed = false;
   return normalized;
+}
+
+function applyTopbarHeight(height) {
+  document.documentElement.style.setProperty("--topbar-height", `${clampTopbarHeight(height)}px`);
 }
 
 function loadUiSettings() {
@@ -512,6 +549,7 @@ function collectUiSettings() {
     cardColumns: state.cardColumns,
     cardRows: state.cardRows,
     singleCardSize: state.singleCardSize,
+    topbarHeight: clampTopbarHeight(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height"))),
     cardSampleSize: state.cardSampleSize,
     sort: state.sort,
     magnifier: state.magnifier,
@@ -559,6 +597,7 @@ function syncCardAreaToggle(collapsed) {
 }
 function applyStoredUiSettings(settings) {
   document.body.classList.toggle("dark", settings.theme === "dark");
+  applyTopbarHeight(settings.topbarHeight);
   ui.size.value = settings.previewFontSize;
   ui.spacing.value = settings.previewLetterSpacing;
   ui.lineHeight.value = settings.previewLineHeight;
@@ -3104,7 +3143,7 @@ function snapPreviewAngle(angle, enabled = false) {
 }
 
 function previewAngleWheelDelta(event) {
-  return event.deltaY < 0 ? 1 : -1;
+  return event.deltaY > 0 ? 1 : -1;
 }
 
 function renderGradientAngleDial(angle, scope) {
@@ -3619,6 +3658,9 @@ function renderGradientStopsEditor(target, scope) {
 function renderFillStyleParams() {
   const fill = cardPreviewStyleDraft.fill;
   syncFillLegacyColors(fill);
+  if (fill.enabled === false) {
+    return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid"><div class="preview-style-transparent-fill-note"><strong>透明填充</strong><span>填充层已关闭，文字本体不绘制颜色，仅保留其他图层效果。</span></div></div>`;
+  }
   const isGradient = fill.mode === "gradient";
   const gradientFields = isGradient ? renderGradientStopsEditor(fill, "fill") : "";
   const opacityField = isGradient
@@ -3640,7 +3682,7 @@ function renderCardPreviewStyleLayerList() {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       const fillActive = cardPreviewStyleSelectedLayerId == null ? " active" : "";
       const fillDisabled = fillEnabled ? "" : " is-disabled";
-      return `<li class="preview-style-style-item${fillActive}${fillDisabled}" data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">填充</span><span class="layer-spacer" aria-hidden="true"></span></li>`;
+      return `<li class="preview-style-style-item${fillActive}${fillDisabled}" data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${fillEnabled ? " checked" : ""} aria-label="启用填充" /><span class="style-name">${fillEnabled ? "填充" : "填充（透明）"}</span><span class="layer-spacer" aria-hidden="true"></span></li>`;
     }
     const layer = cardPreviewStyleDraft.layers.find(item => item.id === key);
     if (!layer) return "";
@@ -4086,7 +4128,7 @@ function handleGridLayoutControlWheel(event) {
   if (!range || range.disabled) return;
   event.preventDefault();
   event.stopPropagation();
-  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+  adjustRangeInput(range, event.deltaY > 0 ? 1 : -1);
 }
 
 function closeCardPreviewStyleQuickMenu() {
@@ -4411,7 +4453,7 @@ function handlePreviewStyleWheel(event) {
   if (fontField && modal.contains(fontField)) {
     event.preventDefault();
     event.stopPropagation();
-    stepCardPreviewStyleFont(event.deltaY < 0 ? -1 : 1);
+    stepCardPreviewStyleFont(event.deltaY > 0 ? 1 : -1);
     return;
   }
   const range = target instanceof HTMLInputElement && target.classList.contains("preview-style-range")
@@ -4420,7 +4462,7 @@ function handlePreviewStyleWheel(event) {
   if (!range || !modal.contains(range)) return;
   event.preventDefault();
   event.stopPropagation();
-  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+  adjustRangeInput(range, event.deltaY > 0 ? 1 : -1);
 }
 
 function wireCardPreviewStyleModal() {
@@ -4639,6 +4681,7 @@ function wireCardPreviewStyleModal() {
     if (fillItem) {
       cardPreviewStyleDraft.fill.enabled = event.target.checked;
       renderCardPreviewStyleLayerList();
+      if (cardPreviewStyleSelectedLayerId == null) renderCardPreviewStyleParams();
       renderCardPreviewStyleModalPreview();
       return;
     }
@@ -5386,6 +5429,10 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   const renderToken = ++state.renderVersion;
   fontObserver?.disconnect();
   state.prefetchCards.clear();
+  state.singleCardSize = clampSingleCardSize(state.singleCardSize);
+  ui.list.classList.toggle("single-view", state.view === "single");
+  ui.list.classList.toggle("focus-view", state.view === "focus");
+  ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
   state.pageSize = calculatePageSize();
   state.totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
   state.page = Math.max(0, Math.min(state.page, state.totalPages - 1));
@@ -5394,14 +5441,14 @@ function renderFontList({ deferFonts = false, remeasure = true } = {}) {
   const fragment = document.createDocumentFragment();
   for (const font of pageFonts) fragment.appendChild(createFontCard(font));
   ui.list.replaceChildren(fragment);
-  ui.list.classList.toggle("single-view", state.view === "single");
-  ui.list.classList.toggle("focus-view", state.view === "focus");
   syncCardGridLayoutVars();
-  if (["grid", "focus"].includes(state.view)) syncCardGridControls();
-  ui.list.style.gridTemplateColumns = ["grid", "focus"].includes(state.view)
-    ? `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`
-    : "";
-  ui.list.style.setProperty("--single-card-size", `${state.singleCardSize}px`);
+  syncCardGridControls();
+  if (state.view === "single") {
+    const singleLayout = getSingleViewGridLayout();
+    ui.list.style.gridTemplateColumns = `repeat(${singleLayout.columns}, var(--single-card-size))`;
+  } else {
+    ui.list.style.gridTemplateColumns = `repeat(${getCardGridLayout().columns}, minmax(0, 1fr))`;
+  }
   ui.count.innerHTML = `<span class="font-count-value">${state.filtered.length}</span><span class="font-count-suffix"> 款字体</span>`;
   ui.empty.hidden = state.filtered.length > 0;
   ui.pagination.hidden = state.filtered.length === 0;
@@ -5454,12 +5501,11 @@ function updateFontStatus(font) {
 }
 
 function calculatePageSize() {
-  const layout = getCardGridLayout();
   if (state.view === "single") {
-    const columns = Math.max(1, Math.floor(layout.width / state.singleCardSize));
-    const rows = Math.max(1, Math.floor(layout.height / state.singleCardSize));
+    const { columns, rows } = getSingleViewGridLayout();
     return columns * rows;
   }
+  const layout = getCardGridLayout();
   return layout.columns * layout.rows;
 }
 
@@ -5695,6 +5741,42 @@ function hideCardSampleSizeBubble(delay = 0) {
   clearTimeout(cardSampleSizeBubbleHideTimer);
   cardSampleSizeBubbleHideTimer = setTimeout(() => {
     if (ui.cardSampleSizeBubble) ui.cardSampleSizeBubble.hidden = true;
+  }, delay);
+}
+
+function syncSingleCardSizeBubble(show = false) {
+  const bubble = $("#singleCardSizeBubble");
+  const input = $("#singleCardSize");
+  if (!bubble || !input) return;
+  const value = Number(input.value);
+  bubble.textContent = String(value);
+  if (!show) {
+    bubble.hidden = true;
+    return;
+  }
+  bubble.hidden = false;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const percent = max === min ? 0 : (value - min) / (max - min);
+  const trackWidth = input.offsetWidth || input.clientWidth;
+  const thumb = 14;
+  const x = percent * Math.max(trackWidth - thumb, 0) + thumb / 2;
+  bubble.style.left = `${x}px`;
+  bubble.style.transform = "translateX(-50%)";
+}
+
+let singleCardSizeBubbleHideTimer = null;
+
+function showSingleCardSizeBubble() {
+  clearTimeout(singleCardSizeBubbleHideTimer);
+  syncSingleCardSizeBubble(true);
+}
+
+function hideSingleCardSizeBubble(delay = 0) {
+  clearTimeout(singleCardSizeBubbleHideTimer);
+  singleCardSizeBubbleHideTimer = setTimeout(() => {
+    const bubble = $("#singleCardSizeBubble");
+    if (bubble) bubble.hidden = true;
   }, delay);
 }
 
@@ -6428,14 +6510,14 @@ function handlePreviewControlWheel(event) {
   if (!range) return;
   event.preventDefault();
   event.stopPropagation();
-  adjustRangeInput(range, event.deltaY < 0 ? 1 : -1);
+  adjustRangeInput(range, event.deltaY > 0 ? 1 : -1);
 }
 
 function handlePreviewStageWheel(event) {
   if (isDetailPreviewEditing() || !state.previewed) return;
   event.preventDefault();
   event.stopPropagation();
-  const direction = event.deltaY < 0 ? 1 : -1;
+  const direction = event.deltaY > 0 ? 1 : -1;
   if (event.shiftKey) adjustRangeInput(ui.spacing, direction);
   else if (event.altKey) adjustRangeInput(ui.lineHeight, direction);
   else adjustRangeInput(ui.size, direction);
@@ -7069,6 +7151,21 @@ $("#cardRows")?.addEventListener("input", event => {
   }
   persistUiSettings();
 });
+$("#singleCardSize")?.addEventListener("input", event => {
+  state.singleCardSize = clampSingleCardSize(event.target.value);
+  syncCardGridControls();
+  showSingleCardSizeBubble();
+  if (state.view === "single") {
+    state.page = 0;
+    renderFontList();
+  }
+  persistUiSettings();
+});
+$("#singleCardSize")?.addEventListener("pointerdown", showSingleCardSizeBubble);
+$("#singleCardSize")?.addEventListener("pointerup", () => hideSingleCardSizeBubble(500));
+$("#singleCardSize")?.addEventListener("pointercancel", () => hideSingleCardSizeBubble(500));
+$("#singleCardSize")?.addEventListener("mouseenter", showSingleCardSizeBubble);
+$("#singleCardSize")?.addEventListener("mouseleave", () => hideSingleCardSizeBubble(300));
 document.querySelectorAll(".grid-layout-control").forEach(label => {
   label.addEventListener("wheel", handleGridLayoutControlWheel, { passive: false });
 });
@@ -7136,9 +7233,10 @@ function setView(view) {
 ui.list.addEventListener("wheel", event => {
   if (!event.ctrlKey) return;
   event.preventDefault();
-  const direction = event.deltaY < 0 ? 1 : -1;
+  const direction = event.deltaY > 0 ? 1 : -1;
   if (state.view === "single") {
-    state.singleCardSize = Math.max(48, Math.min(180, state.singleCardSize + direction * 6));
+    state.singleCardSize = clampSingleCardSize(state.singleCardSize + direction * 6);
+    syncCardGridControls();
     state.page = 0;
     renderFontList();
     toast(`单字卡片 ${state.singleCardSize} × ${state.singleCardSize}`);
@@ -7155,13 +7253,12 @@ ui.list.addEventListener("wheel", event => {
 }, { passive: false });
 ui.previousPage.addEventListener("click", () => goToPage(state.page - 1));
 ui.nextPage.addEventListener("click", () => goToPage(state.page + 1));
-const cardArea = $(".card-area");
-cardArea?.addEventListener("pointerenter", () => {
+ui.list.addEventListener("pointerenter", () => {
   if (!["grid", "focus"].includes(state.view)) return;
   state.pointerInFontView = true;
   updateHeaderCardPreviewFocus();
 });
-cardArea?.addEventListener("pointerleave", () => {
+ui.list.addEventListener("pointerleave", () => {
   if (!state.pointerInFontView) return;
   state.pointerInFontView = false;
   hideMagnifier(ui.cardMagnifier);
@@ -7246,6 +7343,35 @@ resizeHandle.addEventListener("pointerup", event => {
   document.body.style.cursor = "";
   document.body.style.userSelect = "";
   persistUiSettings();
+});
+const topbarResizeHandle = $("#topbarResizeHandle");
+let topbarResizeStartY = 0;
+let topbarResizeStartHeight = 0;
+topbarResizeHandle?.addEventListener("pointerdown", event => {
+  event.preventDefault();
+  topbarResizeHandle.setPointerCapture(event.pointerId);
+  topbarResizeStartY = event.clientY;
+  topbarResizeStartHeight = clampTopbarHeight(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")));
+  $(".topbar")?.classList.add("resizing");
+  document.body.style.cursor = "ns-resize";
+  document.body.style.userSelect = "none";
+});
+topbarResizeHandle?.addEventListener("pointermove", event => {
+  if (!topbarResizeHandle.hasPointerCapture(event.pointerId)) return;
+  applyTopbarHeight(topbarResizeStartHeight + event.clientY - topbarResizeStartY);
+});
+topbarResizeHandle?.addEventListener("pointerup", event => {
+  if (topbarResizeHandle.hasPointerCapture(event.pointerId)) topbarResizeHandle.releasePointerCapture(event.pointerId);
+  $(".topbar")?.classList.remove("resizing");
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  persistUiSettings();
+});
+topbarResizeHandle?.addEventListener("pointercancel", event => {
+  if (topbarResizeHandle.hasPointerCapture(event.pointerId)) topbarResizeHandle.releasePointerCapture(event.pointerId);
+  $(".topbar")?.classList.remove("resizing");
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
 });
 document.addEventListener("keydown", event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); ui.search.focus(); }
