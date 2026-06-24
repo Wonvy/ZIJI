@@ -157,7 +157,7 @@
                 <label class="grid-layout-control" title="每页显示行数">行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /><output id="cardRowsOutput">4</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
                     <label class="check-option"><input type="checkbox" id="focusViewToggle">无干扰视图</label>
@@ -234,11 +234,11 @@
                     <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
                     <div class="stage-color-controls">
                       <label class="stage-color-swatch" title="背景颜色">
-                        <input id="backgroundColor" type="color" value="#f3efe7" aria-label="背景颜色" />
+                        <input id="backgroundColor" type="color" value="#eee8dc" aria-label="背景颜色" />
                       </label>
                       <label class="stage-color-swatch stage-color-text" title="文字颜色">
                         <span class="stage-color-mark" aria-hidden="true">A</span>
-                        <input id="textColor" type="color" value="#171714" aria-label="文字颜色" />
+                        <input id="textColor" type="color" value="#181816" aria-label="文字颜色" />
                       </label>
                     </div>
                   </div>
@@ -349,18 +349,18 @@
         <div id="cardPreviewStyleFooterEdit" class="modal-footer preview-style-footer">
           <div class="preview-style-footer-right">
             <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>
-            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式并应用到全部卡片">保存为样式</button>
+            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式到样式库，不关闭窗口也不应用到卡片">保存为样式</button>
           </div>
         </div>
         <div id="cardPreviewStyleFooterManage" class="modal-footer preview-style-footer preview-style-footer-manage" hidden>
           <div class="preview-style-manage-actions">
             <button id="cardPreviewStyleManageNew" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="新建预览样式">新建样式</button>
-            <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑此样式</button>
+            <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑</button>
             <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名样式">重命名</button>
             <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除样式">删除</button>
             <span class="preview-style-preset-divider" aria-hidden="true"></span>
-            <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式 JSON">导出 JSON</button>
-            <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式 JSON">导入 JSON</button>
+            <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式">导出</button>
+            <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式">导入</button>
             <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
           </div>
         </div>

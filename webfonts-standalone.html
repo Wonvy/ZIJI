@@ -247,15 +247,14 @@ body:not(.workspace-active) .topbar { display: none; }
 }
 .toolbar-center {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  row-gap: 6px;
   min-width: 0;
-  justify-self: center;
+  justify-self: stretch;
   grid-column: 2;
-  overflow: visible;
+  overflow: hidden;
 }
 .toolbar-search-wrap {
   position: relative;
@@ -289,14 +288,20 @@ body:not(.workspace-active) .topbar { display: none; }
 .toolbar-filters {
   display: flex;
   flex: 1 1 auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 5px;
-  row-gap: 6px;
   padding: 0;
   border: 0;
   min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.toolbar-filters::-webkit-scrollbar { display: none; }
+.toolbar-filters > * { flex: none; }
 .toolbar-filters .chip {
   height: var(--toolbar-control-height);
   display: inline-flex;
@@ -422,8 +427,8 @@ body:not(.workspace-active) .topbar { display: none; }
 .welcome .eyebrow { margin-bottom: 2px; letter-spacing: .2em; }
 .welcome h1 {
   margin: 8px 0 18px;
-  font-size: clamp(48px, 6.6vw, 92px);
-  font-weight: 700;
+  font-size: clamp(36px, 4.8vw, 64px);
+  font-weight: 400;
   line-height: 1.06;
   letter-spacing: -.03em;
 }
@@ -433,7 +438,7 @@ body:not(.workspace-active) .topbar { display: none; }
   color: var(--accent);
   font-style: normal;
   font-weight: 400;
-  font-size: clamp(26px, 3.4vw, 44px);
+  font-size: clamp(20px, 2.5vw, 32px);
   line-height: 1.12;
   letter-spacing: -.01em;
 }
@@ -481,12 +486,13 @@ body:not(.workspace-active) .topbar { display: none; }
   box-shadow: 0 10px 24px rgba(232, 88, 50, .28);
 }
 .primary-button:disabled { cursor: wait; opacity: .76; transform: none; box-shadow: none; }
+.welcome-inner > .primary-button { margin-top: 52px; }
 .welcome-actions {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 .welcome-actions .privacy { margin: 0; font-size: 11px; }
 .load-progress { width: min(360px, 100%); margin-top: 20px; }
@@ -624,7 +630,7 @@ body.dark .chip.active {
   background: var(--accent);
   border-color: var(--accent);
 }
-body.dark .view-button.active { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+body.dark .view-button.active { color: #fff; border-color: var(--accent); background: var(--accent); }
 body.dark .filter-menu-icon.is-active summary,
 body.dark .filter-menu-icon[open] summary { color: var(--accent); background: var(--panel); }
 body.dark .filter-menu-icon.is-active summary svg,
@@ -832,6 +838,16 @@ body.header-card-preview-focus .preview-input-history {
 }
 .toolbar-view .grid-layout-control,
 .toolbar-view .columns-control { margin-left: 2px; gap: 4px; font-size: 9px; }
+.view-controls > .grid-layout-control:first-of-type {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+.view-controls > .grid-layout-control:last-of-type {
+  margin-right: 10px;
+  padding-right: 10px;
+  border-right: 1px solid var(--line);
+}
 .toolbar-view .grid-layout-control input,
 .toolbar-view .columns-control input {
   width: clamp(36px, 12cqi, 56px);
@@ -847,8 +863,9 @@ body.header-card-preview-focus .preview-input-history {
 .filter-menu[open] { z-index: 40; }
 .filter-menu summary {
   height: var(--toolbar-control-height);
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 0 8px;
   cursor: pointer;
@@ -857,6 +874,7 @@ body.header-card-preview-focus .preview-input-history {
   border-radius: 4px;
   background: var(--paper);
   font-size: 10px;
+  line-height: 1;
   box-sizing: border-box;
 }
 .filter-menu summary::-webkit-details-marker { display: none; }
@@ -871,7 +889,14 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 10px;
   line-height: 1;
 }
-.filter-menu summary b { color: var(--accent); font-size: 9px; font-weight: 700; }
+.filter-menu summary b {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
 .filter-menu-label { white-space: nowrap; }
 .filter-menu-icon summary {
   width: var(--toolbar-control-height);
@@ -988,7 +1013,7 @@ body.header-card-preview-focus .preview-input-history {
   font-size: 15px;
 }
 #gridViewButton { font-size: 13px; }
-.view-button.active { z-index: 1; color: var(--panel); border-color: var(--ink); background: var(--ink); }
+.view-button.active { z-index: 1; color: #fff; border-color: var(--accent); background: var(--accent); }
 .grid-layout-control,
 .columns-control {
   display: flex;
@@ -1159,8 +1184,9 @@ body.header-card-preview-focus .preview-input-history {
   min-height: var(--card-grid-min-height, 129px);
   max-height: var(--card-grid-max-height, none);
   height: 100%;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
   padding: 12px;
   overflow: visible;
   border: 0;
@@ -1185,22 +1211,28 @@ body.header-card-preview-focus .preview-input-history {
 .card-grid .font-card.active::after { border-width: 2px; border-color: var(--accent); }
 .card-grid .font-card strong,
 .card-grid .font-card .card-family-switch {
-  flex: none;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  z-index: 2;
+  min-width: 0;
+  max-width: calc(100% - 28px);
   padding-right: 22px;
   font-size: 13px;
 }
 .card-grid .font-card .sample {
+  grid-area: 1 / 1;
   display: flex;
-  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   min-height: var(--card-grid-sample-height, 66px);
   max-height: none;
-  margin: 4px 0 0;
+  margin: 0;
   overflow: hidden;
   font-size: 34px;
-  line-height: 1.15;
+  line-height: 1;
   text-align: center;
   white-space: nowrap;
   overflow-wrap: normal;
@@ -1578,10 +1610,12 @@ body.header-card-preview-focus .preview-input-history {
 .preview-controls {
   flex: none;
   min-width: 0;
-  padding: 8px 0 4px;
+  margin: 0 -18px;
+  padding: 8px 18px 4px;
   overflow-x: hidden;
   overflow-y: auto;
   border-top: 1px solid var(--line);
+  background: var(--stage);
 }
 #previewTabPanel {
   flex: 1;
@@ -1592,7 +1626,26 @@ body.header-card-preview-focus .preview-input-history {
 .preview-controls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .axis-status { min-width: 0; color: var(--muted); font-size: 10px; letter-spacing: .02em; }
 .detail-tab-panel[hidden] { display: none !important; }
-#infoTabPanel { overflow-y: auto; padding-top: 2px; }
+#infoTabPanel {
+  overflow-y: auto;
+  padding-top: 2px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent;
+}
+#infoTabPanel::-webkit-scrollbar { width: 5px; }
+#infoTabPanel::-webkit-scrollbar-track { background: transparent; }
+#infoTabPanel::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 34%, transparent);
+  background-clip: padding-box;
+}
+#infoTabPanel::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 54%, transparent);
+  background-clip: padding-box;
+}
+#infoTabPanel::-webkit-scrollbar-corner { background: transparent; }
 .detail-hint { color: var(--muted); font-size: 10px; }
 .font-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 8px 0 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .font-info-grid div { min-width: 0; padding: 6px 8px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -1725,16 +1778,46 @@ body.header-card-preview-focus .preview-input-history {
   margin: 5px 4px;
   background: var(--line);
 }
+.card-preview-style-preset-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px;
+}
 .card-preview-style-preset-action {
-  width: 100%;
-  padding: 7px 8px;
+  width: auto;
+  min-width: 0;
+  padding: 7px 12px;
   cursor: pointer;
   border: 0;
   border-radius: 3px;
   color: var(--muted);
   background: transparent;
   font-size: 12px;
-  text-align: left;
+  text-align: center;
+}
+.card-preview-style-preset-action-new {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+}
+.card-preview-style-preset-action-icon {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+.card-preview-style-preset-action-new:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
 }
 .card-preview-style-preset-action:hover { color: var(--ink); background: var(--paper); }
 .preview-style-modal {
@@ -2050,9 +2133,9 @@ body.header-card-preview-focus .preview-input-history {
   place-items: center;
   padding: 20px 16px;
   overflow: visible;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--stage);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .preview-style-sample {
   display: flex;
@@ -2211,7 +2294,6 @@ body.header-card-preview-focus .preview-input-history {
 .preview-style-style-item:hover { background: color-mix(in srgb, var(--stage) 70%, transparent); }
 .preview-style-style-item.active {
   background: var(--stage);
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 .preview-style-style-item.is-disabled { opacity: .42; }
 .preview-style-style-item .layer-spacer {
@@ -2268,29 +2350,44 @@ body.header-card-preview-focus .preview-input-history {
   padding: 16px 18px 18px;
 }
 .preview-style-params-head {
-  margin: 0 0 14px;
-  padding-bottom: 0;
-  border-bottom: 0;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 42%, transparent);
   color: var(--ink);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: .02em;
 }
 .preview-style-params-empty { padding: 32px 0; color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; }
-.preview-style-params-grid { display: grid; gap: 14px; }
+.preview-style-params-grid {
+  display: grid;
+  gap: 0;
+}
+.preview-style-params-grid > * {
+  padding-block: 11px;
+}
+.preview-style-params-grid > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--line) 42%, transparent);
+}
+.preview-style-params-grid > *:first-child {
+  padding-top: 0;
+}
+.preview-style-params-grid > *:last-child {
+  padding-bottom: 0;
+}
 .preview-gradient-editor {
   display: grid;
-  gap: 14px;
-  padding-top: 2px;
+  gap: 10px;
+  padding-top: 0;
 }
 .preview-gradient-bar-wrap {
   position: relative;
-  padding: 20px 8px 24px;
+  padding: 16px 8px 20px;
 }
 .preview-gradient-controls-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
 }
 .preview-gradient-angle-row {
@@ -2304,24 +2401,39 @@ body.header-card-preview-focus .preview-input-history {
 .preview-gradient-angle-field {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   margin: 0;
 }
 .preview-gradient-angle-field > span {
   display: none;
 }
+.preview-gradient-controls-row .preview-gradient-angle-field,
+.preview-style-param-row .preview-gradient-angle-field,
+.preview-style-offset-group .preview-gradient-angle-field {
+  display: grid;
+  grid-template-columns: 50px auto;
+  width: auto;
+}
+.preview-gradient-controls-row .preview-gradient-angle-field > span,
+.preview-style-param-row .preview-gradient-angle-field > span,
+.preview-style-offset-group .preview-gradient-angle-field > span {
+  display: block;
+  align-self: center;
+  color: var(--muted);
+  font-size: 11px;
+}
 .preview-gradient-angle-control {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .preview-gradient-angle-dial {
   flex: none;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   aspect-ratio: 1;
   padding: 3px;
   cursor: grab;
@@ -2350,7 +2462,7 @@ body.header-card-preview-focus .preview-input-history {
   height: 100%;
 }
 .preview-gradient-angle-value {
-  min-width: 42px;
+  min-width: 36px;
   color: var(--ink);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -2566,7 +2678,7 @@ body.dark .preview-gradient-bar.has-alpha {
   cursor: pointer;
 }
 .preview-gradient-stop-controls-inline .preview-style-range-field {
-  flex: 1 1 180px;
+  flex: 1 1 150px;
   min-width: 0;
 }
 .preview-style-select {
@@ -2583,11 +2695,30 @@ body.dark .preview-gradient-bar.has-alpha {
 }
 .preview-style-field {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 50px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--muted);
   font-size: 11px;
+}
+.preview-style-param-row {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: 10px;
+}
+.preview-style-param-row .preview-style-field {
+  min-width: 0;
+}
+.preview-style-param-row .preview-gradient-angle-field {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.preview-style-param-row .preview-style-range-wrap {
+  grid-template-columns: minmax(0, 1fr) 34px;
+}
+.preview-style-offset-group {
+  display: grid;
+  gap: 8px;
 }
 .preview-style-field > span { justify-self: start; }
 .preview-style-field output {
@@ -2613,7 +2744,7 @@ body.dark .preview-gradient-bar.has-alpha {
 .preview-color-mode-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 10px;
 }
 .preview-style-radio-group {
   display: flex;
@@ -2637,8 +2768,8 @@ body.dark .preview-gradient-bar.has-alpha {
   cursor: pointer;
 }
 .preview-style-radio-btn {
-  height: 30px;
-  padding: 0 12px;
+  height: 28px;
+  padding: 0 10px;
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -2663,8 +2794,8 @@ body.dark .preview-gradient-bar.has-alpha {
   gap: 6px;
 }
 .preview-stroke-position-btn {
-  width: 34px;
-  height: 30px;
+  width: 32px;
+  height: 28px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -2691,9 +2822,9 @@ body.dark .preview-gradient-bar.has-alpha {
 }
 .preview-style-range-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
+  grid-template-columns: minmax(0, 1fr) 36px;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .preview-style-range {
   width: 100%;
@@ -2768,7 +2899,7 @@ body.dark .preview-gradient-bar.has-alpha {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 .preview-style-range-value {
-  min-width: 42px;
+  min-width: 34px;
   padding: 2px 0;
   color: var(--ink);
   font-size: 11px;
@@ -2834,7 +2965,9 @@ body.dark .preview-style-footer-manage .preview-style-preset-action {
   background: var(--stage);
   border-color: var(--line);
 }
-body.dark .preview-style-stage { background: #1a1917; }
+body.dark #previewTabPanel,
+body.dark .detail-panel .preview-stage,
+body.dark .preview-controls { background: #1a1917; }
 .font-card.font-ready.has-preview-style .sample { transition: opacity .2s ease, color .2s ease, text-shadow .2s ease, -webkit-text-stroke .2s ease; }
 @media (max-width: 640px) {
   .preview-style-modal {
@@ -2980,55 +3113,21 @@ body.dark .preview-style-stage { background: #1a1917; }
   .card-preview-style-preset-dropdown summary .card-preview-style-icon {
     display: block;
   }
-  .card-toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
-    gap: 6px 8px;
-    align-items: center;
-  }
-  .toolbar-meta {
-    grid-column: 1;
-    grid-row: 1;
-    border-right: 0;
-    padding-right: 0;
-    min-width: 0;
-  }
-  .toolbar-center {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-  }
-  .toolbar-view {
-    grid-column: 2;
-    grid-row: 1;
-    width: auto;
-    justify-self: end;
-    flex-wrap: nowrap;
-  }
   .toolbar-filters {
-    flex-wrap: nowrap;
-    align-items: center;
     gap: 4px;
-    width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
   }
-  .toolbar-filters::-webkit-scrollbar { display: none; }
-  .toolbar-filters > * { flex: none; }
   .toolbar-filters .toolbar-search-wrap {
     flex: 1 1 88px;
     min-width: 72px;
-    max-width: none;
+    max-width: 180px;
     width: auto;
   }
-  .view-controls {
-    flex-wrap: nowrap;
-    justify-content: flex-end;
+  .grid-layout-control input,
+  .columns-control input,
+  .toolbar-view .grid-layout-control input,
+  .toolbar-view .columns-control input {
+    width: clamp(32px, 10cqi, 48px);
+    max-width: 48px;
   }
 }
 
@@ -3052,14 +3151,6 @@ body.dark .preview-style-stage { background: #1a1917; }
 }
 
 @container card-toolbar (max-width: 640px) {
-  .toolbar-filters .chip { padding: 0 6px; font-size: 9px; }
-  .toolbar-filters .filter-menu summary { padding: 0 5px; }
-  .toolbar-filters .filter-menu summary b { font-size: 8px; }
-  .toolbar-search input { font-size: 12px; }
-}
-
-@media (max-width: 1100px) {
-  .detail-panel { width: 350px; min-width: 350px; }
   .card-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
@@ -3087,23 +3178,15 @@ body.dark .preview-style-stage { background: #1a1917; }
     justify-self: end;
     flex-wrap: nowrap;
   }
-  .toolbar-filters {
-    flex-wrap: nowrap;
-    gap: 4px;
-    width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-  .toolbar-filters::-webkit-scrollbar { display: none; }
-  .toolbar-filters > * { flex: none; }
-  .toolbar-filters .toolbar-search-wrap {
-    flex: 1 1 88px;
-    min-width: 72px;
-    max-width: none;
-  }
+  .toolbar-filters .chip { padding: 0 6px; font-size: 9px; }
+  .toolbar-filters .filter-menu summary { padding: 0 5px; }
+  .toolbar-filters .filter-menu summary b { font-size: 8px; }
+  .toolbar-search input { font-size: 12px; }
   .view-controls { flex-wrap: nowrap; justify-content: flex-end; }
+}
+
+@media (max-width: 1100px) {
+  .detail-panel { width: 350px; min-width: 350px; }
   .header-preview { width: min(360px, calc(100vw - 240px)); }
   .privacy { display: none; }
   .status-bar { grid-template-columns: minmax(0,1fr) auto; }
@@ -3284,7 +3367,7 @@ body.dark .preview-style-stage { background: #1a1917; }
                 <label class="grid-layout-control" title="每页显示行数">行 <input id="cardRows" type="range" min="1" max="8" step="1" value="4" aria-label="每页显示行数" /><output id="cardRowsOutput">4</output></label>
                 <details class="filter-menu filter-menu-icon" id="viewOptionsMenu">
                   <summary aria-label="视图选项" title="视图选项">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"></path><path d="M8 7V5M16 12v-2M11 17v-2"></path></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path></svg>
                   </summary>
                   <div class="filter-popover view-options-popover">
                     <label class="check-option"><input type="checkbox" id="focusViewToggle">无干扰视图</label>
@@ -3361,11 +3444,11 @@ body.dark .preview-style-stage { background: #1a1917; }
                     <div class="stage-hint">双击编辑 · 悬停看细节 · 滚轮调字号</div>
                     <div class="stage-color-controls">
                       <label class="stage-color-swatch" title="背景颜色">
-                        <input id="backgroundColor" type="color" value="#f3efe7" aria-label="背景颜色" />
+                        <input id="backgroundColor" type="color" value="#eee8dc" aria-label="背景颜色" />
                       </label>
                       <label class="stage-color-swatch stage-color-text" title="文字颜色">
                         <span class="stage-color-mark" aria-hidden="true">A</span>
-                        <input id="textColor" type="color" value="#171714" aria-label="文字颜色" />
+                        <input id="textColor" type="color" value="#181816" aria-label="文字颜色" />
                       </label>
                     </div>
                   </div>
@@ -3476,18 +3559,18 @@ body.dark .preview-style-stage { background: #1a1917; }
         <div id="cardPreviewStyleFooterEdit" class="modal-footer preview-style-footer">
           <div class="preview-style-footer-right">
             <button id="cardPreviewStyleCancel" class="text-button" type="button" data-preview-status-hint="放弃更改并关闭">取消</button>
-            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式并应用到全部卡片">保存为样式</button>
+            <button id="cardPreviewStyleSaveDraft" class="primary-small-button preview-style-confirm" type="button" data-preview-status-hint="保存样式到样式库，不关闭窗口也不应用到卡片">保存为样式</button>
           </div>
         </div>
         <div id="cardPreviewStyleFooterManage" class="modal-footer preview-style-footer preview-style-footer-manage" hidden>
           <div class="preview-style-manage-actions">
             <button id="cardPreviewStyleManageNew" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="新建预览样式">新建样式</button>
-            <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑此样式</button>
+            <button id="cardPreviewStyleManageEdit" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="编辑当前选中的样式">编辑</button>
             <button id="cardPreviewStyleManageRename" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="重命名样式">重命名</button>
             <button id="cardPreviewStyleManageDelete" class="text-button preview-style-preset-action danger" type="button" data-preview-status-hint="删除样式">删除</button>
             <span class="preview-style-preset-divider" aria-hidden="true"></span>
-            <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式 JSON">导出 JSON</button>
-            <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式 JSON">导入 JSON</button>
+            <button id="cardPreviewStylePresetExport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导出样式">导出</button>
+            <button id="cardPreviewStylePresetImport" class="text-button preview-style-preset-action" type="button" data-preview-status-hint="导入样式">导入</button>
             <input id="cardPreviewStylePresetFile" type="file" accept="application/json,.json" hidden />
           </div>
         </div>
@@ -3711,8 +3794,9 @@ const UI_SETTINGS_DEFAULTS = {
   previewFontSize: 28,
   previewLetterSpacing: 0,
   previewLineHeight: 1.2,
-  previewBackground: "#f3efe7",
-  previewTextColor: "#171714",
+  previewBackground: "#eee8dc",
+  previewTextColor: "#181816",
+  previewColorsCustomized: false,
   detailTab: "preview",
   detailPanelCollapsed: false,
   cardAreaCollapsed: false,
@@ -3723,6 +3807,33 @@ const UI_SETTINGS_DEFAULTS = {
   cardPreviewStylePresets: [],
   activeCardPreviewStylePresetId: null
 };
+
+const LEGACY_LIGHT_PREVIEW_BG = "#f3efe7";
+const LEGACY_LIGHT_PREVIEW_TEXT = "#171714";
+
+function getThemePreviewColors() {
+  const isDark = document.body.classList.contains("dark");
+  return isDark
+    ? { background: "#1a1917", text: "#f4efe6" }
+    : { background: "#eee8dc", text: "#181816" };
+}
+
+function resolvePreviewColorsCustomized(settings = {}) {
+  if (typeof settings.previewColorsCustomized === "boolean") return settings.previewColorsCustomized;
+  const bg = settings.previewBackground || UI_SETTINGS_DEFAULTS.previewBackground;
+  const color = settings.previewTextColor || UI_SETTINGS_DEFAULTS.previewTextColor;
+  return !(
+    (bg === LEGACY_LIGHT_PREVIEW_BG || bg === UI_SETTINGS_DEFAULTS.previewBackground)
+    && (color === LEGACY_LIGHT_PREVIEW_TEXT || color === UI_SETTINGS_DEFAULTS.previewTextColor)
+  );
+}
+
+function applyThemePreviewColorsIfDefault() {
+  if (state.previewColorsCustomized) return;
+  const colors = getThemePreviewColors();
+  ui.bg.value = colors.background;
+  ui.color.value = colors.text;
+}
 
 const CARD_PREVIEW_STYLE_DEFAULTS = {
   fill: {
@@ -3773,6 +3884,7 @@ const PREVIEW_EFFECT_TYPES = {
       { key: "color", type: "color", label: "颜色" },
       { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
       { key: "width", type: "range", label: "粗细", min: 1, max: 16, step: 1 },
+      { key: "blur", type: "range", label: "模糊", min: 0, max: 40, step: 1 },
       { key: "offsetAngle", type: "range", label: "偏移角度", min: 0, max: 360, step: 1 },
       { key: "offsetDistance", type: "range", label: "偏移距离", min: 0, max: 80, step: 1 },
       { key: "position", type: "select", label: "位置", options: STROKE_POSITION_OPTIONS }
@@ -3782,6 +3894,7 @@ const PREVIEW_EFFECT_TYPES = {
       color2: "#e85832",
       opacity: 100,
       width: 2,
+      blur: 0,
       position: "outside",
       offsetAngle: 0,
       offsetDistance: 0,
@@ -3979,6 +4092,7 @@ function collectUiSettings() {
     previewLineHeight: Number(ui.lineHeight.value),
     previewBackground: ui.bg.value,
     previewTextColor: ui.color.value,
+    previewColorsCustomized: state.previewColorsCustomized,
     detailTab: $("#infoTabPanel").classList.contains("active") ? "info" : "preview",
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
     cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
@@ -4017,8 +4131,13 @@ function applyStoredUiSettings(settings) {
   ui.size.value = settings.previewFontSize;
   ui.spacing.value = settings.previewLetterSpacing;
   ui.lineHeight.value = settings.previewLineHeight;
-  ui.bg.value = settings.previewBackground;
-  ui.color.value = settings.previewTextColor;
+  state.previewColorsCustomized = resolvePreviewColorsCustomized(settings);
+  if (state.previewColorsCustomized) {
+    ui.bg.value = settings.previewBackground;
+    ui.color.value = settings.previewTextColor;
+  } else {
+    applyThemePreviewColorsIfDefault();
+  }
   state.cardColumns = resolveCardColumns(settings);
   state.cardRows = resolveCardRows(settings);
   syncCardGridControls();
@@ -4051,6 +4170,7 @@ const state = {
   cardPreviewStyle: loadStoredCardPreviewStyle(uiSettings.cardPreviewStyle),
   cardPreviewStylePresets: loadedCardPreviewStylePresets,
   activeCardPreviewStylePresetId: resolveActiveCardPreviewStylePresetId(uiSettings.activeCardPreviewStylePresetId, loadedCardPreviewStylePresets),
+  previewColorsCustomized: resolvePreviewColorsCustomized(uiSettings),
   favorites: cachedFavorites, categories: cachedFavoriteData.categories, categoryAssignments: cachedFavoriteData.assignments, recentCategories: cachedFavoriteData.recentCategories,
   axes: {}, objectUrls: []
 };
@@ -5099,9 +5219,9 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   gradientBar: PREVIEW_STYLE_GRADIENT_STATUS_HINT,
   gradientStop: "单击选中色标，双击修改颜色，左右拖动调整位置",
   gradientStopDelete: "松开鼠标删除该色标（至少保留 2 个）",
-  gradientAngle: "按住拖拽调整渐变角度",
-  shadowAngle: "按住拖拽调整投影角度",
-  strokeOffsetAngle: "按住拖拽调整轮廓偏移角度",
+  gradientAngle: "拖拽调整渐变角度，按 Shift 吸附 45°，滚轮 1° 微调",
+  shadowAngle: "拖拽调整投影角度，按 Shift 吸附 45°，滚轮 1° 微调",
+  strokeOffsetAngle: "拖拽调整轮廓偏移角度，按 Shift 吸附 45°，滚轮 1° 微调",
   gradientColor: "调整当前色标颜色",
   gradientOpacity: "调整当前色标不透明度",
   layerList: "拖动调整图层顺序，列表越靠上越在前，勾选启用或禁用",
@@ -5115,7 +5235,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   manageDelete: "删除样式",
   manageExport: "导出样式 JSON",
   manageImport: "导入样式 JSON",
-  saveDraft: "保存样式并应用到全部卡片",
+  saveDraft: "保存样式到样式库，不关闭窗口也不应用到卡片",
   cancel: "放弃更改并关闭"
 };
 let draggingGradientScope = null;
@@ -5187,17 +5307,36 @@ function buildPreviewFillValue(fill, defsParts) {
   return escapeXml(hexWithOpacity(fill.color, fill.opacity));
 }
 
-function appendLinearGradientDef(defsParts, gradId, stops, angle) {
+function linearGradientVector(angle) {
   const angleValue = Number(angle) || 0;
   const rad = ((angleValue - 90) * Math.PI) / 180;
-  const x1 = 0.5 - Math.cos(rad) * 0.5;
-  const y1 = 0.5 - Math.sin(rad) * 0.5;
-  const x2 = 0.5 + Math.cos(rad) * 0.5;
-  const y2 = 0.5 + Math.sin(rad) * 0.5;
+  return {
+    x: Math.cos(rad),
+    y: Math.sin(rad)
+  };
+}
+
+function linearGradientLineForBounds(bounds, angle) {
+  const vector = linearGradientVector(angle);
+  const halfWidth = Math.max(0, Number(bounds?.width) || 0) / 2;
+  const halfHeight = Math.max(0, Number(bounds?.height) || 0) / 2;
+  const centerX = Number(bounds?.x) + halfWidth;
+  const centerY = Number(bounds?.y) + halfHeight;
+  const radius = Math.max(0.001, Math.abs(vector.x) * halfWidth + Math.abs(vector.y) * halfHeight);
+  return {
+    x1: centerX - vector.x * radius,
+    y1: centerY - vector.y * radius,
+    x2: centerX + vector.x * radius,
+    y2: centerY + vector.y * radius
+  };
+}
+
+function appendLinearGradientDef(defsParts, gradId, stops, angle) {
+  const line = linearGradientLineForBounds({ x: 0, y: 0, width: 1, height: 1 }, angle);
   const stopMarkup = stops.map(stop =>
     `<stop offset="${formatOutlineNumber(stop.offset)}%" stop-color="${escapeXml(stop.color)}" stop-opacity="${formatOutlineNumber(stop.opacity / 100)}"/>`
   ).join("");
-  defsParts.push(`<linearGradient id="${gradId}" gradientUnits="objectBoundingBox" x1="${formatOutlineNumber(x1)}" y1="${formatOutlineNumber(y1)}" x2="${formatOutlineNumber(x2)}" y2="${formatOutlineNumber(y2)}">${stopMarkup}</linearGradient>`);
+  defsParts.push(`<linearGradient id="${gradId}" gradientUnits="objectBoundingBox" x1="${formatOutlineNumber(line.x1)}" y1="${formatOutlineNumber(line.y1)}" x2="${formatOutlineNumber(line.x2)}" y2="${formatOutlineNumber(line.y2)}">${stopMarkup}</linearGradient>`);
 }
 
 function buildPreviewStrokeValue(layer, defsParts, suffix) {
@@ -5315,7 +5454,7 @@ function shadowAngleDistanceFromOffset(offsetX, offsetY) {
   const x = Number(offsetX) || 0;
   const y = Number(offsetY) || 0;
   const distance = Math.round(Math.sqrt(x * x + y * y));
-  const angle = distance ? (Math.round(Math.atan2(y, x) * 180 / Math.PI + 360) % 360) : PREVIEW_EFFECT_TYPES.dropShadow.defaults.angle;
+  const angle = distance ? (Math.round(Math.atan2(x, -y) * 180 / Math.PI + 360) % 360) : PREVIEW_EFFECT_TYPES.dropShadow.defaults.angle;
   return { angle, distance };
 }
 
@@ -5324,8 +5463,8 @@ function previewShadowOffset(layer, unitsPerPx = 1) {
   const angle = Number(layer.angle) || 0;
   const rad = angle * Math.PI / 180;
   return {
-    x: Math.cos(rad) * distance,
-    y: Math.sin(rad) * distance
+    x: Math.sin(rad) * distance,
+    y: -Math.cos(rad) * distance
   };
 }
 
@@ -5380,7 +5519,7 @@ function innerStrokeShadows(width, color) {
 function getEnabledStyleLayerOrder(style) {
   if (!style) return [];
   const normalized = normalizeCardPreviewStyle(style);
-  return resolveStyleLayerOrder(normalized).filter(key => {
+  return resolveStyleLayerOrder(normalized, normalized.layerOrder).filter(key => {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) return normalized.fill.enabled !== false;
     return normalized.layers.find(layer => layer.id === key)?.enabled;
   });
@@ -5415,28 +5554,25 @@ function setPreviewSvgAttrs(element, attrs) {
 
 function appendPreviewSvgLinearGradient(defs, id, stops, angle, bounds = null) {
   const gradient = createPreviewSvgElement("linearGradient");
-  const angleValue = Number(angle) || 0;
-  const rad = ((angleValue - 90) * Math.PI) / 180;
   if (bounds) {
-    const centerX = bounds.x + bounds.width / 2;
-    const centerY = bounds.y + bounds.height / 2;
-    const radius = Math.max(bounds.width, bounds.height) / 2;
+    const line = linearGradientLineForBounds(bounds, angle);
     setPreviewSvgAttrs(gradient, {
       id,
       gradientUnits: "userSpaceOnUse",
-      x1: formatOutlineNumber(centerX - Math.cos(rad) * radius),
-      y1: formatOutlineNumber(centerY - Math.sin(rad) * radius),
-      x2: formatOutlineNumber(centerX + Math.cos(rad) * radius),
-      y2: formatOutlineNumber(centerY + Math.sin(rad) * radius)
+      x1: formatOutlineNumber(line.x1),
+      y1: formatOutlineNumber(line.y1),
+      x2: formatOutlineNumber(line.x2),
+      y2: formatOutlineNumber(line.y2)
     });
   } else {
+    const line = linearGradientLineForBounds({ x: 0, y: 0, width: 1, height: 1 }, angle);
     setPreviewSvgAttrs(gradient, {
       id,
       gradientUnits: "objectBoundingBox",
-      x1: formatOutlineNumber(0.5 - Math.cos(rad) * 0.5),
-      y1: formatOutlineNumber(0.5 - Math.sin(rad) * 0.5),
-      x2: formatOutlineNumber(0.5 + Math.cos(rad) * 0.5),
-      y2: formatOutlineNumber(0.5 + Math.sin(rad) * 0.5)
+      x1: formatOutlineNumber(line.x1),
+      y1: formatOutlineNumber(line.y1),
+      x2: formatOutlineNumber(line.x2),
+      y2: formatOutlineNumber(line.y2)
     });
   }
   normalizeGradientStops(stops).forEach(stop => {
@@ -5591,6 +5727,24 @@ function buildPreviewSvgTextStack(root, host, style) {
       clipPath.appendChild(createPreviewSvgUse(sourceId));
       defs.appendChild(clipPath);
       strokeUse.setAttribute("clip-path", `url(#${clipId})`);
+    }
+    if (Number(layer.blur) > 0) {
+      const filterId = `preview-svg-stroke-blur-${index}`;
+      const filter = createPreviewSvgElement("filter");
+      setPreviewSvgAttrs(filter, {
+        id: filterId,
+        x: -bleed,
+        y: -bleed,
+        width: width + bleed * 2,
+        height: height + bleed * 2,
+        filterUnits: "userSpaceOnUse",
+        "color-interpolation-filters": "sRGB"
+      });
+      const blur = createPreviewSvgElement("feGaussianBlur");
+      setPreviewSvgAttrs(blur, { stdDeviation: Math.max(0, Number(layer.blur) || 0) / 2 });
+      filter.appendChild(blur);
+      defs.appendChild(filter);
+      strokeUse.setAttribute("filter", `url(#${filterId})`);
     }
     body.appendChild(strokeUse);
   });
@@ -6130,7 +6284,8 @@ function applyCardPreviewStyleToSample(sample, style = state.cardPreviewStyle) {
 }
 
 function applyCardPreviewStyleToAllCards() {
-  ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => applyCardPreviewStyleToSample(sample));
+  ui.list.querySelectorAll(".font-card .sample").forEach(sample => applyCardPreviewStyleToSample(sample));
+  scheduleCardSampleFit();
   renderCardPreviewStyleModalPreview();
   syncHeaderPreviewFocusDisplay();
 }
@@ -6191,15 +6346,17 @@ function computePreviewStyleVisualBleed(style, unitsPerPx = 1) {
     }
     if (!isStrokeLayer(layer)) continue;
     const width = scalePreviewStylePx(Number(layer.width) || 1, unitsPerPx);
+    const blur = scalePreviewStylePx(Number(layer.blur) || 0, unitsPerPx);
+    const blurBleed = 3 * (blur / 2);
     const offset = previewStrokeOffset(layer, unitsPerPx);
     const position = resolveStrokePosition(layer);
     if (useGradientFill || layer.colorMode === "gradient") {
-      bleed = Math.max(bleed, width * 2 + Math.abs(offset.x), width * 2 + Math.abs(offset.y));
+      bleed = Math.max(bleed, width * 2 + blurBleed + Math.abs(offset.x), width * 2 + blurBleed + Math.abs(offset.y));
       continue;
     }
-    if (position === "outside") bleed = Math.max(bleed, width * 2 + Math.abs(offset.x), width * 2 + Math.abs(offset.y));
-    else if (position === "center") bleed = Math.max(bleed, width + Math.abs(offset.x), width + Math.abs(offset.y));
-    else bleed = Math.max(bleed, width + Math.abs(offset.x), width + Math.abs(offset.y));
+    if (position === "outside") bleed = Math.max(bleed, width * 2 + blurBleed + Math.abs(offset.x), width * 2 + blurBleed + Math.abs(offset.y));
+    else if (position === "center") bleed = Math.max(bleed, width + blurBleed + Math.abs(offset.x), width + blurBleed + Math.abs(offset.y));
+    else bleed = Math.max(bleed, width + blurBleed + Math.abs(offset.x), width + blurBleed + Math.abs(offset.y));
   }
   return Math.ceil(bleed);
 }
@@ -6244,12 +6401,20 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     const layerIndex = orderedSvgLayers.findIndex(item => item.key === key);
     const coversFill = fillLayerIndex >= 0 && layerIndex >= 0 && layerIndex < fillLayerIndex;
     let clipAttr = "";
+    let filterAttr = "";
     if (position === "inside") {
       const clipId = `preview-clip-${index}`;
       defsParts.push(`<clipPath id="${clipId}"><use href="#${pathId}"/></clipPath>`);
       clipAttr = ` clip-path="url(#${clipId})"`;
     }
-    body += usePath(`${clipAttr} fill="${coversFill ? strokeValue : "none"}" stroke="${strokeValue}" stroke-width="${formatOutlineNumber(strokeWidth)}" stroke-linejoin="round" stroke-linecap="round" transform="translate(${formatOutlineNumber(offset.x)} ${formatOutlineNumber(offset.y)})"`);
+    const blur = scalePreviewStylePx(Number(layer.blur) || 0, unitsPerPx);
+    if (blur > 0) {
+      const filterId = `preview-stroke-blur-${index}`;
+      const filterPad = Math.max(bleed, 1);
+      defsParts.push(`<filter id="${filterId}" x="${formatOutlineNumber(-filterPad)}" y="${formatOutlineNumber(-filterPad)}" width="${formatOutlineNumber(width + filterPad * 2)}" height="${formatOutlineNumber(height + filterPad * 2)}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${formatOutlineNumber(blur / 2)}"/></filter>`);
+      filterAttr = ` filter="url(#${filterId})"`;
+    }
+    body += usePath(`${clipAttr}${filterAttr} fill="${coversFill ? strokeValue : "none"}" stroke="${strokeValue}" stroke-width="${formatOutlineNumber(strokeWidth)}" stroke-linejoin="round" stroke-linecap="round" transform="translate(${formatOutlineNumber(offset.x)} ${formatOutlineNumber(offset.y)})"`);
   });
   const defsBlock = defsParts.length ? `<defs>${defsParts.join("")}</defs>` : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n${defsBlock}\n  <g>${body}</g>\n</svg>`;
@@ -6316,6 +6481,10 @@ function renderStyleRangeField(field, value, attrs = "") {
   const max = Number(field.max);
   const progress = max === min ? 0 : ((Number(value) - min) / (max - min)) * 100;
   return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><div class="preview-style-range-wrap"><input class="preview-style-range" type="range" style="--range-progress:${progress}%" ${attrs} min="${field.min}" max="${field.max}" step="${field.step}" value="${value}" /><span class="preview-style-range-value" data-range-value>${escapeHtml(String(value))}</span></div></label>`;
+}
+
+function renderPreviewStyleParamRow(...fields) {
+  return `<div class="preview-style-param-row">${fields.filter(Boolean).join("")}</div>`;
 }
 
 function syncStyleRangeProgress(range) {
@@ -6425,11 +6594,24 @@ function gradientAngleFromPointer(dial, clientX, clientY) {
   return angle;
 }
 
+function normalizePreviewAngle(angle) {
+  return ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+}
+
+function snapPreviewAngle(angle, enabled = false) {
+  if (!enabled) return normalizePreviewAngle(angle);
+  return normalizePreviewAngle(Math.round((Number(angle) || 0) / 45) * 45);
+}
+
+function previewAngleWheelDelta(event) {
+  return event.deltaY < 0 ? 1 : -1;
+}
+
 function renderGradientAngleDial(angle, scope) {
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const value = normalizePreviewAngle(angle);
   const tip = gradientAngleDialPoint(value);
   return `<div class="preview-gradient-angle-field preview-style-field">
-    <span>角度</span>
+    <span>渐变角度</span>
     <div class="preview-gradient-angle-control">
       <button type="button" class="preview-gradient-angle-dial" data-gradient-field="angle" data-gradient-scope="${scope}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientAngle)}" aria-label="渐变角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
         <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
@@ -6447,7 +6629,7 @@ function refreshGradientAngleDial(scope, angle) {
   const panel = $("#cardPreviewStyleParams");
   const dial = panel?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${scope}"]`);
   if (!dial) return;
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const value = normalizePreviewAngle(angle);
   const tip = gradientAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
   const line = dial.querySelector("line");
@@ -6466,7 +6648,7 @@ function refreshGradientAngleDial(scope, angle) {
 function applyGradientAngleChange(scope, angle) {
   const target = getGradientEditTarget(scope);
   if (!target) return;
-  target.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  target.angle = normalizePreviewAngle(angle);
   refreshGradientBarVisuals(scope);
   refreshGradientAngleDial(scope, target.angle);
   renderCardPreviewStyleModalPreview();
@@ -6475,12 +6657,31 @@ function applyGradientAngleChange(scope, angle) {
 function shadowAngleDialPoint(angle, radius = 14, center = 20) {
   const rad = (Number(angle) || 0) * Math.PI / 180;
   return {
+    x: center + radius * Math.sin(rad),
+    y: center - radius * Math.cos(rad)
+  };
+}
+
+function shadowAngleFromPointer(dial, clientX, clientY) {
+  const rect = dial.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  let angle = Math.round(Math.atan2(dx, -dy) * 180 / Math.PI);
+  if (angle < 0) angle += 360;
+  return angle;
+}
+
+function strokeOffsetAngleDialPoint(angle, radius = 14, center = 20) {
+  const rad = (Number(angle) || 0) * Math.PI / 180;
+  return {
     x: center + radius * Math.cos(rad),
     y: center + radius * Math.sin(rad)
   };
 }
 
-function shadowAngleFromPointer(dial, clientX, clientY) {
+function strokeOffsetAngleFromPointer(dial, clientX, clientY) {
   const rect = dial.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
@@ -6492,10 +6693,10 @@ function shadowAngleFromPointer(dial, clientX, clientY) {
 }
 
 function renderShadowAngleDial(angle, layerId) {
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const value = normalizePreviewAngle(angle);
   const tip = shadowAngleDialPoint(value);
   return `<div class="preview-gradient-angle-field preview-style-field">
-    <span>角度</span>
+    <span>投影角度</span>
     <div class="preview-gradient-angle-control">
       <button type="button" class="preview-gradient-angle-dial preview-shadow-angle-dial" data-shadow-field="angle" data-layer-id="${escapeHtml(layerId)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.shadowAngle)}" aria-label="投影角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
         <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
@@ -6513,7 +6714,7 @@ function refreshShadowAngleDial(layerId, angle) {
   const panel = $("#cardPreviewStyleParams");
   const dial = panel?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(layerId)}"]`);
   if (!dial) return;
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const value = normalizePreviewAngle(angle);
   const tip = shadowAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
   const line = dial.querySelector("line");
@@ -6532,15 +6733,15 @@ function refreshShadowAngleDial(layerId, angle) {
 function applyShadowAngleChange(layerId, angle) {
   const layer = cardPreviewStyleDraft?.layers.find(entry => entry.id === layerId);
   if (!layer || layer.type !== "dropShadow") return;
-  layer.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  layer.angle = normalizePreviewAngle(angle);
   refreshShadowAngleDial(layer.id, layer.angle);
   syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
 }
 
 function renderStrokeOffsetAngleDial(angle, layerId) {
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
-  const tip = shadowAngleDialPoint(value);
+  const value = normalizePreviewAngle(angle);
+  const tip = strokeOffsetAngleDialPoint(value);
   return `<div class="preview-gradient-angle-field preview-style-field">
     <span>偏移角度</span>
     <div class="preview-gradient-angle-control">
@@ -6560,8 +6761,8 @@ function refreshStrokeOffsetAngleDial(layerId, angle) {
   const panel = $("#cardPreviewStyleParams");
   const dial = panel?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(layerId)}"]`);
   if (!dial) return;
-  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
-  const tip = shadowAngleDialPoint(value);
+  const value = normalizePreviewAngle(angle);
+  const tip = strokeOffsetAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
   const line = dial.querySelector("line");
   const knob = dial.querySelector("circle:last-of-type");
@@ -6579,7 +6780,7 @@ function refreshStrokeOffsetAngleDial(layerId, angle) {
 function applyStrokeOffsetAngleChange(layerId, angle) {
   const layer = cardPreviewStyleDraft?.layers.find(entry => entry.id === layerId);
   if (!layer || !isStrokeLayer(layer)) return;
-  layer.offsetAngle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  layer.offsetAngle = normalizePreviewAngle(angle);
   refreshStrokeOffsetAngleDial(layer.id, layer.offsetAngle);
   syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
@@ -6947,8 +7148,6 @@ function renderGradientStopsEditor(target, scope) {
         <label class="preview-gradient-stop-color-inline" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientColor)}"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
         ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientOpacity)}" aria-label="不透明度"`)}
       </div>
-    </div>
-    <div class="preview-gradient-angle-row">
       ${renderGradientAngleDial(target.angle, scope)}
     </div>
   </div>`;
@@ -6959,10 +7158,14 @@ function renderFillStyleParams() {
   syncFillLegacyColors(fill);
   const isGradient = fill.mode === "gradient";
   const gradientFields = isGradient ? renderGradientStopsEditor(fill, "fill") : "";
-  const solidFields = isGradient
+  const opacityField = isGradient
     ? ""
-    : `${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, fill.opacity, 'data-fill-field="opacity" aria-label="填充不透明度"')}`;
-  return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid">${renderColorModeField(fill.mode, "data-fill-field", "mode")}${isGradient ? "" : `<label class="preview-style-field"><span>颜色</span><input type="color" data-fill-field="color" value="${escapeHtml(resolvePreviewFillColor(cardPreviewStyleDraft))}" /></label>`}${solidFields}${gradientFields}</div>`;
+    : renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, fill.opacity, 'data-fill-field="opacity" aria-label="填充不透明度"');
+  const colorField = isGradient
+    ? ""
+    : `<label class="preview-style-field"><span>颜色</span><input type="color" data-fill-field="color" value="${escapeHtml(resolvePreviewFillColor(cardPreviewStyleDraft))}" /></label>`;
+  const colorOpacityRow = isGradient ? "" : renderPreviewStyleParamRow(colorField, opacityField);
+  return `<h4 class="preview-style-params-head">填充</h4><div class="preview-style-params-grid">${renderColorModeField(fill.mode, "data-fill-field", "mode")}${colorOpacityRow}${gradientFields}</div>`;
 }
 
 function renderCardPreviewStyleLayerList() {
@@ -6998,30 +7201,26 @@ function renderStrokeStyleParams(layer) {
   const opacityField = isGradient
     ? ""
     : renderStyleRangeField(meta.fields.find(field => field.key === "opacity"), layer.opacity, 'data-layer-field="opacity" aria-label="轮廓不透明度"');
-  const sizeFields = meta.fields.filter(field => field.key !== "color" && field.key !== "opacity" && field.key !== "position").map(field => {
-    if (field.key === "offsetAngle") return renderStrokeOffsetAngleDial(layer.offsetAngle, layer.id);
-    const value = layer[field.key];
-    if (field.type === "select") {
-      return renderStyleSelectField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
-    }
-    return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
-  }).join("");
+  const colorOpacityRow = isGradient ? "" : renderPreviewStyleParamRow(colorField, opacityField);
+  const widthField = renderStyleRangeField(meta.fields.find(field => field.key === "width"), layer.width, 'data-layer-field="width" aria-label="轮廓粗细"');
+  const blurField = renderStyleRangeField(meta.fields.find(field => field.key === "blur"), layer.blur, 'data-layer-field="blur" aria-label="轮廓模糊"');
+  const offsetDistanceField = renderStyleRangeField(meta.fields.find(field => field.key === "offsetDistance"), layer.offsetDistance, 'data-layer-field="offsetDistance" aria-label="轮廓偏移距离"');
+  const offsetRow = renderPreviewStyleParamRow(renderStrokeOffsetAngleDial(layer.offsetAngle, layer.id), offsetDistanceField);
   const positionField = renderStrokePositionField(layer.position);
   const gradientFields = isGradient ? renderGradientStopsEditor(layer, "layer") : "";
-  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${modeField}${colorField}${opacityField}${sizeFields}${positionField}${gradientFields}</div>`;
+  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${positionField}${modeField}${gradientFields}${colorOpacityRow}${widthField}${blurField}${offsetRow}</div>`;
 }
 
 function renderDropShadowStyleParams(layer) {
   const meta = PREVIEW_EFFECT_TYPES.dropShadow;
   const title = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
-  const fields = meta.fields.map(field => {
-    if (field.key === "angle") return renderShadowAngleDial(layer.angle, layer.id);
-    const value = layer[field.key];
-    if (field.type === "color") {
-      return `<label class="preview-style-field"><span>${escapeHtml(field.label)}</span><input type="color" data-layer-field="${field.key}" value="${escapeHtml(value)}" /></label>`;
-    }
-    return renderStyleRangeField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
-  }).join("");
+  const colorField = `<label class="preview-style-field"><span>颜色</span><input type="color" data-layer-field="color" value="${escapeHtml(layer.color)}" /></label>`;
+  const opacityField = renderStyleRangeField(meta.fields.find(field => field.key === "opacity"), layer.opacity, 'data-layer-field="opacity" aria-label="投影不透明度"');
+  const colorOpacityRow = renderPreviewStyleParamRow(colorField, opacityField);
+  const distanceField = renderStyleRangeField(meta.fields.find(field => field.key === "distance"), layer.distance, 'data-layer-field="distance" aria-label="投影距离"');
+  const angleDistanceRow = renderPreviewStyleParamRow(renderShadowAngleDial(layer.angle, layer.id), distanceField);
+  const blurField = renderStyleRangeField(meta.fields.find(field => field.key === "blur"), layer.blur, 'data-layer-field="blur" aria-label="投影模糊"');
+  const fields = `${colorOpacityRow}${angleDistanceRow}${blurField}`;
   return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${fields}</div>`;
 }
 
@@ -7286,7 +7485,10 @@ function renderCardPreviewStyleQuickMenu() {
     renderQuickPresetMenuItem(preset.id, { active: preset.id === activeId, name: preset.name })
   ).join("");
   html += `</div><span class="popover-divider"></span>
-    <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式…</button>`;
+    <div class="card-preview-style-preset-footer">
+      <button type="button" class="card-preview-style-preset-action card-preview-style-preset-action-new" data-preset-action="new" aria-label="新建样式" title="新建样式"><span class="card-preview-style-preset-action-icon" aria-hidden="true">+</span></button>
+      <button type="button" class="card-preview-style-preset-action" data-preset-action="manage">管理样式</button>
+    </div>`;
   menu.innerHTML = html;
   applyQuickPresetMenuStyles();
   syncCardPreviewStyleMenuLabel();
@@ -7349,6 +7551,12 @@ function wireCardPreviewStyleQuickMenu() {
   });
   menu.addEventListener("click", event => {
     const actionBtn = event.target.closest("[data-preset-action]");
+    if (actionBtn?.dataset.presetAction === "new") {
+      closeMenu();
+      openCardPreviewStyleModal();
+      createNewCardPreviewStyleDraft();
+      return;
+    }
     if (actionBtn?.dataset.presetAction === "manage") {
       closeMenu();
       openCardPreviewStyleModal();
@@ -7441,7 +7649,9 @@ function applyCardPreviewStylePresetEditor() {
   cardPreviewStyleManagePresetId = preset.id;
   persistUiSettings();
   hideCardPreviewStylePresetEditor();
-  closeCardPreviewStyleModal(true);
+  renderCardPreviewStyleQuickMenu();
+  syncCardPreviewStyleFooter();
+  toast(`已保存「${preset.name}」`);
   return;
 }
 
@@ -7451,9 +7661,11 @@ function saveCardPreviewStylePresetDraft() {
     return;
   }
   if (cardPreviewStyleDraftPresetId && findCardPreviewStylePreset(cardPreviewStyleDraftPresetId)) {
-    updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
+    const preset = updateCardPreviewStylePreset(cardPreviewStyleDraftPresetId, cardPreviewStyleDraft);
     persistUiSettings();
-    closeCardPreviewStyleModal(true);
+    renderCardPreviewStyleQuickMenu();
+    syncCardPreviewStyleFooter();
+    toast(`已保存「${preset?.name || "样式"}」`);
     return;
   }
   showCardPreviewStylePresetEditor("save-as", uniqueCardPreviewStylePresetName("未命名样式"));
@@ -7838,7 +8050,7 @@ function wireCardPreviewStyleModal() {
       draggingShadowAngleLayerId = shadowDial.dataset.layerId || cardPreviewStyleSelectedLayerId;
       shadowDial.classList.add("is-dragging");
       shadowDial.setPointerCapture(event.pointerId);
-      applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(shadowDial, event.clientX, event.clientY));
+      applyShadowAngleChange(draggingShadowAngleLayerId, snapPreviewAngle(shadowAngleFromPointer(shadowDial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     const strokeOffsetDial = event.target.closest(".preview-stroke-offset-angle-dial");
@@ -7847,7 +8059,7 @@ function wireCardPreviewStyleModal() {
       draggingStrokeOffsetAngleLayerId = strokeOffsetDial.dataset.layerId || cardPreviewStyleSelectedLayerId;
       strokeOffsetDial.classList.add("is-dragging");
       strokeOffsetDial.setPointerCapture(event.pointerId);
-      applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, shadowAngleFromPointer(strokeOffsetDial, event.clientX, event.clientY));
+      applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, snapPreviewAngle(strokeOffsetAngleFromPointer(strokeOffsetDial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     const dial = event.target.closest(".preview-gradient-angle-dial");
@@ -7856,7 +8068,7 @@ function wireCardPreviewStyleModal() {
       draggingGradientAngleScope = dial.dataset.gradientScope || getActiveGradientScope();
       dial.classList.add("is-dragging");
       dial.setPointerCapture(event.pointerId);
-      applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
+      applyGradientAngleChange(draggingGradientAngleScope, snapPreviewAngle(gradientAngleFromPointer(dial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     const handle = event.target.closest(".preview-gradient-stop-handle");
@@ -7875,17 +8087,17 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleParams")?.addEventListener("pointermove", event => {
     if (draggingShadowAngleLayerId) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-shadow-angle-dial[data-layer-id="${CSS.escape(draggingShadowAngleLayerId)}"]`);
-      if (dial) applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(dial, event.clientX, event.clientY));
+      if (dial) applyShadowAngleChange(draggingShadowAngleLayerId, snapPreviewAngle(shadowAngleFromPointer(dial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     if (draggingStrokeOffsetAngleLayerId) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(draggingStrokeOffsetAngleLayerId)}"]`);
-      if (dial) applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, shadowAngleFromPointer(dial, event.clientX, event.clientY));
+      if (dial) applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, snapPreviewAngle(strokeOffsetAngleFromPointer(dial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     if (draggingGradientAngleScope) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
-      if (dial) applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
+      if (dial) applyGradientAngleChange(draggingGradientAngleScope, snapPreviewAngle(gradientAngleFromPointer(dial, event.clientX, event.clientY), event.shiftKey));
       return;
     }
     if (draggingGradientStopIndex === null) return;
@@ -7941,6 +8153,24 @@ function wireCardPreviewStyleModal() {
     if (draggingGradientStopIndex === null) return;
     finishGradientStopDrag(event);
   });
+  $("#cardPreviewStyleParams")?.addEventListener("wheel", event => {
+    if (!cardPreviewStyleDraft) return;
+    const dial = event.target.closest(".preview-gradient-angle-dial");
+    if (!dial) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const current = Number(dial.getAttribute("aria-valuenow")) || 0;
+    const next = normalizePreviewAngle(current + previewAngleWheelDelta(event));
+    if (dial.classList.contains("preview-shadow-angle-dial")) {
+      applyShadowAngleChange(dial.dataset.layerId || cardPreviewStyleSelectedLayerId, next);
+      return;
+    }
+    if (dial.classList.contains("preview-stroke-offset-angle-dial")) {
+      applyStrokeOffsetAngleChange(dial.dataset.layerId || cardPreviewStyleSelectedLayerId, next);
+      return;
+    }
+    applyGradientAngleChange(dial.dataset.gradientScope || getActiveGradientScope(), next);
+  }, { passive: false });
   $("#cardPreviewStyleParams")?.addEventListener("input", event => {
     if (!cardPreviewStyleDraft) return;
     if (applyGradientStopFieldChange(event.target)) return;
@@ -9866,8 +10096,8 @@ function resetSettings() {
   ui.size.value = UI_SETTINGS_DEFAULTS.previewFontSize;
   ui.spacing.value = UI_SETTINGS_DEFAULTS.previewLetterSpacing;
   ui.lineHeight.value = UI_SETTINGS_DEFAULTS.previewLineHeight;
-  ui.bg.value = UI_SETTINGS_DEFAULTS.previewBackground;
-  ui.color.value = UI_SETTINGS_DEFAULTS.previewTextColor;
+  state.previewColorsCustomized = false;
+  applyThemePreviewColorsIfDefault();
   updateVisualSettings();
   if (state.selected?.axes) renderAxes(state.selected.axes);
 }
@@ -10024,7 +10254,15 @@ ui.stage.addEventListener("mousemove", updateDetailMagnifier);
 ui.stage.addEventListener("mouseleave", () => hideMagnifier(ui.magnifier));
 ui.stage.addEventListener("wheel", handlePreviewStageWheel, { passive: false });
 $(".preview-controls")?.addEventListener("wheel", handlePreviewControlWheel, { passive: false });
-[ui.size, ui.spacing, ui.lineHeight, ui.bg, ui.color].forEach(input => input.addEventListener("input", updateVisualSettings));
+[ui.size, ui.spacing, ui.lineHeight].forEach(input => input.addEventListener("input", updateVisualSettings));
+ui.bg.addEventListener("input", () => {
+  state.previewColorsCustomized = true;
+  updateVisualSettings();
+});
+ui.color.addEventListener("input", () => {
+  state.previewColorsCustomized = true;
+  updateVisualSettings();
+});
 ui.favorite.addEventListener("click", toggleFavorite);
 ui.categoryButton.addEventListener("click", () => {
   const font = state.selected || state.previewed;
@@ -10227,6 +10465,8 @@ ui.list.addEventListener("wheel", handleFontListWheel, { passive: false });
 ui.list.addEventListener("scroll", closeAllFamilyMenus, { passive: true });
 function toggleTheme() {
   document.body.classList.toggle("dark");
+  applyThemePreviewColorsIfDefault();
+  updateVisualSettings();
   applyCardPreviewStyleToAllCards();
   persistUiSettings();
 }
