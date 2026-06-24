@@ -518,6 +518,11 @@ body.dark .search-clear-button:hover {
 .toolbar-view .filter-menu { position: relative; z-index: 1; }
 .toolbar-view .filter-menu[open] { z-index: 40; }
 .toolbar-view .filter-menu-icon { margin-left: 2px; }
+#viewOptionsMenu {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
 .weight-filter-popover {
   left: auto;
   right: 0;
@@ -1253,16 +1258,24 @@ body.header-card-preview-focus .preview-input-history {
 }
 .filter-menu summary::-webkit-details-marker { display: none; }
 .filter-menu summary::after {
-  content: "⌄";
-  display: inline-flex;
-  align-items: center;
-  align-self: center;
-  height: 1em;
-  margin-left: 2px;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1;
+  display: none;
 }
+.filter-menu-arrow {
+  width: 12px;
+  height: 12px;
+  display: block;
+  flex: none;
+  align-self: center;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+  transform-origin: center;
+  transition: transform .15s ease, color .15s ease;
+}
+.filter-menu[open] > summary .filter-menu-arrow { transform: rotate(180deg); }
 .filter-menu summary b {
   display: inline-flex;
   align-items: center;
@@ -1285,7 +1298,6 @@ body.header-card-preview-focus .preview-input-history {
   .toolbar-filter-group .card-preview-style-preset-dropdown summary .filter-menu-label,
   .toolbar-filter-group .card-preview-style-preset-dropdown summary .card-preview-style-icon { display: none; }
   .toolbar-filter-group .card-preview-style-preset-dropdown summary b { display: inline-flex; }
-  .toolbar-filter-group .card-preview-style-preset-dropdown summary::after { display: inline-flex; }
   .toolbar-filter-group .card-preview-style-preset-dropdown summary {
     width: auto;
     min-width: 0;
@@ -1307,7 +1319,6 @@ body.header-card-preview-focus .preview-input-history {
   .toolbar-filter-group .card-preview-style-preset-dropdown summary .filter-menu-label,
   .toolbar-filter-group .card-preview-style-preset-dropdown summary .card-preview-style-icon { display: none; }
   .toolbar-filter-group .card-preview-style-preset-dropdown summary b { display: inline-flex; }
-  .toolbar-filter-group .card-preview-style-preset-dropdown summary::after { display: inline-flex; }
   .toolbar-filter-group .card-preview-style-preset-dropdown summary {
     width: auto;
     min-width: 0;
@@ -1493,13 +1504,6 @@ body.header-card-preview-focus .preview-input-history {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-.view-controls > .view-button:first-of-type {
-  border-radius: 4px 0 0 4px;
-}
-.view-controls > .view-button + .view-button {
-  margin-left: -7px;
-  border-radius: 0 4px 4px 0;
 }
 .view-button.active { z-index: 1; color: #fff; border-color: var(--accent); background: var(--accent); }
 .grid-layout-control,
@@ -2024,6 +2028,103 @@ body.header-card-preview-focus .preview-input-history {
 .detail-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; padding: 0 18px 18px; overflow: hidden; opacity: 1; transition: opacity .15s ease; }
 .detail-panel.collapsed .detail-content { visibility: hidden; opacity: 0; }
 .detail-panel.empty-preview .detail-content { visibility: hidden; opacity: 0; }
+.detail-empty-guide {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  pointer-events: none;
+}
+.detail-panel.empty-preview:not(.collapsed) .detail-empty-guide { display: flex; }
+.empty-guide-card {
+  width: min(320px, 100%);
+  padding: 26px 22px 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 42%),
+    color-mix(in srgb, var(--panel) 94%, var(--paper));
+  box-shadow: 0 18px 50px rgba(0,0,0,.08);
+  text-align: center;
+}
+.empty-guide-icon {
+  width: 72px;
+  height: 46px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin: 0 auto 18px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  box-sizing: border-box;
+}
+.empty-guide-icon span {
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--line));
+}
+.empty-guide-icon span:nth-child(2) { background: var(--accent); }
+.empty-guide-card h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.empty-guide-card p {
+  margin: 0 auto 18px;
+  max-width: 250px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.keyboard-hints {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.keyboard-hint {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.virtual-key {
+  min-width: 28px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, var(--muted));
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--ink) 8%, transparent);
+  font-size: 10px;
+  line-height: 1;
+  box-sizing: border-box;
+}
+.virtual-key.wide { min-width: 45px; }
+.empty-guide-note {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+  line-height: 1.6;
+}
 .panel-toggle {
   position: absolute;
   z-index: 9;
@@ -2306,8 +2407,8 @@ body.header-card-preview-focus .preview-input-history {
 }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary b,
 .card-preview-style-preset-dropdown[open] summary b { color: white; }
-.card-preview-style-menu:hover .card-preview-style-preset-dropdown summary::after,
-.card-preview-style-preset-dropdown[open] summary::after { color: rgba(255,255,255,.82); }
+.card-preview-style-menu:hover .card-preview-style-preset-dropdown .filter-menu-arrow,
+.card-preview-style-preset-dropdown[open] .filter-menu-arrow { color: rgba(255,255,255,.82); }
 .card-preview-style-menu:hover .card-preview-style-preset-dropdown summary svg,
 .card-preview-style-preset-dropdown[open] summary svg { stroke: white; }
 .card-preview-style-preset-popover {

@@ -130,7 +130,7 @@
                     </div>
                     <div class="toolbar-filter-group" role="group" data-i18n-aria="toolbar.filterSortStyleAria" aria-label="筛选排序样式">
                     <details class="filter-menu" id="languageMenu">
-                      <summary><span class="filter-menu-label" data-i18n="filter.language">语言</span> <b id="languageBadge">全部</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.language">语言</span> <b id="languageBadge">全部</b><svg class="filter-menu-arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 4.5 6 7.5l3-3"/></svg></summary>
                       <div class="filter-popover">
                         <label><input type="radio" name="language-filter" data-language="all" checked> <span data-i18n="filter.languageAll">不限语言</span></label>
                         <label><input type="radio" name="language-filter" data-language="chinese"> <span data-i18n="filter.languageChinese">中文字体</span></label>
@@ -140,13 +140,13 @@
                       </div>
                     </details>
                     <details class="filter-menu" id="weightMenu">
-                      <summary><span class="filter-menu-label" data-i18n="filter.weight">字重</span> <b id="weightBadge">全部</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.weight">字重</span> <b id="weightBadge">全部</b><svg class="filter-menu-arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 4.5 6 7.5l3-3"/></svg></summary>
                       <div class="filter-popover weight-filter-popover" id="weightFilterList">
                         <span class="filter-empty" data-i18n="filter.weightScanning">正在扫描字重…</span>
                       </div>
                     </details>
                     <details class="filter-menu" id="sortMenu">
-                      <summary><span class="filter-menu-label" data-i18n="filter.sort">排序</span> <b id="sortBadge">名称</b></summary>
+                      <summary><span class="filter-menu-label" data-i18n="filter.sort">排序</span> <b id="sortBadge">名称</b><svg class="filter-menu-arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 4.5 6 7.5l3-3"/></svg></summary>
                       <div class="filter-popover sort-filter-popover">
                         <span class="filter-group-label" data-i18n="filter.sortGeneral">常规</span>
                         <label><input type="radio" name="sort-filter" data-sort="name" checked> <span data-i18n="filter.sortByName">名称排序</span></label>
@@ -168,6 +168,7 @@
                           <span class="filter-menu-label" data-i18n="filter.style">样式</span>
                           <b id="cardPreviewStyleBadge" data-i18n="filter.styleDefault">默认</b>
                           <svg class="card-preview-style-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 7h16M4 12h10M4 17h13"/><circle fill="currentColor" cx="18" cy="12" r="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M18 7v10"/></svg>
+                          <svg class="filter-menu-arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 4.5 6 7.5l3-3"/></svg>
                         </summary>
                         <div id="cardPreviewStylePresetMenu" class="filter-popover card-preview-style-preset-popover" role="menu" aria-label="预览样式"></div>
                       </details>
@@ -327,6 +328,30 @@
                     <div class="span-2"><dt data-i18n="info.features">特性表</dt><dd id="infoFeatures" class="wrap">—</dd></div>
                   </dl>
                 </div>
+              </div>
+            </div>
+            <div class="detail-empty-guide" aria-hidden="true">
+              <div class="empty-guide-card">
+                <div class="empty-guide-icon" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+                <h3>选择一个字体开始预览</h3>
+                <p>将鼠标移到字体卡片，或点击卡片固定到右侧详情。</p>
+                <div class="keyboard-hints" aria-label="键盘快捷键">
+                  <div class="keyboard-hint">
+                    <span class="virtual-key wide">Space</span>
+                    <span>悬停字体时打开 / 关闭大预览</span>
+                  </div>
+                  <div class="keyboard-hint">
+                    <span class="virtual-key">←</span><span class="virtual-key">→</span>
+                    <span>在字体列表中前后翻页</span>
+                  </div>
+                  <div class="keyboard-hint">
+                    <span class="virtual-key wide">PageUp</span><span class="virtual-key wide">PageDown</span>
+                    <span>快速翻到上一页 / 下一页</span>
+                  </div>
+                </div>
+                <div class="empty-guide-note">详情预览中可双击编辑文字，滚轮调整字号。</div>
               </div>
             </div>
           </aside>
