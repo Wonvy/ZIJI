@@ -83,7 +83,7 @@ main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   position: absolute;
   z-index: 20;
   left: 0;
-  right: 0;
+  left: 0;
   bottom: -4px;
   height: 8px;
   cursor: ns-resize;
@@ -771,7 +771,6 @@ kbd { color: var(--muted); font-size: 10px; }
 .font-card strong { display: block; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .font-card .sample { display: block; overflow: hidden; margin-top: 7px; font-size: 22px; text-overflow: ellipsis; white-space: nowrap; }
 .font-card small { display: block; margin-top: 7px; color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
-.font-card .star { position: absolute; right: 9px; top: 17px; color: var(--muted); }
 .empty-state { padding: 50px 10px; color: var(--muted); text-align: center; font-size: 13px; }
 .preview-pane { display: grid; min-width: 0; min-height: 0; grid-template-rows: auto auto minmax(250px, 1fr) auto; background: var(--panel); }
 .control-bar { display: grid; grid-template-columns: 1fr 280px; gap: 30px; padding: 22px 34px; border-bottom: 1px solid var(--line); }
@@ -1600,27 +1599,33 @@ body.header-card-preview-focus .preview-input-history {
   max-height: none;
   margin-block: 0;
 }
-.favorite-sidebar { width: 210px; min-width: 210px; display: flex; flex-direction: column; overflow: hidden; padding: 8px 10px 8px 0; border-right: 1px solid var(--line); }
+.favorite-sidebar { position: relative; flex: 0 0 auto; width: 210px; min-width: 190px; display: flex; flex-direction: column; overflow: hidden; padding: 8px 10px 8px 0; border-right: 1px solid var(--line); }
 .favorite-sidebar[hidden] { display: none; }
-.favorite-sidebar-header { height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
-.favorite-sidebar-header button { width: 25px; height: 25px; cursor: pointer; border: 0; border-radius: 3px; color: var(--muted); background: transparent; font-size: 18px; }
+.favorite-sidebar.resizing { transition: none; }
+.favorite-sidebar-header { min-height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 8px; color: var(--ink); font-size: 14px; font-weight: 700; box-sizing: border-box; }
+.favorite-sidebar-header button { width: 18px; height: 18px; display: inline-grid; place-items: center; padding: 0; cursor: pointer; border: 0; border-radius: 999px; color: var(--muted); background: transparent; }
+.favorite-sidebar-header button svg { width: 14px; height: 14px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .favorite-sidebar-header button:hover { color: white; background: var(--accent); }
 .favorite-sidebar-create { flex: none; display: grid; grid-template-columns: minmax(0,1fr) 56px 28px; gap: 4px; padding: 4px 6px 9px; }
 .favorite-sidebar-create input, .favorite-sidebar-create select { min-width: 0; height: 30px; padding: 0 6px; border: 1px solid var(--line); border-radius: 3px; outline: 0; color: var(--ink); background: var(--paper); font-size: 12px; }
 .favorite-sidebar-create button { width: 28px; height: 30px; cursor: pointer; border: 0; border-radius: 3px; color: white; background: var(--ink); font-size: 17px; }
 .favorite-sidebar-create button:hover { background: var(--accent); }
-.favorite-category-list { min-height: 0; flex: 1; overflow: auto; }
-.favorite-category-item { width: 100%; min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; cursor: pointer; border: 0; border-radius: 3px; color: var(--muted); background: transparent; font-size: 12px; text-align: left; }
-.favorite-category-item.child { padding-left: 22px; }
+.favorite-category-list { min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 2px 0 8px; }
+.favorite-category-item { width: 100%; min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 28px; cursor: pointer; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: color-mix(in srgb, var(--paper) 74%, transparent); font-size: 12px; text-align: left; }
+.favorite-category-item.child { padding-left: 28px; }
 .favorite-category-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.favorite-category-item b { color: var(--muted); font-size: 12px; font-weight: 500; }
-.favorite-category-item:hover { color: var(--ink); background: var(--paper); }
-.favorite-category-item.active { color: var(--paper); background: var(--ink); }
-.favorite-category-item.active b { color: color-mix(in srgb, var(--paper) 65%, transparent); }
-.favorite-category-row { display: flex; align-items: center; }
+.favorite-category-item b { min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--ink) 8%, transparent); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; box-sizing: border-box; }
+.favorite-category-item:hover { color: var(--ink); border-color: color-mix(in srgb, var(--line) 70%, transparent); background: var(--paper); }
+.favorite-category-item.active { color: white; border-color: var(--accent); background: var(--accent); }
+.favorite-category-item.active b { color: var(--accent); background: white; }
+.favorite-category-divider { height: 1px; margin: 2px 8px 4px; background: var(--line); opacity: .75; }
+.favorite-category-row { position: relative; display: flex; align-items: center; }
 .favorite-category-row.is-child { padding-left: 4px; }
 .favorite-category-toggle {
-  flex: none;
+  position: absolute;
+  z-index: 1;
+  left: 4px;
+  top: 50%;
   width: 22px;
   height: 28px;
   display: grid;
@@ -1631,6 +1636,7 @@ body.header-card-preview-focus .preview-input-history {
   color: var(--muted);
   background: transparent;
   cursor: pointer;
+  transform: translateY(-50%);
 }
 .favorite-category-toggle svg {
   width: 12px;
@@ -1639,23 +1645,62 @@ body.header-card-preview-focus .preview-input-history {
   transition: transform .18s ease;
 }
 .favorite-category-toggle.collapsed svg { transform: rotate(-90deg); }
+.favorite-category-row.active .favorite-category-toggle { color: white; }
 .favorite-category-toggle:hover {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
+.favorite-category-row.active .favorite-category-toggle:hover {
+  color: white;
+  background: color-mix(in srgb, white 16%, transparent);
+}
 .favorite-category-row.dragging { opacity: .35; }
+.favorite-category-row[draggable='true'] .favorite-category-item { cursor: grab; }
+.favorite-category-row[draggable='true'].dragging .favorite-category-item { cursor: grabbing; }
 .favorite-category-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .favorite-category-row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 .favorite-category-row.drop-inside { border-radius: 3px; background: var(--stage); box-shadow: inset 0 0 0 1px var(--accent); }
 .favorite-category-row.font-drop { border-radius: 3px; background: var(--stage); box-shadow: inset 0 0 0 2px var(--accent); }
 .favorite-category-row .favorite-category-item { min-width: 0; flex: 1; }
-.favorite-category-actions { display: flex; opacity: 0; transition: opacity .12s; }
-.favorite-category-row:hover .favorite-category-actions { opacity: 1; }
-.favorite-category-actions button { width: 23px; height: 28px; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; font-size: 12px; }
-.favorite-category-actions button:hover { color: var(--accent); }
 .category-inline-input { min-width: 0; width: 100%; height: 30px; margin: 2px 4px; padding: 0 7px; border: 1px solid var(--accent); border-radius: 2px; outline: 0; color: var(--ink); background: var(--panel); font-size: 12px; }
-.favorite-sidebar-data { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 9px 6px 0; border-top: 1px solid var(--line); }
-.favorite-sidebar-data .data-button { height: 30px; padding: 0 4px; }
+.favorite-sidebar-toolbar { flex: none; display: flex; justify-content: center; gap: 6px; padding: 8px 6px; border-top: 1px solid var(--line); }
+.favorite-toolbar-button { width: 30px; height: 30px; display: inline-grid; place-items: center; padding: 0; cursor: pointer; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: var(--paper); transition: color .12s ease, border-color .12s ease, background .12s ease, opacity .12s ease; }
+.favorite-toolbar-button svg { width: 15px; height: 15px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.favorite-toolbar-button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--paper)); }
+.favorite-toolbar-button.danger:hover:not(:disabled) { color: #fff; border-color: #c0392b; background: #c0392b; }
+.favorite-toolbar-button:disabled { opacity: .38; cursor: not-allowed; }
+.favorite-toolbar-menu { position: relative; }
+.favorite-toolbar-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 12;
+  min-width: 86px;
+  display: none;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 12px 28px rgba(0,0,0,.22);
+}
+.favorite-toolbar-menu:hover .favorite-toolbar-popover,
+.favorite-toolbar-menu:focus-within .favorite-toolbar-popover { display: grid; gap: 4px; }
+.favorite-toolbar-popover button {
+  height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+.favorite-toolbar-popover button:hover { color: white; background: var(--accent); }
+.favorite-sidebar-resize-handle { position: absolute; z-index: 8; top: 0; right: -5px; bottom: 0; width: 10px; cursor: col-resize; }
+.favorite-sidebar-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; right: 4px; width: 1px; background: transparent; transition: background .15s; }
+.favorite-sidebar-resize-handle:hover::after,
+.favorite-sidebar.resizing .favorite-sidebar-resize-handle::after { background: var(--accent); }
 .status-bar { min-height: 42px; flex: none; display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(180px, 1fr); align-items: center; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: 12px; }
 .pagination-bar { height: 42px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .page-info { display: inline-flex; align-items: center; gap: 0.35em; }
@@ -1806,7 +1851,18 @@ body.header-card-preview-focus .preview-input-history {
 .card-grid .font-card small { position: absolute; left: 12px; bottom: 10px; cursor: default; }
 .card-grid .font-card:has(.card-family-switch) small { cursor: ns-resize; }
 .card-grid .font-card .star { right: 11px; top: 10px; }
-.font-card .star { position: absolute; z-index: 3; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; font-size: 16px; }
+.font-card .star { position: absolute; z-index: 3; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; cursor: pointer; border: 0; color: var(--muted); background: transparent; transition: color .15s ease, transform .15s ease; }
+.font-card .star svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.font-card .star.favorited { color: var(--accent); }
+.font-card .star.favorited svg { fill: currentColor; }
 .font-card .star:hover { color: var(--accent); transform: scale(1.08); }
 .card-copy { width: 28px; height: 28px; display: grid; place-items: center; cursor: copy; border: 0; border-radius: 50%; color: var(--ink); background: var(--panel); box-shadow: 0 3px 10px rgba(0,0,0,.09); transition: opacity .15s ease, transform .15s ease; }
 .card-actions {
@@ -2463,6 +2519,7 @@ body.header-card-preview-focus .preview-input-history {
   min-height: 56px;
   display: grid;
   place-items: center;
+  background: transparent;
   font-size: 36px;
   line-height: 1;
 }
@@ -4364,13 +4421,33 @@ body.dark .preview-controls { background: #1a1917; }
             </div>
             <div class="font-view-shell">
               <aside id="favoriteSidebar" class="favorite-sidebar" hidden>
-                <div class="favorite-sidebar-header"><span data-i18n="favorite.categories">收藏分类</span><button id="addCategoryButton" type="button" data-i18n-title="favorite.newCategory" title="新建分类">＋</button></div>
+                <div class="favorite-sidebar-header"><span data-i18n="favorite.categories">收藏分类</span><button id="addCategoryButton" type="button" data-i18n-title="favorite.newCategory" title="新建分类" aria-label="新建分类"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></button></div>
                 <div id="favoriteCategoryList" class="favorite-category-list"></div>
-                <div class="favorite-sidebar-data">
-                  <button id="exportFavorites" class="data-button" type="button" data-i18n="favorite.export">导出</button>
-                  <button id="importFavorites" class="data-button" type="button" data-i18n="favorite.import">导入</button>
+                <div class="favorite-sidebar-toolbar" aria-label="收藏分类操作">
+                  <div class="favorite-toolbar-menu">
+                    <button class="favorite-toolbar-button" type="button" title="收藏设置" aria-label="收藏设置">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.03.03-1.9 3.28-.04-.01a1.7 1.7 0 0 0-1.86-.34l-.43.25a1.7 1.7 0 0 0-.82 1.45V21H9.28v-.04a1.7 1.7 0 0 0-.82-1.45l-.43-.25a1.7 1.7 0 0 0-1.86.34l-.04.01-1.9-3.28.03-.03A1.7 1.7 0 0 0 4.6 15v-.5a1.7 1.7 0 0 0-1.04-1.55L3.5 13v-3.8l.06-.02A1.7 1.7 0 0 0 4.6 7.62v-.5a1.7 1.7 0 0 0-.34-1.88l-.03-.03 1.9-3.28.04.01a1.7 1.7 0 0 0 1.86.34l.43-.25A1.7 1.7 0 0 0 9.28.58V.54h5.44v.04a1.7 1.7 0 0 0 .82 1.45l.43.25a1.7 1.7 0 0 0 1.86-.34l.04-.01 1.9 3.28-.03.03a1.7 1.7 0 0 0-.34 1.88v.5a1.7 1.7 0 0 0 1.04 1.55l.06.02V13l-.06.02a1.7 1.7 0 0 0-1.04 1.55V15z"></path></svg>
+                    </button>
+                    <div class="favorite-toolbar-popover" role="menu">
+                      <button id="exportFavorites" type="button" role="menuitem" data-i18n="favorite.export">导出</button>
+                      <button id="importFavorites" type="button" role="menuitem" data-i18n="favorite.import">导入</button>
+                    </div>
+                  </div>
+                  <button id="renameCategoryButton" class="favorite-toolbar-button" type="button" title="重命名分类" aria-label="重命名分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4z"></path><path d="m13.5 6.5 4 4"></path></svg>
+                  </button>
+                  <button id="moveCategoryUpButton" class="favorite-toolbar-button" type="button" title="上移分类" aria-label="上移分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="m7 10 5-5 5 5"></path></svg>
+                  </button>
+                  <button id="moveCategoryDownButton" class="favorite-toolbar-button" type="button" title="下移分类" aria-label="下移分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="m7 14 5 5 5-5"></path></svg>
+                  </button>
+                  <button id="deleteCategoryButton" class="favorite-toolbar-button danger" type="button" title="删除分类" aria-label="删除分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="m7 7 1 12h8l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>
+                  </button>
                   <input id="favoritesFile" type="file" accept="application/json,.json" hidden />
                 </div>
+                <div id="favoriteSidebarResizeHandle" class="favorite-sidebar-resize-handle" aria-hidden="true"></div>
               </aside>
               <div class="font-page-area">
                 <div id="fontList" class="font-list card-grid" aria-live="polite"></div>
@@ -8916,6 +8993,7 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelCollapsed: false,
   cardAreaCollapsed: false,
   detailPanelWidth: null,
+  favoriteSidebarWidth: null,
   favoriteCategoryView: "all",
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
@@ -9271,10 +9349,21 @@ function getMaxDetailPanelWidth() {
   return Math.max(320, Math.min(520, Math.floor(window.innerWidth * 0.48)));
 }
 
+function getMaxFavoriteSidebarWidth() {
+  return Math.max(240, Math.min(360, Math.floor(window.innerWidth * 0.32)));
+}
+
+function clampFavoriteSidebarWidth(width) {
+  return Math.max(190, Math.min(Number(width) || 210, getMaxFavoriteSidebarWidth()));
+}
+
 function normalizeLayoutSettings(settings) {
   const normalized = { ...settings };
   if (normalized.detailPanelWidth) {
     normalized.detailPanelWidth = Math.max(320, Math.min(normalized.detailPanelWidth, getMaxDetailPanelWidth()));
+  }
+  if (normalized.favoriteSidebarWidth) {
+    normalized.favoriteSidebarWidth = clampFavoriteSidebarWidth(normalized.favoriteSidebarWidth);
   }
   normalized.topbarHeight = clampTopbarHeight(normalized.topbarHeight);
   normalized.cardAreaCollapsed = false;
@@ -9348,6 +9437,7 @@ function collectUiSettings() {
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
     cardAreaCollapsed: false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
+    favoriteSidebarWidth: ui.favoriteSidebar?.dataset.openWidth ? Number(ui.favoriteSidebar.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
@@ -9414,6 +9504,13 @@ function applyStoredUiSettings(settings) {
     detailPanel.style.maxWidth = `${width}px`;
   } else {
     detailPanel.style.maxWidth = "";
+  }
+  if (settings.favoriteSidebarWidth) {
+    const width = clampFavoriteSidebarWidth(settings.favoriteSidebarWidth);
+    ui.favoriteSidebar.dataset.openWidth = String(width);
+    ui.favoriteSidebar.style.width = `${width}px`;
+    ui.favoriteSidebar.style.minWidth = `${width}px`;
+    ui.favoriteSidebar.style.flexBasis = `${width}px`;
   }
   cardArea.classList.remove("collapsed");
   syncDetailPanelToggle(settings.detailPanelCollapsed);
@@ -10458,6 +10555,7 @@ function pickInitialDisplayName(family = "", fullName = "") {
 
 const CARD_SVG_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path fill="currentColor" d="M7 8h10v2H7zm0 3h10v2H7zm0 3h7v2H7z"/></svg>`;
 const CARD_DOWNLOAD_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.5 10.5 12 14l3.5-3.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M5 18h14"/></svg>`;
+const CARD_STAR_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3.8 2.4 4.86 5.36.78-3.88 3.78.92 5.34L12 16.04l-4.8 2.52.92-5.34-3.88-3.78 5.36-.78L12 3.8Z"/></svg>`;
 
 function escapeXml(value = "") {
   return String(value)
@@ -14288,6 +14386,15 @@ function renderCardTitle(font, displayName) {
   return `<div class="card-family-switch"><span class="card-family-name">${escapeHtml(displayName)}</span><span class="card-family-caret" aria-hidden="true">▾</span><div class="card-family-menu" role="menu">${options}</div></div>`;
 }
 
+function syncCardFavoriteButton(button, font, displayName = font.displayName || font.family) {
+  if (!button || !font) return;
+  const favorited = state.favorites.has(font.postscriptName);
+  button.classList.toggle("favorited", favorited);
+  button.title = favorited ? "取消收藏" : "收藏字体";
+  button.setAttribute("aria-label", `${favorited ? "取消收藏" : "收藏"} ${displayName}`);
+  button.innerHTML = CARD_STAR_ICON;
+}
+
 function createFontCard(font) {
   const readyForRender = font.previewState === "ready";
   const card = document.createElement("div");
@@ -14297,7 +14404,8 @@ function createFontCard(font) {
   const ratioText = Number.isFinite(font.aspectRatio) ? ` · ${font.aspectRatio.toFixed(2)}:1` : "";
   const displayName = font.displayName || font.family;
   card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
-  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button"></button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  syncCardFavoriteButton(card.querySelector(".star"), font, displayName);
   card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
   applyCardPreviewStyleToSample(card.querySelector(".sample"));
   if (readyForRender) {
@@ -15541,6 +15649,9 @@ function toggleFavoriteFor(font) {
   } else state.favorites.add(key);
   persistFavorites();
   ui.favorite.textContent = state.favorites.has(key) ? "★" : "☆";
+  ui.list.querySelectorAll(`[data-id="${font.id}"] .star`).forEach(button => {
+    syncCardFavoriteButton(button, font);
+  });
   if (state.previewed === font || state.selected === font) updateFontStatus(font);
   applyFilter();
 }
@@ -15571,6 +15682,9 @@ function setFontCategory(font, categoryId, enabled) {
     touchRecentCategory(categoryId);
   }
   if (state.previewed === font || state.selected === font) ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
+  ui.list.querySelectorAll(`[data-id="${font.id}"] .star`).forEach(button => {
+    syncCardFavoriteButton(button, font);
+  });
   if (state.previewed === font || state.selected === font) updateFontStatus(font);
   persistFavorites();
 }
@@ -15623,7 +15737,7 @@ function renderFavoriteSidebar() {
     return [...expanded].some(item => ids.has(item));
   }).length;
   const items = [
-    { id: "all", name: "全部收藏", parentId: null },
+    { id: "all", name: "全部", parentId: null },
     { id: "uncategorized", name: "未分类", parentId: null },
     ...visibleCategories()
   ];
@@ -15634,24 +15748,26 @@ function renderFavoriteSidebar() {
     const toggle = hasChildren
       ? `<button type="button" class="favorite-category-toggle${collapsed ? " collapsed" : ""}" data-category-toggle="${escapeHtml(item.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "展开子分类" : "折叠子分类"}" title="${collapsed ? "展开子分类" : "折叠子分类"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 10l4 4 4-4"/></svg></button>`
       : "";
-    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? escapeHtml(item.name) : escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
-    if (["all", "uncategorized"].includes(item.id)) return button;
-    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
+    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
+    if (item.id === "all") return button;
+    if (item.id === "uncategorized") return `${button}<div class="favorite-category-divider" aria-hidden="true"></div>`;
+    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}</div>`;
   }).join("");
   ui.favoriteCategoryList.querySelectorAll("[data-favorite-category]").forEach(button => button.addEventListener("click", () => {
     state.favoriteCategoryView = button.dataset.favoriteCategory;
     applyFilter();
     persistUiSettings();
   }));
+  ui.favoriteCategoryList.querySelectorAll(".favorite-category-row [data-favorite-category]").forEach(button => button.addEventListener("dblclick", event => {
+    event.preventDefault();
+    const id = button.closest("[data-category-id]")?.dataset.categoryId;
+    if (id) renameCategory(id);
+  }));
   ui.favoriteCategoryList.querySelectorAll("[data-category-toggle]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     toggleCategoryCollapsed(button.dataset.categoryToggle);
   }));
-  ui.favoriteCategoryList.querySelectorAll("[data-category-action]").forEach(button => button.addEventListener("click", event => {
-    event.stopPropagation();
-    const id = button.closest("[data-category-id]").dataset.categoryId;
-    button.dataset.categoryAction === "rename" ? renameCategory(id) : deleteCategory(id);
-  }));
+  syncFavoriteCategoryToolbar();
   const inlineInput = ui.favoriteCategoryList.querySelector(".category-inline-input");
   if (inlineInput) {
     const id = inlineInput.closest("[data-category-id]").dataset.categoryId;
@@ -15668,6 +15784,26 @@ function renderFavoriteSidebar() {
     setTimeout(() => { inlineInput.focus(); inlineInput.select(); }, 0);
   }
   ui.favoriteCategoryList.querySelectorAll(".favorite-category-row[draggable='true']").forEach(row => bindCategoryDragEvents(row));
+}
+
+function getSelectedEditableCategory() {
+  return state.categories.find(item => item.id === state.favoriteCategoryView) || null;
+}
+
+function getSiblingCategories(category) {
+  if (!category) return [];
+  return state.categories.filter(item => (item.parentId || null) === (category.parentId || null));
+}
+
+function syncFavoriteCategoryToolbar() {
+  const selected = getSelectedEditableCategory();
+  const siblings = getSiblingCategories(selected);
+  const index = selected ? siblings.findIndex(item => item.id === selected.id) : -1;
+  const canEdit = Boolean(selected);
+  $("#renameCategoryButton").disabled = !canEdit;
+  $("#moveCategoryUpButton").disabled = !canEdit || index <= 0;
+  $("#moveCategoryDownButton").disabled = !canEdit || index < 0 || index >= siblings.length - 1;
+  $("#deleteCategoryButton").disabled = !canEdit;
 }
 
 function renderCategoryUI() {
@@ -15687,6 +15823,22 @@ function addCategory() {
   state.editingCategoryId = category.id;
   persistFavorites();
   applyFilter();
+}
+
+function moveSelectedFavoriteCategory(direction) {
+  const selected = getSelectedEditableCategory();
+  if (!selected) return;
+  const siblings = getSiblingCategories(selected);
+  const siblingIndex = siblings.findIndex(item => item.id === selected.id);
+  const targetSibling = siblings[siblingIndex + direction];
+  if (!targetSibling) return;
+  const from = state.categories.indexOf(selected);
+  const to = state.categories.indexOf(targetSibling);
+  state.categories.splice(from, 1);
+  const insertAt = direction < 0 ? to : to;
+  state.categories.splice(Math.max(0, insertAt), 0, selected);
+  persistFavorites();
+  renderFavoriteSidebar();
 }
 
 function renameCategory(id) {
@@ -15716,7 +15868,7 @@ function clearCategoryDropStates() {
 
 function bindCategoryDragEvents(row) {
   row.addEventListener("dragstart", event => {
-    if (event.target.closest("button, input")) return event.preventDefault();
+    if (event.target.closest("input, .favorite-category-toggle")) return event.preventDefault();
     state.draggingCategoryId = row.dataset.categoryId;
     row.classList.add("dragging");
     event.dataTransfer.effectAllowed = "move";
@@ -16196,6 +16348,16 @@ ui.categoryButton.addEventListener("click", () => {
 });
 ui.reset.addEventListener("click", resetSettings);
 $("#addCategoryButton").addEventListener("click", addCategory);
+$("#renameCategoryButton").addEventListener("click", () => {
+  const selected = getSelectedEditableCategory();
+  if (selected) renameCategory(selected.id);
+});
+$("#moveCategoryUpButton").addEventListener("click", () => moveSelectedFavoriteCategory(-1));
+$("#moveCategoryDownButton").addEventListener("click", () => moveSelectedFavoriteCategory(1));
+$("#deleteCategoryButton").addEventListener("click", () => {
+  const selected = getSelectedEditableCategory();
+  if (selected) deleteCategory(selected.id);
+});
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !ui.contextMenu.hidden) hideContextMenu(); });
 document.addEventListener("pointerdown", event => {
   if (!ui.contextMenu.hidden && !ui.contextMenu.contains(event.target)) hideContextMenu();
@@ -16467,6 +16629,33 @@ resizeHandle.addEventListener("pointerup", event => {
   document.body.style.userSelect = "";
   persistUiSettings();
 });
+const favoriteSidebarResizeHandle = $("#favoriteSidebarResizeHandle");
+favoriteSidebarResizeHandle?.addEventListener("pointerdown", event => {
+  if (ui.favoriteSidebar.hidden) return;
+  event.preventDefault();
+  favoriteSidebarResizeHandle.setPointerCapture(event.pointerId);
+  ui.favoriteSidebar.classList.add("resizing");
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+});
+favoriteSidebarResizeHandle?.addEventListener("pointermove", event => {
+  if (!favoriteSidebarResizeHandle.hasPointerCapture(event.pointerId)) return;
+  const bounds = $(".font-view-shell").getBoundingClientRect();
+  const width = clampFavoriteSidebarWidth(event.clientX - bounds.left);
+  ui.favoriteSidebar.style.width = `${width}px`;
+  ui.favoriteSidebar.style.minWidth = `${width}px`;
+  ui.favoriteSidebar.style.flexBasis = `${width}px`;
+  ui.favoriteSidebar.dataset.openWidth = `${width}`;
+});
+function stopFavoriteSidebarResize(event) {
+  if (favoriteSidebarResizeHandle?.hasPointerCapture(event.pointerId)) favoriteSidebarResizeHandle.releasePointerCapture(event.pointerId);
+  ui.favoriteSidebar.classList.remove("resizing");
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  persistUiSettings();
+}
+favoriteSidebarResizeHandle?.addEventListener("pointerup", stopFavoriteSidebarResize);
+favoriteSidebarResizeHandle?.addEventListener("pointercancel", stopFavoriteSidebarResize);
 const topbarResizeHandle = $("#topbarResizeHandle");
 let topbarResizeStartY = 0;
 let topbarResizeStartHeight = 0;

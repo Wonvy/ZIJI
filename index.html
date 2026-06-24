@@ -205,13 +205,33 @@
             </div>
             <div class="font-view-shell">
               <aside id="favoriteSidebar" class="favorite-sidebar" hidden>
-                <div class="favorite-sidebar-header"><span data-i18n="favorite.categories">收藏分类</span><button id="addCategoryButton" type="button" data-i18n-title="favorite.newCategory" title="新建分类">＋</button></div>
+                <div class="favorite-sidebar-header"><span data-i18n="favorite.categories">收藏分类</span><button id="addCategoryButton" type="button" data-i18n-title="favorite.newCategory" title="新建分类" aria-label="新建分类"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></button></div>
                 <div id="favoriteCategoryList" class="favorite-category-list"></div>
-                <div class="favorite-sidebar-data">
-                  <button id="exportFavorites" class="data-button" type="button" data-i18n="favorite.export">导出</button>
-                  <button id="importFavorites" class="data-button" type="button" data-i18n="favorite.import">导入</button>
+                <div class="favorite-sidebar-toolbar" aria-label="收藏分类操作">
+                  <div class="favorite-toolbar-menu">
+                    <button class="favorite-toolbar-button" type="button" title="收藏设置" aria-label="收藏设置">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.03.03-1.9 3.28-.04-.01a1.7 1.7 0 0 0-1.86-.34l-.43.25a1.7 1.7 0 0 0-.82 1.45V21H9.28v-.04a1.7 1.7 0 0 0-.82-1.45l-.43-.25a1.7 1.7 0 0 0-1.86.34l-.04.01-1.9-3.28.03-.03A1.7 1.7 0 0 0 4.6 15v-.5a1.7 1.7 0 0 0-1.04-1.55L3.5 13v-3.8l.06-.02A1.7 1.7 0 0 0 4.6 7.62v-.5a1.7 1.7 0 0 0-.34-1.88l-.03-.03 1.9-3.28.04.01a1.7 1.7 0 0 0 1.86.34l.43-.25A1.7 1.7 0 0 0 9.28.58V.54h5.44v.04a1.7 1.7 0 0 0 .82 1.45l.43.25a1.7 1.7 0 0 0 1.86-.34l.04-.01 1.9 3.28-.03.03a1.7 1.7 0 0 0-.34 1.88v.5a1.7 1.7 0 0 0 1.04 1.55l.06.02V13l-.06.02a1.7 1.7 0 0 0-1.04 1.55V15z"></path></svg>
+                    </button>
+                    <div class="favorite-toolbar-popover" role="menu">
+                      <button id="exportFavorites" type="button" role="menuitem" data-i18n="favorite.export">导出</button>
+                      <button id="importFavorites" type="button" role="menuitem" data-i18n="favorite.import">导入</button>
+                    </div>
+                  </div>
+                  <button id="renameCategoryButton" class="favorite-toolbar-button" type="button" title="重命名分类" aria-label="重命名分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4z"></path><path d="m13.5 6.5 4 4"></path></svg>
+                  </button>
+                  <button id="moveCategoryUpButton" class="favorite-toolbar-button" type="button" title="上移分类" aria-label="上移分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="m7 10 5-5 5 5"></path></svg>
+                  </button>
+                  <button id="moveCategoryDownButton" class="favorite-toolbar-button" type="button" title="下移分类" aria-label="下移分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14"></path><path d="m7 14 5 5 5-5"></path></svg>
+                  </button>
+                  <button id="deleteCategoryButton" class="favorite-toolbar-button danger" type="button" title="删除分类" aria-label="删除分类">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="m7 7 1 12h8l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>
+                  </button>
                   <input id="favoritesFile" type="file" accept="application/json,.json" hidden />
                 </div>
+                <div id="favoriteSidebarResizeHandle" class="favorite-sidebar-resize-handle" aria-hidden="true"></div>
               </aside>
               <div class="font-page-area">
                 <div id="fontList" class="font-list card-grid" aria-live="polite"></div>

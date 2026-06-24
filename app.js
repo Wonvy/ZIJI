@@ -277,6 +277,7 @@ const UI_SETTINGS_DEFAULTS = {
   detailPanelCollapsed: false,
   cardAreaCollapsed: false,
   detailPanelWidth: null,
+  favoriteSidebarWidth: null,
   favoriteCategoryView: "all",
   collapseFamilyFonts: false,
   cardPreviewStyle: null,
@@ -632,10 +633,21 @@ function getMaxDetailPanelWidth() {
   return Math.max(320, Math.min(520, Math.floor(window.innerWidth * 0.48)));
 }
 
+function getMaxFavoriteSidebarWidth() {
+  return Math.max(240, Math.min(360, Math.floor(window.innerWidth * 0.32)));
+}
+
+function clampFavoriteSidebarWidth(width) {
+  return Math.max(190, Math.min(Number(width) || 210, getMaxFavoriteSidebarWidth()));
+}
+
 function normalizeLayoutSettings(settings) {
   const normalized = { ...settings };
   if (normalized.detailPanelWidth) {
     normalized.detailPanelWidth = Math.max(320, Math.min(normalized.detailPanelWidth, getMaxDetailPanelWidth()));
+  }
+  if (normalized.favoriteSidebarWidth) {
+    normalized.favoriteSidebarWidth = clampFavoriteSidebarWidth(normalized.favoriteSidebarWidth);
   }
   normalized.topbarHeight = clampTopbarHeight(normalized.topbarHeight);
   normalized.cardAreaCollapsed = false;
@@ -709,6 +721,7 @@ function collectUiSettings() {
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
     cardAreaCollapsed: false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
+    favoriteSidebarWidth: ui.favoriteSidebar?.dataset.openWidth ? Number(ui.favoriteSidebar.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
     collapseFamilyFonts: state.collapseFamilyFonts,
     cardPreviewStyle: state.cardPreviewStyle,
@@ -775,6 +788,13 @@ function applyStoredUiSettings(settings) {
     detailPanel.style.maxWidth = `${width}px`;
   } else {
     detailPanel.style.maxWidth = "";
+  }
+  if (settings.favoriteSidebarWidth) {
+    const width = clampFavoriteSidebarWidth(settings.favoriteSidebarWidth);
+    ui.favoriteSidebar.dataset.openWidth = String(width);
+    ui.favoriteSidebar.style.width = `${width}px`;
+    ui.favoriteSidebar.style.minWidth = `${width}px`;
+    ui.favoriteSidebar.style.flexBasis = `${width}px`;
   }
   cardArea.classList.remove("collapsed");
   syncDetailPanelToggle(settings.detailPanelCollapsed);
@@ -1819,6 +1839,7 @@ function pickInitialDisplayName(family = "", fullName = "") {
 
 const CARD_SVG_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path fill="currentColor" d="M7 8h10v2H7zm0 3h10v2H7zm0 3h7v2H7z"/></svg>`;
 const CARD_DOWNLOAD_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.5 10.5 12 14l3.5-3.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M5 18h14"/></svg>`;
+const CARD_STAR_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3.8 2.4 4.86 5.36.78-3.88 3.78.92 5.34L12 16.04l-4.8 2.52.92-5.34-3.88-3.78 5.36-.78L12 3.8Z"/></svg>`;
 
 function escapeXml(value = "") {
   return String(value)
@@ -5649,6 +5670,15 @@ function renderCardTitle(font, displayName) {
   return `<div class="card-family-switch"><span class="card-family-name">${escapeHtml(displayName)}</span><span class="card-family-caret" aria-hidden="true">▾</span><div class="card-family-menu" role="menu">${options}</div></div>`;
 }
 
+function syncCardFavoriteButton(button, font, displayName = font.displayName || font.family) {
+  if (!button || !font) return;
+  const favorited = state.favorites.has(font.postscriptName);
+  button.classList.toggle("favorited", favorited);
+  button.title = favorited ? "取消收藏" : "收藏字体";
+  button.setAttribute("aria-label", `${favorited ? "取消收藏" : "收藏"} ${displayName}`);
+  button.innerHTML = CARD_STAR_ICON;
+}
+
 function createFontCard(font) {
   const readyForRender = font.previewState === "ready";
   const card = document.createElement("div");
@@ -5658,7 +5688,8 @@ function createFontCard(font) {
   const ratioText = Number.isFinite(font.aspectRatio) ? ` · ${font.aspectRatio.toFixed(2)}:1` : "";
   const displayName = font.displayName || font.family;
   card.title = `${displayName} · ${font.style || "Regular"}${ratioText}`;
-  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button" title="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏字体"}" aria-label="${state.favorites.has(font.postscriptName) ? "取消收藏" : "收藏"} ${escapeHtml(displayName)}">${state.favorites.has(font.postscriptName) ? "★" : "☆"}</button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  card.innerHTML = `${renderCardTitle(font, displayName)}<span class="sample">${escapeHtml(cardPreviewText())}</span><small>${escapeHtml(font.style || "Regular")}${font.variable ? " · Variable" : ""}${ratioText}</small><button class="star" type="button"></button><div class="card-actions"><button class="card-download-svg" type="button" title="下载 SVG 轮廓" aria-label="下载 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_DOWNLOAD_ICON}</button><button class="card-copy-svg" type="button" title="复制 SVG 轮廓" aria-label="复制 ${escapeHtml(displayName)} 的 SVG 轮廓">${CARD_SVG_ICON}</button><button class="card-copy" type="button" title="复制字体名称" aria-label="复制 ${escapeHtml(displayName)} 的字体名称">⧉</button></div>`;
+  syncCardFavoriteButton(card.querySelector(".star"), font, displayName);
   card.querySelector(".sample").style.fontSize = `${cardBaseFontSize()}px`;
   applyCardPreviewStyleToSample(card.querySelector(".sample"));
   if (readyForRender) {
@@ -6902,6 +6933,9 @@ function toggleFavoriteFor(font) {
   } else state.favorites.add(key);
   persistFavorites();
   ui.favorite.textContent = state.favorites.has(key) ? "★" : "☆";
+  ui.list.querySelectorAll(`[data-id="${font.id}"] .star`).forEach(button => {
+    syncCardFavoriteButton(button, font);
+  });
   if (state.previewed === font || state.selected === font) updateFontStatus(font);
   applyFilter();
 }
@@ -6932,6 +6966,9 @@ function setFontCategory(font, categoryId, enabled) {
     touchRecentCategory(categoryId);
   }
   if (state.previewed === font || state.selected === font) ui.favorite.textContent = state.favorites.has(font.postscriptName) ? "★" : "☆";
+  ui.list.querySelectorAll(`[data-id="${font.id}"] .star`).forEach(button => {
+    syncCardFavoriteButton(button, font);
+  });
   if (state.previewed === font || state.selected === font) updateFontStatus(font);
   persistFavorites();
 }
@@ -6984,7 +7021,7 @@ function renderFavoriteSidebar() {
     return [...expanded].some(item => ids.has(item));
   }).length;
   const items = [
-    { id: "all", name: "全部收藏", parentId: null },
+    { id: "all", name: "全部", parentId: null },
     { id: "uncategorized", name: "未分类", parentId: null },
     ...visibleCategories()
   ];
@@ -6995,24 +7032,26 @@ function renderFavoriteSidebar() {
     const toggle = hasChildren
       ? `<button type="button" class="favorite-category-toggle${collapsed ? " collapsed" : ""}" data-category-toggle="${escapeHtml(item.id)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "展开子分类" : "折叠子分类"}" title="${collapsed ? "展开子分类" : "折叠子分类"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 10l4 4 4-4"/></svg></button>`
       : "";
-    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${item.parentId ? escapeHtml(item.name) : escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
-    if (["all", "uncategorized"].includes(item.id)) return button;
-    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}<span class="favorite-category-actions"><button type="button" data-category-action="rename" title="重命名">✎</button><button type="button" data-category-action="delete" title="删除">×</button></span></div>`;
+    const button = `<button type="button" class="favorite-category-item${item.parentId ? " child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" data-favorite-category="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><b>${countFor(item.id)}</b></button>`;
+    if (item.id === "all") return button;
+    if (item.id === "uncategorized") return `${button}<div class="favorite-category-divider" aria-hidden="true"></div>`;
+    return `<div class="favorite-category-row${hasChildren ? " has-children" : ""}${item.parentId ? " is-child" : ""}${state.favoriteCategoryView === item.id ? " active" : ""}" draggable="true" data-category-id="${escapeHtml(item.id)}">${toggle}${button}</div>`;
   }).join("");
   ui.favoriteCategoryList.querySelectorAll("[data-favorite-category]").forEach(button => button.addEventListener("click", () => {
     state.favoriteCategoryView = button.dataset.favoriteCategory;
     applyFilter();
     persistUiSettings();
   }));
+  ui.favoriteCategoryList.querySelectorAll(".favorite-category-row [data-favorite-category]").forEach(button => button.addEventListener("dblclick", event => {
+    event.preventDefault();
+    const id = button.closest("[data-category-id]")?.dataset.categoryId;
+    if (id) renameCategory(id);
+  }));
   ui.favoriteCategoryList.querySelectorAll("[data-category-toggle]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     toggleCategoryCollapsed(button.dataset.categoryToggle);
   }));
-  ui.favoriteCategoryList.querySelectorAll("[data-category-action]").forEach(button => button.addEventListener("click", event => {
-    event.stopPropagation();
-    const id = button.closest("[data-category-id]").dataset.categoryId;
-    button.dataset.categoryAction === "rename" ? renameCategory(id) : deleteCategory(id);
-  }));
+  syncFavoriteCategoryToolbar();
   const inlineInput = ui.favoriteCategoryList.querySelector(".category-inline-input");
   if (inlineInput) {
     const id = inlineInput.closest("[data-category-id]").dataset.categoryId;
@@ -7029,6 +7068,26 @@ function renderFavoriteSidebar() {
     setTimeout(() => { inlineInput.focus(); inlineInput.select(); }, 0);
   }
   ui.favoriteCategoryList.querySelectorAll(".favorite-category-row[draggable='true']").forEach(row => bindCategoryDragEvents(row));
+}
+
+function getSelectedEditableCategory() {
+  return state.categories.find(item => item.id === state.favoriteCategoryView) || null;
+}
+
+function getSiblingCategories(category) {
+  if (!category) return [];
+  return state.categories.filter(item => (item.parentId || null) === (category.parentId || null));
+}
+
+function syncFavoriteCategoryToolbar() {
+  const selected = getSelectedEditableCategory();
+  const siblings = getSiblingCategories(selected);
+  const index = selected ? siblings.findIndex(item => item.id === selected.id) : -1;
+  const canEdit = Boolean(selected);
+  $("#renameCategoryButton").disabled = !canEdit;
+  $("#moveCategoryUpButton").disabled = !canEdit || index <= 0;
+  $("#moveCategoryDownButton").disabled = !canEdit || index < 0 || index >= siblings.length - 1;
+  $("#deleteCategoryButton").disabled = !canEdit;
 }
 
 function renderCategoryUI() {
@@ -7048,6 +7107,22 @@ function addCategory() {
   state.editingCategoryId = category.id;
   persistFavorites();
   applyFilter();
+}
+
+function moveSelectedFavoriteCategory(direction) {
+  const selected = getSelectedEditableCategory();
+  if (!selected) return;
+  const siblings = getSiblingCategories(selected);
+  const siblingIndex = siblings.findIndex(item => item.id === selected.id);
+  const targetSibling = siblings[siblingIndex + direction];
+  if (!targetSibling) return;
+  const from = state.categories.indexOf(selected);
+  const to = state.categories.indexOf(targetSibling);
+  state.categories.splice(from, 1);
+  const insertAt = direction < 0 ? to : to;
+  state.categories.splice(Math.max(0, insertAt), 0, selected);
+  persistFavorites();
+  renderFavoriteSidebar();
 }
 
 function renameCategory(id) {
@@ -7077,7 +7152,7 @@ function clearCategoryDropStates() {
 
 function bindCategoryDragEvents(row) {
   row.addEventListener("dragstart", event => {
-    if (event.target.closest("button, input")) return event.preventDefault();
+    if (event.target.closest("input, .favorite-category-toggle")) return event.preventDefault();
     state.draggingCategoryId = row.dataset.categoryId;
     row.classList.add("dragging");
     event.dataTransfer.effectAllowed = "move";
@@ -7557,6 +7632,16 @@ ui.categoryButton.addEventListener("click", () => {
 });
 ui.reset.addEventListener("click", resetSettings);
 $("#addCategoryButton").addEventListener("click", addCategory);
+$("#renameCategoryButton").addEventListener("click", () => {
+  const selected = getSelectedEditableCategory();
+  if (selected) renameCategory(selected.id);
+});
+$("#moveCategoryUpButton").addEventListener("click", () => moveSelectedFavoriteCategory(-1));
+$("#moveCategoryDownButton").addEventListener("click", () => moveSelectedFavoriteCategory(1));
+$("#deleteCategoryButton").addEventListener("click", () => {
+  const selected = getSelectedEditableCategory();
+  if (selected) deleteCategory(selected.id);
+});
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !ui.contextMenu.hidden) hideContextMenu(); });
 document.addEventListener("pointerdown", event => {
   if (!ui.contextMenu.hidden && !ui.contextMenu.contains(event.target)) hideContextMenu();
@@ -7828,6 +7913,33 @@ resizeHandle.addEventListener("pointerup", event => {
   document.body.style.userSelect = "";
   persistUiSettings();
 });
+const favoriteSidebarResizeHandle = $("#favoriteSidebarResizeHandle");
+favoriteSidebarResizeHandle?.addEventListener("pointerdown", event => {
+  if (ui.favoriteSidebar.hidden) return;
+  event.preventDefault();
+  favoriteSidebarResizeHandle.setPointerCapture(event.pointerId);
+  ui.favoriteSidebar.classList.add("resizing");
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+});
+favoriteSidebarResizeHandle?.addEventListener("pointermove", event => {
+  if (!favoriteSidebarResizeHandle.hasPointerCapture(event.pointerId)) return;
+  const bounds = $(".font-view-shell").getBoundingClientRect();
+  const width = clampFavoriteSidebarWidth(event.clientX - bounds.left);
+  ui.favoriteSidebar.style.width = `${width}px`;
+  ui.favoriteSidebar.style.minWidth = `${width}px`;
+  ui.favoriteSidebar.style.flexBasis = `${width}px`;
+  ui.favoriteSidebar.dataset.openWidth = `${width}`;
+});
+function stopFavoriteSidebarResize(event) {
+  if (favoriteSidebarResizeHandle?.hasPointerCapture(event.pointerId)) favoriteSidebarResizeHandle.releasePointerCapture(event.pointerId);
+  ui.favoriteSidebar.classList.remove("resizing");
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  persistUiSettings();
+}
+favoriteSidebarResizeHandle?.addEventListener("pointerup", stopFavoriteSidebarResize);
+favoriteSidebarResizeHandle?.addEventListener("pointercancel", stopFavoriteSidebarResize);
 const topbarResizeHandle = $("#topbarResizeHandle");
 let topbarResizeStartY = 0;
 let topbarResizeStartHeight = 0;
