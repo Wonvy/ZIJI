@@ -1604,7 +1604,7 @@ body.header-card-preview-focus .preview-input-history {
 .favorite-sidebar-create button:hover { background: var(--accent); }
 .favorite-category-list { min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 2px 0 8px; }
 .favorite-category-item { width: 100%; min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 28px; cursor: pointer; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: color-mix(in srgb, var(--paper) 74%, transparent); font-size: 12px; text-align: left; }
-.favorite-category-item.child { padding-left: 28px; }
+.favorite-category-item.child { min-height: 30px; padding-left: 20px; background: color-mix(in srgb, var(--paper) 58%, transparent); }
 .favorite-category-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .favorite-category-item b { min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--ink) 8%, transparent); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; box-sizing: border-box; }
 .favorite-category-item:hover { color: var(--ink); border-color: color-mix(in srgb, var(--line) 70%, transparent); background: var(--paper); }
@@ -1612,7 +1612,19 @@ body.header-card-preview-focus .preview-input-history {
 .favorite-category-item.active b { color: var(--accent); background: white; }
 .favorite-category-divider { height: 1px; margin: 2px 8px 4px; background: var(--line); opacity: .75; }
 .favorite-category-row { position: relative; display: flex; align-items: center; }
-.favorite-category-row.is-child { padding-left: 4px; }
+.favorite-category-row.is-child { padding-left: 18px; }
+.favorite-category-row.is-child::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: -4px;
+  bottom: 50%;
+  width: 9px;
+  border-left: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 0 0 0 6px;
+  pointer-events: none;
+}
 .favorite-category-toggle {
   position: absolute;
   z-index: 1;
