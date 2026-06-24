@@ -1,7 +1,22 @@
 const I18N_LOCALE_META = [
   { id: "zh-CN", label: "中文" },
+  { id: "zh-TW", label: "繁體中文" },
   { id: "en", label: "English" },
-  { id: "fr", label: "Français" }
+  { id: "ja", label: "日本語" },
+  { id: "ko", label: "한국어" },
+  { id: "fr", label: "Français" },
+  { id: "de", label: "Deutsch" },
+  { id: "es", label: "Español" },
+  { id: "pt-BR", label: "Português" },
+  { id: "it", label: "Italiano" },
+  { id: "ru", label: "Русский" },
+  { id: "nl", label: "Nederlands" },
+  { id: "pl", label: "Polski" },
+  { id: "tr", label: "Türkçe" },
+  { id: "vi", label: "Tiếng Việt" },
+  { id: "th", label: "ไทย" },
+  { id: "id", label: "Indonesia" },
+  { id: "ar", label: "العربية" }
 ];
 
 const I18N_MESSAGES = {
@@ -642,11 +657,32 @@ const I18N_MESSAGES = {
 
 let currentLocale = "zh-CN";
 
+const I18N_LOCALE_ALIASES = {
+  zh: "zh-CN",
+  "zh-hans": "zh-CN",
+  "zh-cn": "zh-CN",
+  "zh-hant": "zh-TW",
+  "zh-tw": "zh-TW",
+  "zh-hk": "zh-TW",
+  jp: "ja",
+  kr: "ko",
+  pt: "pt-BR",
+  "pt-br": "pt-BR",
+  nb: "en",
+  "en-us": "en",
+  "en-gb": "en"
+};
+
 function normalizeLocale(locale) {
-  const value = String(locale || "").trim();
-  if (I18N_MESSAGES[value]) return value;
-  const short = value.split("-")[0];
-  if (short === "zh") return "zh-CN";
+  const raw = String(locale || "").trim();
+  const lower = raw.toLowerCase();
+  const aliased = I18N_LOCALE_ALIASES[lower];
+  if (aliased && I18N_MESSAGES[aliased]) return aliased;
+  if (I18N_MESSAGES[raw]) return raw;
+  if (I18N_MESSAGES[lower]) return lower;
+  const short = lower.split("-")[0];
+  const shortAliased = I18N_LOCALE_ALIASES[short];
+  if (shortAliased && I18N_MESSAGES[shortAliased]) return shortAliased;
   if (I18N_MESSAGES[short]) return short;
   return "zh-CN";
 }
@@ -661,9 +697,8 @@ function detectDefaultLocale() {
 }
 
 function t(key, params = {}) {
-  const table = I18N_MESSAGES[currentLocale] || I18N_MESSAGES["zh-CN"];
-  const fallback = I18N_MESSAGES["zh-CN"][key];
-  let text = table[key] ?? fallback ?? key;
+  const table = I18N_MESSAGES[currentLocale] || I18N_MESSAGES.en;
+  let text = table[key] ?? I18N_MESSAGES.en?.[key] ?? I18N_MESSAGES["zh-CN"][key] ?? key;
   Object.entries(params).forEach(([name, value]) => {
     text = text.replaceAll(`{${name}}`, String(value ?? ""));
   });
@@ -772,3 +807,5 @@ function wireLocaleMenu() {
   wireLocaleDropdown(document.getElementById("localeMenu"), document.getElementById("localeMenuPopover"));
   wireLocaleDropdown(document.getElementById("welcomeLocaleMenu"), document.getElementById("welcomeLocaleMenuPopover"));
 }
+
+if (typeof registerExtraLocales === "function") registerExtraLocales();

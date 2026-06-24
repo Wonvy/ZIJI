@@ -184,7 +184,10 @@ body.workspace-active .version-badge { font-size: 9px; }
   right: 0;
   left: auto;
   min-width: 148px;
+  max-height: min(360px, 58vh);
+  overflow-y: auto;
   padding: 6px;
+  overscroll-behavior: contain;
 }
 .locale-option {
   width: 100%;
