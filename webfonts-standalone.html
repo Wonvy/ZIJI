@@ -37,7 +37,7 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: 0;
   pointer-events: none;
   opacity: .32;
   background-image:
@@ -49,7 +49,7 @@ body::before {
 }
 button, input { font: inherit; }
 button { color: inherit; }
-.app-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.app-shell { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 main { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .topbar {
   position: relative;
@@ -324,7 +324,7 @@ body:not(.workspace-active) .topbar { display: none; }
   min-width: 0;
   justify-self: stretch;
   grid-column: 2;
-  overflow: hidden;
+  overflow: visible;
 }
 .toolbar-search-wrap {
   position: relative;
@@ -333,6 +333,9 @@ body:not(.workspace-active) .topbar { display: none; }
   min-width: 140px;
   max-width: 300px;
   z-index: 12;
+}
+.toolbar-search-wrap:focus-within {
+  z-index: 80;
 }
 .toolbar-search,
 .card-toolbar .search-box {
@@ -365,10 +368,7 @@ body:not(.workspace-active) .topbar { display: none; }
   border: 0;
   min-width: 0;
   width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
 }
 .toolbar-filters::-webkit-scrollbar { display: none; }
 .toolbar-filters > * { flex: none; }
@@ -378,9 +378,15 @@ body:not(.workspace-active) .topbar { display: none; }
   justify-content: center;
   gap: 5px;
   flex: 0 0 auto;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   margin-inline: auto;
   padding-inline: 6px;
 }
+.toolbar-filter-group::-webkit-scrollbar { display: none; }
 .toolbar-filters .chip {
   height: var(--toolbar-control-height);
   display: inline-flex;
