@@ -476,11 +476,24 @@ function syncStyleLayerOrder(draft = cardPreviewStyleDraft) {
   draft.layers = layerIds.map(id => draft.layers.find(layer => layer.id === id)).filter(Boolean);
 }
 
+function getMaxDetailPanelWidth() {
+  return Math.max(320, Math.min(520, Math.floor(window.innerWidth * 0.48)));
+}
+
+function normalizeLayoutSettings(settings) {
+  const normalized = { ...settings };
+  if (normalized.detailPanelWidth) {
+    normalized.detailPanelWidth = Math.max(320, Math.min(normalized.detailPanelWidth, getMaxDetailPanelWidth()));
+  }
+  normalized.cardAreaCollapsed = false;
+  return normalized;
+}
+
 function loadUiSettings() {
   try {
     const raw = localStorage.getItem(UI_SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
-    const settings = { ...UI_SETTINGS_DEFAULTS, ...parsed };
+    const settings = normalizeLayoutSettings({ ...UI_SETTINGS_DEFAULTS, ...parsed });
     if (!raw) {
       const legacyCardSize = localStorage.getItem("card-sample-size");
       if (legacyCardSize !== null) settings.cardSampleSize = Number(legacyCardSize) || settings.cardSampleSize;
@@ -513,7 +526,7 @@ function collectUiSettings() {
     previewColorsCustomized: state.previewColorsCustomized,
     detailTab: $("#infoTabPanel").classList.contains("active") ? "info" : "preview",
     detailPanelCollapsed: detailPanel?.classList.contains("collapsed") ?? false,
-    cardAreaCollapsed: $(".card-area")?.classList.contains("collapsed") ?? false,
+    cardAreaCollapsed: false,
     detailPanelWidth: detailPanel?.dataset.openWidth ? Number(detailPanel.dataset.openWidth) : null,
     favoriteCategoryView: state.favoriteCategoryView,
     collapseFamilyFonts: state.collapseFamilyFonts,
@@ -562,18 +575,24 @@ function applyStoredUiSettings(settings) {
   syncMagnifierControl();
   const detailPanel = $("#detailPanel");
   const cardArea = $(".card-area");
+  const maxDetailWidth = getMaxDetailPanelWidth();
   if (settings.detailPanelCollapsed) {
     detailPanel.classList.add("collapsed");
     detailPanel.style.width = "";
     detailPanel.style.minWidth = "";
+    detailPanel.style.maxWidth = "";
   } else if (settings.detailPanelWidth) {
-    detailPanel.dataset.openWidth = String(settings.detailPanelWidth);
-    detailPanel.style.width = `${settings.detailPanelWidth}px`;
-    detailPanel.style.minWidth = `${settings.detailPanelWidth}px`;
+    const width = Math.max(320, Math.min(settings.detailPanelWidth, maxDetailWidth));
+    detailPanel.dataset.openWidth = String(width);
+    detailPanel.style.width = `${width}px`;
+    detailPanel.style.minWidth = `${width}px`;
+    detailPanel.style.maxWidth = `${width}px`;
+  } else {
+    detailPanel.style.maxWidth = "";
   }
-  cardArea.classList.toggle("collapsed", settings.cardAreaCollapsed);
+  cardArea.classList.remove("collapsed");
   syncDetailPanelToggle(settings.detailPanelCollapsed);
-  syncCardAreaToggle(settings.cardAreaCollapsed);
+  syncCardAreaToggle(false);
   setDetailTab(settings.detailTab);
   updateFilterControls();
   setView(normalizeView(settings.view));
@@ -621,7 +640,7 @@ const ui = {
   loadProgress: $("#loadProgress"), progressBar: $("#progressBar"), progressText: $("#progressText"), progressValue: $("#progressValue"),
   scanProgress: $("#scanProgress"), scanBar: $("#scanBar"), scanText: $("#scanText"),
   support: $("#supportNote"), search: $("#searchInput"), list: $("#fontList"), count: $("#fontCount"),
-  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeOutput: $("#cardSampleSizeOutput"),
+  pagination: $("#paginationBar"), previousPage: $("#previousPage"), nextPage: $("#nextPage"), pageInfo: $("#pageInfo"), fontStatus: $("#fontStatus"), viewStatus: $("#viewStatus"), cardSampleSize: $("#cardSampleSize"), cardSampleSizeBubble: $("#cardSampleSizeBubble"),
   empty: $("#emptyState"), previewInput: $("#previewInput"), previewInputHistory: $("#previewInputHistory"), previewText: $("#previewText"),
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
@@ -1629,6 +1648,10 @@ let cardPreviewStylePresetEditorMode = null;
 let cardPreviewStyleModalTab = "edit";
 let cardPreviewStyleManagePresetId = "";
 let cardPreviewStyleManageHoverPresetId = null;
+let managePresetInlineRenamePresetId = null;
+const PREVIEW_STYLE_ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>';
+const PREVIEW_STYLE_ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5h6v2M6 7l1 12h10l1-12"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M10 11v6M14 11v6"/></svg>';
+const PREVIEW_STYLE_ICON_EDIT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M15.5 5.5l3 3L8 19l-4 1 1-4 10.5-10.5z"/></svg>';
 let cardPreviewStyleSelectedStopIndex = 0;
 let cardPreviewStyleHoverStopIndex = null;
 let draggingGradientStopIndex = null;
@@ -1644,8 +1667,11 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   gradientOpacity: "调整当前色标不透明度",
   layerList: "拖动调整图层顺序，列表越靠上越在前，勾选启用或禁用",
   layerDuplicate: "复制图层",
+  layerMoveUp: "上移选中图层",
+  layerMoveDown: "下移选中图层",
+  layerDelete: "删除选中图层",
   strokePosition: "选择轮廓相对文字的位置",
-  previewFont: "切换预览字体",
+  previewFont: "切换预览字体，悬停时滚轮可快速切换",
   previewStage: "实时预览当前样式效果",
   managePreset: "悬停预览效果，点击选中样式",
   manageEdit: "编辑当前选中的样式",
@@ -1708,6 +1734,37 @@ function movePreviewStyleLayer(sourceKey, targetKey, before = true) {
   if (from < to) insertAt--;
   order.splice(insertAt, 0, item);
   syncStyleLayerOrder(cardPreviewStyleDraft);
+}
+
+function moveSelectedPreviewStyleLayer(direction) {
+  if (!cardPreviewStyleDraft || !cardPreviewStyleSelectedLayerId) return;
+  syncStyleLayerOrder(cardPreviewStyleDraft);
+  const order = cardPreviewStyleDraft.layerOrder;
+  const key = cardPreviewStyleSelectedLayerId;
+  const index = order.indexOf(key);
+  if (index < 0) return;
+  const targetIndex = direction < 0 ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= order.length) return;
+  if (order[targetIndex] === PREVIEW_STYLE_FILL_LAYER_ID) return;
+  movePreviewStyleLayer(key, order[targetIndex], direction < 0);
+}
+
+function syncLayerToolbarState() {
+  const upBtn = $("#cardPreviewStyleLayerMoveUp");
+  const downBtn = $("#cardPreviewStyleLayerMoveDown");
+  const deleteBtn = $("#cardPreviewStyleLayerDelete");
+  if (!upBtn || !downBtn || !deleteBtn) return;
+  const layerId = cardPreviewStyleSelectedLayerId;
+  if (!layerId || !cardPreviewStyleDraft) {
+    upBtn.disabled = downBtn.disabled = deleteBtn.disabled = true;
+    return;
+  }
+  syncStyleLayerOrder(cardPreviewStyleDraft);
+  const order = cardPreviewStyleDraft.layerOrder;
+  const index = order.indexOf(layerId);
+  deleteBtn.disabled = index < 0;
+  upBtn.disabled = index <= 0 || order[index - 1] === PREVIEW_STYLE_FILL_LAYER_ID;
+  downBtn.disabled = index < 0 || index >= order.length - 1;
 }
 
 function resolvePreviewFillColor(style) {
@@ -2844,6 +2901,32 @@ function getCardPreviewStyleModalFont() {
   return state.selected || state.previewed || state.filtered[0] || state.fonts[0] || null;
 }
 
+function stepCardPreviewStyleFont(direction) {
+  const select = $("#cardPreviewStyleFont");
+  if (!select || select.options.length <= 1) return;
+  let index = select.selectedIndex;
+  if (direction > 0) index = Math.min(index + 1, select.options.length - 1);
+  else index = Math.max(index - 1, 0);
+  if (index === select.selectedIndex) return;
+  select.selectedIndex = index;
+  cardPreviewStylePreviewFontId = Number(select.value);
+  renderCardPreviewStyleModalPreview();
+  if (cardPreviewStyleModalTab === "manage") applyManagePresetIconStyles();
+}
+
+function renderAngleDialSvg(tip) {
+  return `<svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg"><line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+
+function refreshAngleDialLine(dial, tip) {
+  if (!dial) return;
+  const line = dial.querySelector("line");
+  if (line) {
+    line.setAttribute("x2", tip.x.toFixed(2));
+    line.setAttribute("y2", tip.y.toFixed(2));
+  }
+}
+
 function renderCardPreviewStyleFontOptions() {
   const select = $("#cardPreviewStyleFont");
   if (!select) return;
@@ -2930,12 +3013,11 @@ function renderStyleSelectField(field, value, attrs = "") {
 
 function renderColorModeField(value, fieldAttr, fieldKey) {
   const current = value === "gradient" ? "gradient" : "solid";
-  const groupName = fieldAttr === "data-fill-field" ? "preview-fill-color-mode" : "preview-layer-color-mode";
   const options = COLOR_MODE_OPTIONS.map(option => {
-    const checked = option.value === current ? " checked" : "";
-    return `<label class="preview-color-mode-option"><input type="radio" name="${groupName}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${option.value}"${checked} /><span>${escapeHtml(option.label)}</span></label>`;
+    const active = option.value === current ? " active" : "";
+    return `<button type="button" class="preview-color-mode-btn${active}" ${fieldAttr}="${escapeHtml(fieldKey)}" data-mode-value="${escapeHtml(option.value)}" aria-pressed="${option.value === current ? "true" : "false"}">${escapeHtml(option.label)}</button>`;
   }).join("");
-  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="radiogroup" aria-label="颜色类型">${options}</div></div>`;
+  return `<div class="preview-style-field preview-color-mode-field" data-preview-status-hint="选择纯色或线性渐变"><span>类型</span><div class="preview-color-mode-group" role="group" aria-label="颜色类型">${options}</div></div>`;
 }
 
 function applyPreviewColorModeChange(trigger) {
@@ -3032,11 +3114,7 @@ function renderGradientAngleDial(angle, scope) {
     <span>渐变角度</span>
     <div class="preview-gradient-angle-control">
       <button type="button" class="preview-gradient-angle-dial" data-gradient-field="angle" data-gradient-scope="${scope}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientAngle)}" aria-label="渐变角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
-        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
-          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
-          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
-        </svg>
+        ${renderAngleDialSvg(tip)}
       </button>
       <span class="preview-gradient-angle-value" data-gradient-angle-value="${scope}">${value}°</span>
     </div>
@@ -3050,16 +3128,7 @@ function refreshGradientAngleDial(scope, angle) {
   const value = normalizePreviewAngle(angle);
   const tip = gradientAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
-  const line = dial.querySelector("line");
-  const knob = dial.querySelector("circle:last-of-type");
-  if (line) {
-    line.setAttribute("x2", tip.x.toFixed(2));
-    line.setAttribute("y2", tip.y.toFixed(2));
-  }
-  if (knob) {
-    knob.setAttribute("cx", tip.x.toFixed(2));
-    knob.setAttribute("cy", tip.y.toFixed(2));
-  }
+  refreshAngleDialLine(dial, tip);
   panel.querySelector(`[data-gradient-angle-value="${scope}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
 }
 
@@ -3117,11 +3186,7 @@ function renderShadowAngleDial(angle, layerId) {
     <span>投影角度</span>
     <div class="preview-gradient-angle-control">
       <button type="button" class="preview-gradient-angle-dial preview-shadow-angle-dial" data-shadow-field="angle" data-layer-id="${escapeHtml(layerId)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.shadowAngle)}" aria-label="投影角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
-        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
-          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
-          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
-        </svg>
+        ${renderAngleDialSvg(tip)}
       </button>
       <span class="preview-gradient-angle-value" data-shadow-angle-value="${escapeHtml(layerId)}">${value}°</span>
     </div>
@@ -3135,16 +3200,7 @@ function refreshShadowAngleDial(layerId, angle) {
   const value = normalizePreviewAngle(angle);
   const tip = shadowAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
-  const line = dial.querySelector("line");
-  const knob = dial.querySelector("circle:last-of-type");
-  if (line) {
-    line.setAttribute("x2", tip.x.toFixed(2));
-    line.setAttribute("y2", tip.y.toFixed(2));
-  }
-  if (knob) {
-    knob.setAttribute("cx", tip.x.toFixed(2));
-    knob.setAttribute("cy", tip.y.toFixed(2));
-  }
+  refreshAngleDialLine(dial, tip);
   panel.querySelector(`[data-shadow-angle-value="${CSS.escape(layerId)}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
 }
 
@@ -3164,11 +3220,7 @@ function renderStrokeOffsetAngleDial(angle, layerId) {
     <span>偏移角度</span>
     <div class="preview-gradient-angle-control">
       <button type="button" class="preview-gradient-angle-dial preview-stroke-offset-angle-dial" data-stroke-offset-field="offsetAngle" data-layer-id="${escapeHtml(layerId)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.strokeOffsetAngle)}" aria-label="轮廓偏移角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
-        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
-          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
-          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
-        </svg>
+        ${renderAngleDialSvg(tip)}
       </button>
       <span class="preview-gradient-angle-value" data-stroke-offset-angle-value="${escapeHtml(layerId)}">${value}°</span>
     </div>
@@ -3182,16 +3234,7 @@ function refreshStrokeOffsetAngleDial(layerId, angle) {
   const value = normalizePreviewAngle(angle);
   const tip = strokeOffsetAngleDialPoint(value);
   dial.setAttribute("aria-valuenow", String(value));
-  const line = dial.querySelector("line");
-  const knob = dial.querySelector("circle:last-of-type");
-  if (line) {
-    line.setAttribute("x2", tip.x.toFixed(2));
-    line.setAttribute("y2", tip.y.toFixed(2));
-  }
-  if (knob) {
-    knob.setAttribute("cx", tip.x.toFixed(2));
-    knob.setAttribute("cy", tip.y.toFixed(2));
-  }
+  refreshAngleDialLine(dial, tip);
   panel.querySelector(`[data-stroke-offset-angle-value="${CSS.escape(layerId)}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
 }
 
@@ -3561,11 +3604,13 @@ function renderGradientStopsEditor(target, scope) {
       </div>
       <div class="preview-gradient-stops-track">${handles}</div>
     </div>
-    <div class="preview-gradient-controls-row">
+    <div class="preview-gradient-stop-row">
       <div class="preview-gradient-stop-controls preview-gradient-stop-controls-inline">
         <label class="preview-gradient-stop-color-inline" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientColor)}"><input type="color" data-gradient-stop-field="color" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" value="${escapeHtml(controlStop.color)}" aria-label="色标颜色" /></label>
         ${renderStyleRangeField({ label: "不透明度", min: 0, max: 100, step: 1 }, controlStop.opacity, `data-gradient-stop-field="opacity" data-gradient-scope="${scope}" data-stop-index="${controlIndex}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.gradientOpacity)}" aria-label="不透明度"`)}
       </div>
+    </div>
+    <div class="preview-gradient-angle-row">
       ${renderGradientAngleDial(target.angle, scope)}
     </div>
   </div>`;
@@ -3602,9 +3647,10 @@ function renderCardPreviewStyleLayerList() {
     const label = getPreviewStyleLayerLabel(layer, cardPreviewStyleDraft.layers);
     const active = layer.id === cardPreviewStyleSelectedLayerId ? " active" : "";
     const disabled = layer.enabled ? "" : " is-disabled";
-    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><span class="layer-actions"><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerDuplicate)}">+</button><button type="button" class="layer-delete" title="删除图层" aria-label="删除${escapeHtml(label)}">×</button></span></li>`;
+    return `<li class="preview-style-style-item${active}${disabled}" data-layer-key="${escapeHtml(layer.id)}" data-layer-id="${escapeHtml(layer.id)}" draggable="true" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerList)}"><span class="style-drag" aria-hidden="true">⋮⋮</span><input type="checkbox"${layer.enabled ? " checked" : ""} aria-label="启用${escapeHtml(label)}" /><span class="style-name">${escapeHtml(label)}</span><span class="layer-actions"><button type="button" class="layer-duplicate" title="复制图层" aria-label="复制${escapeHtml(label)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.layerDuplicate)}">+</button></span></li>`;
   }).join("");
   list.innerHTML = html;
+  syncLayerToolbarState();
 }
 
 function renderStrokeStyleParams(layer) {
@@ -3625,8 +3671,9 @@ function renderStrokeStyleParams(layer) {
   const offsetDistanceField = renderStyleRangeField(meta.fields.find(field => field.key === "offsetDistance"), layer.offsetDistance, 'data-layer-field="offsetDistance" aria-label="轮廓偏移距离"');
   const offsetRow = renderPreviewStyleParamRow(renderStrokeOffsetAngleDial(layer.offsetAngle, layer.id), offsetDistanceField);
   const positionField = renderStrokePositionField(layer.position);
+  const widthPositionRow = `<div class="preview-style-param-row preview-style-stroke-layout-row">${positionField}${widthField}</div>`;
   const gradientFields = isGradient ? renderGradientStopsEditor(layer, "layer") : "";
-  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${positionField}${modeField}${gradientFields}${colorOpacityRow}${widthField}${blurField}${offsetRow}</div>`;
+  return `<h4 class="preview-style-params-head">${escapeHtml(title)}</h4><div class="preview-style-params-grid">${widthPositionRow}${modeField}${gradientFields}${colorOpacityRow}${blurField}${offsetRow}</div>`;
 }
 
 function renderDropShadowStyleParams(layer) {
@@ -3732,11 +3779,134 @@ function applyManagePresetIconStyles() {
 
 function renderManagePresetIconCard(presetId, name, { selected = false, current = false } = {}) {
   const active = (cardPreviewStyleManagePresetId || "") === (presetId || "");
-  return `<button type="button" class="preview-style-preset-card${active ? " active" : ""}${current ? " is-current" : ""}" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(name)}">
+  const canEdit = Boolean(presetId);
+  const isRenaming = managePresetInlineRenamePresetId === presetId && canEdit;
+  const labelHtml = isRenaming
+    ? `<input class="preview-style-preset-rename-input" type="text" maxlength="48" value="${escapeHtml(name)}" aria-label="样式名称" />`
+    : `<span class="preview-style-preset-label"${canEdit ? ' data-renamable="true"' : ""}>${escapeHtml(name)}</span>`;
+  return `<div class="preview-style-preset-card${active ? " active" : ""}${current ? " is-current" : ""}" role="button" tabindex="0" data-preset-id="${escapeHtml(presetId || "")}" aria-label="${escapeHtml(name)}">
+    ${canEdit ? `<button type="button" class="preview-style-preset-edit" aria-label="编辑样式" title="编辑样式">${PREVIEW_STYLE_ICON_EDIT}</button>` : ""}
     <span class="preview-style-preset-glyph" aria-hidden="true">${MANAGE_PRESET_PREVIEW_CHAR}</span>
-    <span class="preview-style-preset-label">${escapeHtml(name)}</span>
+    ${labelHtml}
     ${current ? '<span class="preview-style-preset-badge">使用中</span>' : ""}
-  </button>`;
+  </div>`;
+}
+
+function focusManagePresetInlineRenameInput() {
+  const input = $("#cardPreviewStylePresetList")?.querySelector(".preview-style-preset-rename-input");
+  if (!input) return;
+  input.focus();
+  input.select();
+}
+
+function startManagePresetInlineRename(presetId) {
+  if (!presetId || !findCardPreviewStylePreset(presetId)) return;
+  managePresetInlineRenamePresetId = presetId;
+  cardPreviewStyleManagePresetId = presetId;
+  renderCardPreviewStyleManagePanel();
+  focusManagePresetInlineRenameInput();
+}
+
+function commitManagePresetInlineRename() {
+  const presetId = managePresetInlineRenamePresetId;
+  const input = $("#cardPreviewStylePresetList")?.querySelector(".preview-style-preset-rename-input");
+  if (!presetId || !input) {
+    managePresetInlineRenamePresetId = null;
+    return;
+  }
+  const name = input.value.trim();
+  if (!name) {
+    toast("请输入样式名称");
+    input.focus();
+    return;
+  }
+  const preset = renameCardPreviewStylePreset(presetId, name);
+  if (!preset) {
+    toast("重命名失败");
+    return;
+  }
+  managePresetInlineRenamePresetId = null;
+  persistUiSettings();
+  renderCardPreviewStyleManagePanel();
+  renderCardPreviewStyleQuickMenu();
+  toast(`已重命名为「${preset.name}」`);
+}
+
+function cancelManagePresetInlineRename() {
+  if (!managePresetInlineRenamePresetId) return;
+  managePresetInlineRenamePresetId = null;
+  renderCardPreviewStyleManagePanel();
+}
+
+function deleteManagePresetById(presetId) {
+  if (!presetId) return;
+  const preset = findCardPreviewStylePreset(presetId);
+  if (!preset) return;
+  if (!window.confirm(`删除样式「${preset.name}」？`)) return;
+  deleteCardPreviewStylePreset(presetId);
+  if (cardPreviewStyleManagePresetId === presetId) cardPreviewStyleManagePresetId = "";
+  if (managePresetInlineRenamePresetId === presetId) managePresetInlineRenamePresetId = null;
+  persistUiSettings();
+  renderCardPreviewStyleManagePanel();
+  renderCardPreviewStyleQuickMenu();
+  renderCardPreviewStyleModalPreview();
+  toast("已删除样式");
+}
+
+function hideManagePresetContextMenu() {
+  const menu = $("#cardPreviewStylePresetContextMenu");
+  if (!menu) return;
+  menu.classList.remove("visible");
+  setTimeout(() => {
+    if (!menu.classList.contains("visible")) menu.hidden = true;
+  }, 130);
+}
+
+function showManagePresetContextMenu(presetId, x, y) {
+  const menu = $("#cardPreviewStylePresetContextMenu");
+  if (!menu) return;
+  const preset = presetId ? findCardPreviewStylePreset(presetId) : null;
+  const title = presetId ? (preset?.name || "样式") : "默认";
+  let html = `<div class="context-menu-header">${escapeHtml(title)}</div>`;
+  if (presetId) {
+    html += `<button class="context-menu-item" type="button" data-manage-preset-action="edit"><span>编辑</span></button>`;
+    html += `<button class="context-menu-item" type="button" data-manage-preset-action="rename"><span>重命名</span></button>`;
+    html += `<div class="context-menu-divider"></div>`;
+    html += `<button class="context-menu-item danger" type="button" data-manage-preset-action="delete"><span>删除</span></button>`;
+  } else {
+    html += `<button class="context-menu-item" type="button" data-manage-preset-action="apply"><span>应用默认</span></button>`;
+  }
+  menu.innerHTML = html;
+  menu.dataset.presetId = presetId || "";
+  menu.hidden = false;
+  menu.classList.toggle("open-left", x + 220 > window.innerWidth);
+  menu.style.left = `${Math.min(x, window.innerWidth - 230)}px`;
+  menu.style.top = `${Math.min(y, window.innerHeight - 180)}px`;
+  requestAnimationFrame(() => menu.classList.add("visible"));
+  menu.querySelectorAll("[data-manage-preset-action]").forEach(button => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.managePresetAction;
+      const id = menu.dataset.presetId || "";
+      hideManagePresetContextMenu();
+      cardPreviewStyleManagePresetId = id;
+      if (action === "edit") loadManagePresetToEdit();
+      else if (action === "rename") startManagePresetInlineRename(id);
+      else if (action === "delete") deleteManagePresetById(id);
+      else if (action === "apply") {
+        applyCardPreviewStylePresetById(null);
+        renderCardPreviewStyleManagePanel();
+        renderCardPreviewStyleModalPreview();
+      }
+    });
+  });
+}
+
+function handleManagePresetCardActivate(card) {
+  if (!card) return;
+  cardPreviewStyleManagePresetId = card.dataset.presetId || "";
+  cardPreviewStyleManageHoverPresetId = null;
+  renderCardPreviewStyleManagePanel();
+  renderCardPreviewStyleModalPreview();
 }
 
 function syncCardPreviewStyleFooter() {
@@ -3768,6 +3938,8 @@ function setCardPreviewStyleModalTab(tab) {
   if (managePanel) managePanel.hidden = isEdit;
   hideCardPreviewStylePresetEditor();
   if (isEdit) {
+    managePresetInlineRenamePresetId = null;
+    hideManagePresetContextMenu();
     renderCardPreviewStyleLayerList();
     renderCardPreviewStyleParams();
   } else {
@@ -3787,13 +3959,9 @@ function renderCardPreviewStyleManagePanel() {
   ).join("");
   list.innerHTML = html;
   applyManagePresetIconStyles();
-  const hasPreset = Boolean(cardPreviewStyleManagePresetId);
-  const editBtn = $("#cardPreviewStyleManageEdit");
-  const renameBtn = $("#cardPreviewStyleManageRename");
+  if (managePresetInlineRenamePresetId) focusManagePresetInlineRenameInput();
   const deleteBtn = $("#cardPreviewStyleManageDelete");
-  if (editBtn) editBtn.disabled = !hasPreset;
-  if (renameBtn) renameBtn.disabled = !hasPreset;
-  if (deleteBtn) deleteBtn.disabled = !hasPreset;
+  if (deleteBtn) deleteBtn.disabled = !Boolean(cardPreviewStyleManagePresetId);
 }
 
 function applyManageSelectedPreset() {
@@ -4015,6 +4183,8 @@ function loadManagePresetToEdit() {
 function createNewCardPreviewStyleDraft() {
   cardPreviewStyleManagePresetId = "";
   cardPreviewStyleManageHoverPresetId = null;
+  managePresetInlineRenamePresetId = null;
+  hideManagePresetContextMenu();
   loadCardPreviewStylePresetDraft(null);
   setCardPreviewStyleModalTab("edit");
 }
@@ -4225,6 +4395,8 @@ function closeCardPreviewStyleModal(apply = false) {
   cardPreviewStyleModalTab = "edit";
   cardPreviewStyleManagePresetId = "";
   cardPreviewStyleManageHoverPresetId = null;
+  managePresetInlineRenamePresetId = null;
+  hideManagePresetContextMenu();
   draggingPreviewStyleLayerId = null;
   hideCardPreviewStylePresetEditor();
   $("#cardPreviewStyleModal").hidden = true;
@@ -4235,6 +4407,13 @@ function handlePreviewStyleWheel(event) {
   const modal = $("#cardPreviewStyleModal");
   if (modal?.hidden) return;
   const target = event.target;
+  const fontField = target.closest?.(".preview-style-font-field");
+  if (fontField && modal.contains(fontField)) {
+    event.preventDefault();
+    event.stopPropagation();
+    stepCardPreviewStyleFont(event.deltaY < 0 ? -1 : 1);
+    return;
+  }
   const range = target instanceof HTMLInputElement && target.classList.contains("preview-style-range")
     ? target
     : target.closest?.(".preview-style-range-wrap")?.querySelector("input.preview-style-range");
@@ -4255,7 +4434,22 @@ function wireCardPreviewStyleModal() {
     if (event.target === modal) closeCardPreviewStyleModal(false);
   });
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !modal.hidden) closeCardPreviewStyleModal(false);
+    if (event.key !== "Escape") return;
+    const menu = $("#cardPreviewStylePresetContextMenu");
+    if (menu && !menu.hidden) {
+      hideManagePresetContextMenu();
+      return;
+    }
+    if (managePresetInlineRenamePresetId) {
+      cancelManagePresetInlineRename();
+      return;
+    }
+    if (!modal.hidden) closeCardPreviewStyleModal(false);
+  });
+  document.addEventListener("pointerdown", event => {
+    const menu = $("#cardPreviewStylePresetContextMenu");
+    if (!menu || menu.hidden) return;
+    if (!menu.contains(event.target)) hideManagePresetContextMenu();
   });
   $("#cardPreviewStyleFont")?.addEventListener("change", event => {
     cardPreviewStylePreviewFontId = Number(event.target.value);
@@ -4267,12 +4461,65 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleSaveDraft")?.addEventListener("click", saveCardPreviewStylePresetDraft);
   const presetList = $("#cardPreviewStylePresetList");
   presetList?.addEventListener("click", event => {
+    if (event.target.closest(".preview-style-preset-edit")) {
+      event.stopPropagation();
+      const card = event.target.closest(".preview-style-preset-card");
+      if (!card?.dataset.presetId) return;
+      cardPreviewStyleManagePresetId = card.dataset.presetId;
+      loadManagePresetToEdit();
+      return;
+    }
+    if (event.target.closest(".preview-style-preset-rename-input")) return;
     const item = event.target.closest(".preview-style-preset-card");
     if (!item) return;
-    cardPreviewStyleManagePresetId = item.dataset.presetId || "";
-    cardPreviewStyleManageHoverPresetId = null;
+    handleManagePresetCardActivate(item);
+  });
+  presetList?.addEventListener("dblclick", event => {
+    const label = event.target.closest(".preview-style-preset-label[data-renamable='true']");
+    if (!label) return;
+    event.preventDefault();
+    const card = label.closest(".preview-style-preset-card");
+    if (!card?.dataset.presetId) return;
+    startManagePresetInlineRename(card.dataset.presetId);
+  });
+  presetList?.addEventListener("keydown", event => {
+    const card = event.target.closest(".preview-style-preset-card");
+    if (!card || card.querySelector(".preview-style-preset-rename-input")) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleManagePresetCardActivate(card);
+    } else if (event.key === "F2" && card.dataset.presetId) {
+      event.preventDefault();
+      startManagePresetInlineRename(card.dataset.presetId);
+    }
+  });
+  presetList?.addEventListener("focusout", event => {
+    const input = event.target.closest(".preview-style-preset-rename-input");
+    if (!input || !presetList.contains(input)) return;
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (active?.closest(".preview-style-preset-rename-input")) return;
+      commitManagePresetInlineRename();
+    }, 0);
+  });
+  presetList?.addEventListener("keydown", event => {
+    const input = event.target.closest(".preview-style-preset-rename-input");
+    if (!input) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitManagePresetInlineRename();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelManagePresetInlineRename();
+    }
+  });
+  presetList?.addEventListener("contextmenu", event => {
+    const card = event.target.closest(".preview-style-preset-card");
+    if (!card || !presetList.contains(card)) return;
+    event.preventDefault();
+    cardPreviewStyleManagePresetId = card.dataset.presetId || "";
     renderCardPreviewStyleManagePanel();
-    renderCardPreviewStyleModalPreview();
+    showManagePresetContextMenu(card.dataset.presetId || "", event.clientX, event.clientY);
   });
   presetList?.addEventListener("mouseover", event => {
     const item = event.target.closest(".preview-style-preset-card");
@@ -4287,23 +4534,9 @@ function wireCardPreviewStyleModal() {
     clearManagePresetHover();
   });
   $("#cardPreviewStyleManageNew")?.addEventListener("click", createNewCardPreviewStyleDraft);
-  $("#cardPreviewStyleManageEdit")?.addEventListener("click", loadManagePresetToEdit);
-  $("#cardPreviewStyleManageRename")?.addEventListener("click", () => {
-    if (!cardPreviewStyleManagePresetId) return;
-    showCardPreviewStylePresetEditor("rename", findCardPreviewStylePreset(cardPreviewStyleManagePresetId)?.name || "");
-  });
   $("#cardPreviewStyleManageDelete")?.addEventListener("click", () => {
     if (!cardPreviewStyleManagePresetId) return;
-    const preset = findCardPreviewStylePreset(cardPreviewStyleManagePresetId);
-    if (!preset) return;
-    if (!window.confirm(`删除样式「${preset.name}」？`)) return;
-    deleteCardPreviewStylePreset(cardPreviewStyleManagePresetId);
-    cardPreviewStyleManagePresetId = "";
-    persistUiSettings();
-    renderCardPreviewStyleManagePanel();
-    renderCardPreviewStyleQuickMenu();
-    renderCardPreviewStyleModalPreview();
-    toast("已删除样式");
+    deleteManagePresetById(cardPreviewStyleManagePresetId);
   });
   $("#cardPreviewStylePresetRenameConfirm")?.addEventListener("click", applyCardPreviewStylePresetEditor);
   $("#cardPreviewStylePresetRenameCancel")?.addEventListener("click", hideCardPreviewStylePresetEditor);
@@ -4359,6 +4592,21 @@ function wireCardPreviewStyleModal() {
     draggingPreviewStyleLayerId = null;
     layerList.querySelectorAll(".dragging, .drop-before, .drop-after").forEach(item => item.classList.remove("dragging", "drop-before", "drop-after"));
   });
+  $("#cardPreviewStyleLayerMoveUp")?.addEventListener("click", () => {
+    moveSelectedPreviewStyleLayer(-1);
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleLayerMoveDown")?.addEventListener("click", () => {
+    moveSelectedPreviewStyleLayer(1);
+    renderCardPreviewStyleLayerList();
+    renderCardPreviewStyleModalPreview();
+  });
+  $("#cardPreviewStyleLayerDelete")?.addEventListener("click", () => {
+    if (!cardPreviewStyleSelectedLayerId || !removePreviewStyleLayer(cardPreviewStyleSelectedLayerId)) return;
+    renderCardPreviewStyleModal();
+    renderCardPreviewStyleModalPreview();
+  });
   layerList?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
     if (event.target.matches('input[type="checkbox"]')) return;
@@ -4371,15 +4619,7 @@ function wireCardPreviewStyleModal() {
       renderCardPreviewStyleModal();
       return;
     }
-    if (event.target.closest(".layer-delete")) {
-      event.stopPropagation();
-      const layerId = event.target.closest("[data-layer-id]")?.dataset.layerId;
-      if (!layerId || !removePreviewStyleLayer(layerId)) return;
-      renderCardPreviewStyleModal();
-      renderCardPreviewStyleModalPreview();
-      return;
-    }
-    if (event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`) && !event.target.closest(".layer-duplicate, .layer-delete")) {
+    if (event.target.closest(`[data-layer-key="${PREVIEW_STYLE_FILL_LAYER_ID}"]`) && !event.target.closest(".layer-duplicate")) {
       cardPreviewStyleSelectedLayerId = null;
       cardPreviewStyleSelectedStopIndex = 0;
       renderCardPreviewStyleLayerList();
@@ -4387,7 +4627,7 @@ function wireCardPreviewStyleModal() {
       return;
     }
     const item = event.target.closest("[data-layer-id]");
-    if (!item || event.target.matches('input[type="checkbox"]') || event.target.closest(".layer-duplicate, .layer-delete")) return;
+    if (!item || event.target.matches('input[type="checkbox"]') || event.target.closest(".layer-duplicate")) return;
     cardPreviewStyleSelectedLayerId = item.dataset.layerId;
     cardPreviewStyleSelectedStopIndex = 0;
     renderCardPreviewStyleLayerList();
@@ -4412,12 +4652,14 @@ function wireCardPreviewStyleModal() {
   $("#cardPreviewStyleParams")?.addEventListener("change", event => {
     if (!cardPreviewStyleDraft) return;
     applyGradientStopFieldChange(event.target);
-    if (event.target.matches('input[type="radio"][data-mode-value]')) {
-      applyPreviewColorModeChange(event.target);
-    }
   });
   $("#cardPreviewStyleParams")?.addEventListener("click", event => {
     if (!cardPreviewStyleDraft) return;
+    const colorModeBtn = event.target.closest(".preview-color-mode-btn");
+    if (colorModeBtn?.dataset.modeValue) {
+      applyPreviewColorModeChange(colorModeBtn);
+      return;
+    }
     const radioBtn = event.target.closest(".preview-style-radio-btn");
     if (radioBtn?.dataset.layerField && radioBtn.dataset.radioValue) {
       const layer = cardPreviewStyleDraft.layers.find(entry => entry.id === cardPreviewStyleSelectedLayerId);
@@ -5421,13 +5663,48 @@ function cardBaseFontSize() {
   return state.cardSampleSize;
 }
 
+function syncCardSampleSizeBubble(show = false) {
+  const bubble = ui.cardSampleSizeBubble;
+  const input = ui.cardSampleSize;
+  if (!bubble || !input) return;
+  const value = Number(input.value);
+  bubble.textContent = String(value);
+  if (!show) {
+    bubble.hidden = true;
+    return;
+  }
+  bubble.hidden = false;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const percent = max === min ? 0 : (value - min) / (max - min);
+  const trackWidth = input.offsetWidth || input.clientWidth;
+  const thumb = 14;
+  const x = percent * Math.max(trackWidth - thumb, 0) + thumb / 2;
+  bubble.style.left = `${x}px`;
+  bubble.style.transform = "translateX(-50%)";
+}
+
+let cardSampleSizeBubbleHideTimer = null;
+
+function showCardSampleSizeBubble() {
+  clearTimeout(cardSampleSizeBubbleHideTimer);
+  syncCardSampleSizeBubble(true);
+}
+
+function hideCardSampleSizeBubble(delay = 0) {
+  clearTimeout(cardSampleSizeBubbleHideTimer);
+  cardSampleSizeBubbleHideTimer = setTimeout(() => {
+    if (ui.cardSampleSizeBubble) ui.cardSampleSizeBubble.hidden = true;
+  }, delay);
+}
+
 function updateCardSampleSizeControl() {
   const disabled = state.view === "single";
   ui.cardSampleSize.disabled = disabled;
   $("#cardSampleSizeDecrease").disabled = disabled;
   $("#cardSampleSizeIncrease").disabled = disabled;
   ui.cardSampleSize.value = state.cardSampleSize;
-  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+  syncCardSampleSizeBubble(false);
 }
 
 function stepCardSampleSize(direction) {
@@ -5439,12 +5716,14 @@ function stepCardSampleSize(direction) {
   if (next === Number(ui.cardSampleSize.value)) return;
   ui.cardSampleSize.value = String(next);
   applyCardSampleSize();
+  showCardSampleSizeBubble();
+  hideCardSampleSizeBubble(800);
   persistCardSampleSize();
 }
 
 function applyCardSampleSize({ fit = false } = {}) {
   state.cardSampleSize = Number(ui.cardSampleSize.value);
-  ui.cardSampleSizeOutput.textContent = state.cardSampleSize;
+  if (ui.cardSampleSizeBubble && !ui.cardSampleSizeBubble.hidden) syncCardSampleSizeBubble(true);
   syncCardGridLayoutVars();
   ui.list.querySelectorAll(".font-card.font-ready .sample").forEach(sample => {
     sample.style.fontSize = `${state.cardSampleSize}px`;
@@ -6657,15 +6936,21 @@ ui.previewInputHistory?.addEventListener("click", event => {
 document.addEventListener("pointerdown", event => {
   if (!event.target.closest(".header-preview-input-wrap")) hidePreviewInputHistory();
 });
+ui.cardSampleSize.addEventListener("pointerdown", showCardSampleSizeBubble);
 ui.cardSampleSize.addEventListener("input", () => {
   applyCardSampleSize();
+  showCardSampleSizeBubble();
   persistUiSettings();
 });
 ui.cardSampleSize.addEventListener("change", () => {
   applyCardSampleSize({ fit: true });
   persistCardSampleSize();
   refreshCardGridPageIfNeeded();
+  hideCardSampleSizeBubble(500);
 });
+ui.cardSampleSize.addEventListener("pointerup", () => hideCardSampleSizeBubble(500));
+ui.cardSampleSize.addEventListener("pointercancel", () => hideCardSampleSizeBubble(500));
+ui.cardSampleSize.addEventListener("pointerleave", () => hideCardSampleSizeBubble(500));
 $("#cardSampleSizeDecrease").addEventListener("click", () => stepCardSampleSize(-1));
 $("#cardSampleSizeIncrease").addEventListener("click", () => stepCardSampleSize(1));
 ui.previewText.addEventListener("input", syncDetailPreviewStage);
@@ -6915,17 +7200,21 @@ $("#detailToggle").addEventListener("click", () => {
   if (collapsed) {
     panel.style.width = "";
     panel.style.minWidth = "";
+    panel.style.maxWidth = "";
   } else if (panel.dataset.openWidth) {
-    panel.style.width = `${panel.dataset.openWidth}px`;
-    panel.style.minWidth = `${panel.dataset.openWidth}px`;
+    const width = Math.max(320, Math.min(Number(panel.dataset.openWidth) || 420, getMaxDetailPanelWidth()));
+    panel.dataset.openWidth = String(width);
+    panel.style.width = `${width}px`;
+    panel.style.minWidth = `${width}px`;
+    panel.style.maxWidth = `${width}px`;
   }
   syncDetailPanelToggle(collapsed);
   persistUiSettings();
 });
 $("#cardAreaToggle").addEventListener("click", () => {
   const area = $(".card-area");
-  const collapsed = area.classList.toggle("collapsed");
-  syncCardAreaToggle(collapsed);
+  area.classList.remove("collapsed");
+  syncCardAreaToggle(false);
   persistUiSettings();
 });
 const resizeHandle = $("#resizeHandle");
@@ -6942,10 +7231,13 @@ resizeHandle.addEventListener("pointermove", event => {
   if (!resizeHandle.hasPointerCapture(event.pointerId)) return;
   const panel = $("#detailPanel");
   const bounds = $(".library-body").getBoundingClientRect();
-  const maximum = Math.min(800, bounds.width - 360);
+  const cardArea = $(".card-area");
+  const cardWidth = cardArea?.classList.contains("collapsed") ? 40 : Math.max(cardArea?.getBoundingClientRect().width || 360, 360);
+  const maximum = Math.min(getMaxDetailPanelWidth(), bounds.width - cardWidth);
   const width = Math.max(320, Math.min(maximum, bounds.right - event.clientX));
   panel.style.width = `${width}px`;
   panel.style.minWidth = `${width}px`;
+  panel.style.maxWidth = `${width}px`;
   panel.dataset.openWidth = `${width}`;
 });
 resizeHandle.addEventListener("pointerup", event => {
