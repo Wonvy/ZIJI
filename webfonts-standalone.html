@@ -495,18 +495,18 @@ body:not(.workspace-active) .topbar { display: none; }
 }
 .primary-button:hover {
   color: white;
-  background: color-mix(in srgb, var(--accent) 88%, white);
+  background: var(--accent);
   box-shadow:
-    0 18px 42px rgba(232, 88, 50, .42),
-    0 0 0 1px color-mix(in srgb, var(--accent) 55%, white);
-  filter: brightness(1.06);
-  transform: translateY(-3px) scale(1.03);
+    0 14px 34px rgba(232, 88, 50, .28),
+    0 0 0 5px color-mix(in srgb, var(--accent) 12%, transparent);
+  filter: none;
+  transform: translateY(-2px);
 }
 .primary-button:active {
   filter: none;
-  transform: translateY(-1px) scale(1.015);
-  background: color-mix(in srgb, var(--accent) 82%, black);
-  box-shadow: 0 10px 24px rgba(232, 88, 50, .28);
+  transform: translateY(0);
+  background: var(--accent);
+  box-shadow: 0 8px 20px rgba(232, 88, 50, .2);
 }
 .primary-button:disabled { cursor: wait; opacity: .76; transform: none; box-shadow: none; }
 .welcome-inner > .primary-button { margin-top: 52px; }
@@ -882,6 +882,8 @@ body.header-card-preview-focus .preview-input-history {
   border-right: 1px solid var(--line);
 }
 .view-controls > .single-size-control {
+  flex: 0 0 175px;
+  width: 175px;
   margin-left: 10px;
   margin-right: 10px;
   padding-left: 10px;
@@ -924,6 +926,93 @@ body.header-card-preview-focus .preview-input-history {
   white-space: nowrap;
 }
 .single-size-bubble[hidden] { display: none !important; }
+.hover-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background: color-mix(in srgb, #000 38%, transparent);
+  backdrop-filter: blur(12px);
+}
+.hover-preview-overlay[hidden] { display: none !important; }
+.hover-preview-window {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  width: min(860px, 82vw);
+  height: min(620px, 78vh);
+  padding: 34px 38px 28px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 18px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 24px 90px rgba(0,0,0,.32);
+}
+.hover-preview-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--paper);
+  font-size: 18px;
+  line-height: 1;
+}
+.hover-preview-close:hover { color: white; border-color: var(--accent); background: var(--accent); }
+.hover-preview-sample {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  font-size: clamp(54px, 12vw, 150px);
+  line-height: 1.05;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.hover-preview-subsamples {
+  display: grid;
+  gap: 5px;
+  max-width: 100%;
+  margin: 10px auto 22px;
+  color: color-mix(in srgb, var(--ink) 82%, var(--muted));
+  font-size: clamp(17px, 2.2vw, 30px);
+  line-height: 1.25;
+  text-align: center;
+}
+.hover-preview-subsamples div {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hover-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.hover-preview-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .toolbar-view .grid-layout-control output,
 .toolbar-view .columns-control output { min-width: 1.2em; color: var(--ink); font-size: 9px; text-align: left; font-variant-numeric: tabular-nums; }
 .toolbar-view .density-control { margin-left: 2px; gap: 4px; font-size: 9px; }
@@ -3653,7 +3742,7 @@ body.dark .preview-controls { background: #1a1917; }
               <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
             </svg>
           </span>
-          <h1>字己<span class="welcome-accent">找字也找自己</span></h1>
+          <h1>字己<span class="welcome-accent">找字体，也找自己</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
           <div class="welcome-actions">
@@ -3898,6 +3987,22 @@ body.dark .preview-controls { background: #1a1917; }
   </div>
 
   <div id="cardMagnifier" class="card-magnifier" hidden><span id="cardMagnifiedText"></span></div>
+  <div id="hoverPreviewOverlay" class="hover-preview-overlay" hidden>
+    <div class="hover-preview-window" role="dialog" aria-modal="true" aria-label="字体预览">
+      <button id="hoverPreviewClose" class="hover-preview-close" type="button" aria-label="关闭预览">×</button>
+      <div id="hoverPreviewSample" class="hover-preview-sample"></div>
+      <div id="hoverPreviewSubsamples" class="hover-preview-subsamples" aria-label="附加样张">
+        <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+        <div>abcdefghijklmnopqrstuvwxyz</div>
+        <div>0123456789</div>
+        <div>，。！？；：“”「」,.?!;:()[]{}@#$%&*</div>
+      </div>
+      <div class="hover-preview-meta">
+        <strong id="hoverPreviewName"></strong>
+        <span id="hoverPreviewStyle"></span>
+      </div>
+    </div>
+  </div>
   <div id="cardContextMenu" class="context-menu" role="menu" hidden></div>
   <div id="cardPreviewStylePresetContextMenu" class="context-menu preview-style-preset-context-menu" role="menu" hidden></div>
   <div id="cardPreviewStyleModal" class="modal-backdrop" hidden>
@@ -4659,6 +4764,7 @@ const ui = {
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
   cardMagnifier: $("#cardMagnifier"), cardMagnifiedText: $("#cardMagnifiedText"),
+  hoverPreviewOverlay: $("#hoverPreviewOverlay"), hoverPreviewSample: $("#hoverPreviewSample"), hoverPreviewSubsamples: $("#hoverPreviewSubsamples"), hoverPreviewName: $("#hoverPreviewName"), hoverPreviewStyle: $("#hoverPreviewStyle"),
   favorite: $("#favoriteButton"), axes: $("#axisControls"), axisStatus: $("#axisStatus"),
   spacing: $("#letterSpacing"), spacingOut: $("#spacingOutput"), lineHeight: $("#lineHeight"), lineHeightOut: $("#lineHeightOutput"),
   bg: $("#backgroundColor"), color: $("#textColor"), reset: $("#resetButton"), toast: $("#toast"),
@@ -4992,6 +5098,48 @@ function syncHeaderPreviewFocusDisplay() {
     if (!display.isConnected || !shouldHeaderCardPreviewFocus()) return;
     display.style.fontFamily = cssName(font);
   });
+}
+
+function hideHoverPreviewOverlay() {
+  if (!ui.hoverPreviewOverlay) return;
+  ui.hoverPreviewOverlay.hidden = true;
+  clearCardPreviewStyleOnElement(ui.hoverPreviewSample);
+}
+
+function showHoverPreviewOverlay(font = state.hovered) {
+  if (!font || !ui.hoverPreviewOverlay || !ui.hoverPreviewSample) return;
+  const text = cardPreviewText() || "字体有光";
+  registerFont(font);
+  ui.hoverPreviewSample.textContent = text;
+  ui.hoverPreviewSample.style.fontFamily = cssName(font);
+  ui.hoverPreviewSample.style.fontVariationSettings = toolbarVariationSettings();
+  if (ui.hoverPreviewSubsamples) {
+    ui.hoverPreviewSubsamples.style.fontFamily = cssName(font);
+    ui.hoverPreviewSubsamples.style.fontVariationSettings = toolbarVariationSettings();
+  }
+  if (state.cardPreviewStyle && hasActiveCardPreviewStyle(state.cardPreviewStyle)) {
+    applyCardPreviewStyleToElement(ui.hoverPreviewSample, state.cardPreviewStyle, { themeDefault: true, text });
+  } else {
+    clearCardPreviewStyleOnElement(ui.hoverPreviewSample);
+    ui.hoverPreviewSample.textContent = text;
+    ui.hoverPreviewSample.style.fontFamily = cssName(font);
+    ui.hoverPreviewSample.style.fontVariationSettings = toolbarVariationSettings();
+    ui.hoverPreviewSample.style.color = "var(--ink)";
+  }
+  if (ui.hoverPreviewName) ui.hoverPreviewName.textContent = font.displayName || font.fullName || font.family || "";
+  if (ui.hoverPreviewStyle) ui.hoverPreviewStyle.textContent = font.style || "Regular";
+  ui.hoverPreviewOverlay.hidden = false;
+  ensureFontLoaded(font, text).then(() => {
+    if (ui.hoverPreviewOverlay?.hidden) return;
+    ui.hoverPreviewSample.style.fontFamily = cssName(font);
+    if (ui.hoverPreviewSubsamples) ui.hoverPreviewSubsamples.style.fontFamily = cssName(font);
+  });
+}
+
+function toggleHoverPreviewOverlay() {
+  if (!ui.hoverPreviewOverlay) return;
+  if (!ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
+  else showHoverPreviewOverlay(state.hovered);
 }
 
 function syncDetailMetaFonts(font) {
@@ -10423,6 +10571,7 @@ function updatePreview() {
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (document.body.classList.contains("header-card-preview-focus")) syncHeaderPreviewFocusDisplay();
+  if (ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) showHoverPreviewOverlay(state.hovered || state.previewed);
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
   if ($("#cardPreviewStylePresetDropdown")?.open || $(".card-preview-style-menu")?.matches(":hover")) applyQuickPresetMenuStyles();
@@ -10958,7 +11107,25 @@ document.addEventListener("pointerdown", event => {
 });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !ui.searchSuggestions.hidden) ui.searchSuggestions.hidden = true;
+  if (event.key === "Escape" && ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
 });
+document.addEventListener("keydown", event => {
+  if (event.key !== " " && event.code !== "Space") return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.matches("input, textarea, select, button, [contenteditable='true']")) return;
+  if (ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) {
+    event.preventDefault();
+    hideHoverPreviewOverlay();
+    return;
+  }
+  if (!state.hovered) return;
+  event.preventDefault();
+  showHoverPreviewOverlay(state.hovered);
+});
+ui.hoverPreviewOverlay?.addEventListener("click", event => {
+  if (event.target === ui.hoverPreviewOverlay) hideHoverPreviewOverlay();
+});
+$("#hoverPreviewClose")?.addEventListener("click", hideHoverPreviewOverlay);
 ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();

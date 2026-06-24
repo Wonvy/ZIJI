@@ -61,7 +61,7 @@
               <circle class="logo-dot" cx="34" cy="14" r="2.5"></circle>
             </svg>
           </span>
-          <h1>字己<span class="welcome-accent">找字也找自己</span></h1>
+          <h1>字己<span class="welcome-accent">找字体，也找自己</span></h1>
           <p class="welcome-lead">授权后即可搜索、比较并细看系统中安装的字体，所有处理都在浏览器内完成</p>
           <button id="loadFontsButton" class="primary-button" type="button">读取系统字体</button>
           <div class="welcome-actions">
@@ -306,6 +306,22 @@
   </div>
 
   <div id="cardMagnifier" class="card-magnifier" hidden><span id="cardMagnifiedText"></span></div>
+  <div id="hoverPreviewOverlay" class="hover-preview-overlay" hidden>
+    <div class="hover-preview-window" role="dialog" aria-modal="true" aria-label="字体预览">
+      <button id="hoverPreviewClose" class="hover-preview-close" type="button" aria-label="关闭预览">×</button>
+      <div id="hoverPreviewSample" class="hover-preview-sample"></div>
+      <div id="hoverPreviewSubsamples" class="hover-preview-subsamples" aria-label="附加样张">
+        <div>ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+        <div>abcdefghijklmnopqrstuvwxyz</div>
+        <div>0123456789</div>
+        <div>，。！？；：“”「」,.?!;:()[]{}@#$%&*</div>
+      </div>
+      <div class="hover-preview-meta">
+        <strong id="hoverPreviewName"></strong>
+        <span id="hoverPreviewStyle"></span>
+      </div>
+    </div>
+  </div>
   <div id="cardContextMenu" class="context-menu" role="menu" hidden></div>
   <div id="cardPreviewStylePresetContextMenu" class="context-menu preview-style-preset-context-menu" role="menu" hidden></div>
   <div id="cardPreviewStyleModal" class="modal-backdrop" hidden>

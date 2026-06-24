@@ -684,6 +684,7 @@ const ui = {
   selectedName: $("#selectedName"), selectedStyle: $("#selectedStyle"), size: $("#fontSize"), sizeOut: $("#fontSizeOutput"),
   stage: $("#previewStage"), magnifier: $("#magnifier"), magnifiedText: $("#magnifiedText"), magnifierButton: $("#magnifierButton"),
   cardMagnifier: $("#cardMagnifier"), cardMagnifiedText: $("#cardMagnifiedText"),
+  hoverPreviewOverlay: $("#hoverPreviewOverlay"), hoverPreviewSample: $("#hoverPreviewSample"), hoverPreviewSubsamples: $("#hoverPreviewSubsamples"), hoverPreviewName: $("#hoverPreviewName"), hoverPreviewStyle: $("#hoverPreviewStyle"),
   favorite: $("#favoriteButton"), axes: $("#axisControls"), axisStatus: $("#axisStatus"),
   spacing: $("#letterSpacing"), spacingOut: $("#spacingOutput"), lineHeight: $("#lineHeight"), lineHeightOut: $("#lineHeightOutput"),
   bg: $("#backgroundColor"), color: $("#textColor"), reset: $("#resetButton"), toast: $("#toast"),
@@ -1017,6 +1018,48 @@ function syncHeaderPreviewFocusDisplay() {
     if (!display.isConnected || !shouldHeaderCardPreviewFocus()) return;
     display.style.fontFamily = cssName(font);
   });
+}
+
+function hideHoverPreviewOverlay() {
+  if (!ui.hoverPreviewOverlay) return;
+  ui.hoverPreviewOverlay.hidden = true;
+  clearCardPreviewStyleOnElement(ui.hoverPreviewSample);
+}
+
+function showHoverPreviewOverlay(font = state.hovered) {
+  if (!font || !ui.hoverPreviewOverlay || !ui.hoverPreviewSample) return;
+  const text = cardPreviewText() || "字体有光";
+  registerFont(font);
+  ui.hoverPreviewSample.textContent = text;
+  ui.hoverPreviewSample.style.fontFamily = cssName(font);
+  ui.hoverPreviewSample.style.fontVariationSettings = toolbarVariationSettings();
+  if (ui.hoverPreviewSubsamples) {
+    ui.hoverPreviewSubsamples.style.fontFamily = cssName(font);
+    ui.hoverPreviewSubsamples.style.fontVariationSettings = toolbarVariationSettings();
+  }
+  if (state.cardPreviewStyle && hasActiveCardPreviewStyle(state.cardPreviewStyle)) {
+    applyCardPreviewStyleToElement(ui.hoverPreviewSample, state.cardPreviewStyle, { themeDefault: true, text });
+  } else {
+    clearCardPreviewStyleOnElement(ui.hoverPreviewSample);
+    ui.hoverPreviewSample.textContent = text;
+    ui.hoverPreviewSample.style.fontFamily = cssName(font);
+    ui.hoverPreviewSample.style.fontVariationSettings = toolbarVariationSettings();
+    ui.hoverPreviewSample.style.color = "var(--ink)";
+  }
+  if (ui.hoverPreviewName) ui.hoverPreviewName.textContent = font.displayName || font.fullName || font.family || "";
+  if (ui.hoverPreviewStyle) ui.hoverPreviewStyle.textContent = font.style || "Regular";
+  ui.hoverPreviewOverlay.hidden = false;
+  ensureFontLoaded(font, text).then(() => {
+    if (ui.hoverPreviewOverlay?.hidden) return;
+    ui.hoverPreviewSample.style.fontFamily = cssName(font);
+    if (ui.hoverPreviewSubsamples) ui.hoverPreviewSubsamples.style.fontFamily = cssName(font);
+  });
+}
+
+function toggleHoverPreviewOverlay() {
+  if (!ui.hoverPreviewOverlay) return;
+  if (!ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
+  else showHoverPreviewOverlay(state.hovered);
 }
 
 function syncDetailMetaFonts(font) {
@@ -6448,6 +6491,7 @@ function updatePreview() {
   }
   ui.cardMagnifiedText.textContent = cardPreviewText();
   if (document.body.classList.contains("header-card-preview-focus")) syncHeaderPreviewFocusDisplay();
+  if (ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) showHoverPreviewOverlay(state.hovered || state.previewed);
   if (!$("#cardPreviewStyleModal")?.hidden) renderCardPreviewStyleModalPreview();
   scheduleLazyCardTextUpdate();
   if ($("#cardPreviewStylePresetDropdown")?.open || $(".card-preview-style-menu")?.matches(":hover")) applyQuickPresetMenuStyles();
@@ -6983,7 +7027,25 @@ document.addEventListener("pointerdown", event => {
 });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !ui.searchSuggestions.hidden) ui.searchSuggestions.hidden = true;
+  if (event.key === "Escape" && ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) hideHoverPreviewOverlay();
 });
+document.addEventListener("keydown", event => {
+  if (event.key !== " " && event.code !== "Space") return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.matches("input, textarea, select, button, [contenteditable='true']")) return;
+  if (ui.hoverPreviewOverlay && !ui.hoverPreviewOverlay.hidden) {
+    event.preventDefault();
+    hideHoverPreviewOverlay();
+    return;
+  }
+  if (!state.hovered) return;
+  event.preventDefault();
+  showHoverPreviewOverlay(state.hovered);
+});
+ui.hoverPreviewOverlay?.addEventListener("click", event => {
+  if (event.target === ui.hoverPreviewOverlay) hideHoverPreviewOverlay();
+});
+$("#hoverPreviewClose")?.addEventListener("click", hideHoverPreviewOverlay);
 ui.previewInput.addEventListener("input", () => {
   localStorage.setItem("font-preview-text", ui.previewInput.value);
   updatePreview();
