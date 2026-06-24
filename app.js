@@ -274,6 +274,8 @@ const PREVIEW_EFFECT_TYPES = {
       { key: "color", type: "color", label: "颜色" },
       { key: "opacity", type: "range", label: "不透明度", min: 0, max: 100, step: 1 },
       { key: "width", type: "range", label: "粗细", min: 1, max: 16, step: 1 },
+      { key: "offsetAngle", type: "range", label: "偏移角度", min: 0, max: 360, step: 1 },
+      { key: "offsetDistance", type: "range", label: "偏移距离", min: 0, max: 80, step: 1 },
       { key: "position", type: "select", label: "位置", options: STROKE_POSITION_OPTIONS }
     ],
     defaults: {
@@ -282,6 +284,8 @@ const PREVIEW_EFFECT_TYPES = {
       opacity: 100,
       width: 2,
       position: "outside",
+      offsetAngle: 0,
+      offsetDistance: 0,
       colorMode: "solid",
       angle: 90,
       stops: [
@@ -1598,6 +1602,7 @@ const PREVIEW_STYLE_STATUS_HINTS = {
   gradientStopDelete: "松开鼠标删除该色标（至少保留 2 个）",
   gradientAngle: "按住拖拽调整渐变角度",
   shadowAngle: "按住拖拽调整投影角度",
+  strokeOffsetAngle: "按住拖拽调整轮廓偏移角度",
   gradientColor: "调整当前色标颜色",
   gradientOpacity: "调整当前色标不透明度",
   layerList: "拖动调整图层顺序，列表越靠上越在前，勾选启用或禁用",
@@ -1618,6 +1623,7 @@ let draggingGradientScope = null;
 let draggingGradientDeleteIntent = false;
 let draggingGradientAngleScope = null;
 let draggingShadowAngleLayerId = null;
+let draggingStrokeOffsetAngleLayerId = null;
 let draggingPreviewStyleLayerId = null;
 
 function createPreviewStyleLayer(type, enabled = false, overrides = {}) {
@@ -1824,6 +1830,16 @@ function previewShadowOffset(layer, unitsPerPx = 1) {
   };
 }
 
+function previewStrokeOffset(layer, unitsPerPx = 1) {
+  const distance = scalePreviewStylePx(Number(layer.offsetDistance) || 0, unitsPerPx);
+  const angle = Number(layer.offsetAngle) || 0;
+  const rad = angle * Math.PI / 180;
+  return {
+    x: Math.cos(rad) * distance,
+    y: Math.sin(rad) * distance
+  };
+}
+
 function strokeOutlineShadows(width, color) {
   return innerStrokeShadows(width, color);
 }
@@ -1898,18 +1914,32 @@ function setPreviewSvgAttrs(element, attrs) {
   });
 }
 
-function appendPreviewSvgLinearGradient(defs, id, stops, angle) {
+function appendPreviewSvgLinearGradient(defs, id, stops, angle, bounds = null) {
   const gradient = createPreviewSvgElement("linearGradient");
   const angleValue = Number(angle) || 0;
   const rad = ((angleValue - 90) * Math.PI) / 180;
-  setPreviewSvgAttrs(gradient, {
-    id,
-    gradientUnits: "objectBoundingBox",
-    x1: formatOutlineNumber(0.5 - Math.cos(rad) * 0.5),
-    y1: formatOutlineNumber(0.5 - Math.sin(rad) * 0.5),
-    x2: formatOutlineNumber(0.5 + Math.cos(rad) * 0.5),
-    y2: formatOutlineNumber(0.5 + Math.sin(rad) * 0.5)
-  });
+  if (bounds) {
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    const radius = Math.max(bounds.width, bounds.height) / 2;
+    setPreviewSvgAttrs(gradient, {
+      id,
+      gradientUnits: "userSpaceOnUse",
+      x1: formatOutlineNumber(centerX - Math.cos(rad) * radius),
+      y1: formatOutlineNumber(centerY - Math.sin(rad) * radius),
+      x2: formatOutlineNumber(centerX + Math.cos(rad) * radius),
+      y2: formatOutlineNumber(centerY + Math.sin(rad) * radius)
+    });
+  } else {
+    setPreviewSvgAttrs(gradient, {
+      id,
+      gradientUnits: "objectBoundingBox",
+      x1: formatOutlineNumber(0.5 - Math.cos(rad) * 0.5),
+      y1: formatOutlineNumber(0.5 - Math.sin(rad) * 0.5),
+      x2: formatOutlineNumber(0.5 + Math.cos(rad) * 0.5),
+      y2: formatOutlineNumber(0.5 + Math.sin(rad) * 0.5)
+    });
+  }
   normalizeGradientStops(stops).forEach(stop => {
     const stopEl = createPreviewSvgElement("stop");
     setPreviewSvgAttrs(stopEl, {
@@ -1922,20 +1952,20 @@ function appendPreviewSvgLinearGradient(defs, id, stops, angle) {
   defs.appendChild(gradient);
 }
 
-function previewSvgFillValue(fill, defs) {
+function previewSvgFillValue(fill, defs, suffix, bounds) {
   if (fill.enabled === false) return "none";
   if (fill.mode === "gradient") {
-    const id = "preview-svg-fill-gradient";
-    appendPreviewSvgLinearGradient(defs, id, fill.stops, fill.angle);
+    const id = `preview-svg-fill-gradient-${suffix}`;
+    appendPreviewSvgLinearGradient(defs, id, fill.stops, fill.angle, bounds);
     return `url(#${id})`;
   }
   return hexWithOpacity(fill.color, fill.opacity);
 }
 
-function previewSvgStrokeValue(layer, defs, suffix) {
+function previewSvgStrokeValue(layer, defs, suffix, bounds) {
   if (layer.colorMode === "gradient") {
     const id = `preview-svg-stroke-gradient-${suffix}`;
-    appendPreviewSvgLinearGradient(defs, id, layer.stops, layer.angle);
+    appendPreviewSvgLinearGradient(defs, id, layer.stops, layer.angle, bounds);
     return `url(#${id})`;
   }
   return hexWithOpacity(layer.color, layer.opacity);
@@ -1992,15 +2022,22 @@ function buildPreviewSvgTextStack(root, host, style) {
   defs.appendChild(sourceText);
   svg.appendChild(defs);
   const body = createPreviewSvgElement("g");
+  const gradientBounds = {
+    x: bleed,
+    y: bleed,
+    width: measuredWidth,
+    height: measuredHeight
+  };
   const orderedSvgLayers = getEnabledStyleLayerOrder(normalized).map(key => ({
     key,
     layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
   }));
+  const fillLayerIndex = orderedSvgLayers.findIndex(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID);
   const svgDrawLayers = [...orderedSvgLayers].reverse();
   svgDrawLayers.forEach(({ key, layer }, index) => {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
       const fillUse = createPreviewSvgUse(sourceId);
-      setPreviewSvgAttrs(fillUse, { fill: previewSvgFillValue(normalized.fill, defs), stroke: "none" });
+      setPreviewSvgAttrs(fillUse, { fill: previewSvgFillValue(normalized.fill, defs, sourceId, gradientBounds), stroke: "none" });
       body.appendChild(fillUse);
       return;
     }
@@ -2038,10 +2075,15 @@ function buildPreviewSvgTextStack(root, host, style) {
     const position = resolveStrokePosition(layer);
     const strokeWidth = (Number(layer.width) || 1) * (position === "center" ? 1 : 2);
     const strokeUse = createPreviewSvgUse(sourceId);
+    const strokeOffset = previewStrokeOffset(layer);
+    const strokeValue = previewSvgStrokeValue(layer, defs, `${sourceId}-${index}`, gradientBounds);
+    const layerIndex = orderedSvgLayers.findIndex(item => item.key === key);
+    const coversFill = fillLayerIndex >= 0 && layerIndex >= 0 && layerIndex < fillLayerIndex;
     setPreviewSvgAttrs(strokeUse, {
-      fill: "none",
-      stroke: previewSvgStrokeValue(layer, defs, `${index}`),
-      "stroke-width": strokeWidth
+      fill: coversFill ? strokeValue : "none",
+      stroke: strokeValue,
+      "stroke-width": strokeWidth,
+      transform: `translate(${formatOutlineNumber(strokeOffset.x)} ${formatOutlineNumber(strokeOffset.y)})`
     });
     if (position === "inside") {
       const clipId = `preview-svg-clip-${index}`;
@@ -2650,14 +2692,15 @@ function computePreviewStyleVisualBleed(style, unitsPerPx = 1) {
     }
     if (!isStrokeLayer(layer)) continue;
     const width = scalePreviewStylePx(Number(layer.width) || 1, unitsPerPx);
+    const offset = previewStrokeOffset(layer, unitsPerPx);
     const position = resolveStrokePosition(layer);
     if (useGradientFill || layer.colorMode === "gradient") {
-      bleed = Math.max(bleed, width * 2);
+      bleed = Math.max(bleed, width * 2 + Math.abs(offset.x), width * 2 + Math.abs(offset.y));
       continue;
     }
-    if (position === "outside") bleed = Math.max(bleed, width * 2);
-    else if (position === "center") bleed = Math.max(bleed, width);
-    else bleed = Math.max(bleed, width);
+    if (position === "outside") bleed = Math.max(bleed, width * 2 + Math.abs(offset.x), width * 2 + Math.abs(offset.y));
+    else if (position === "center") bleed = Math.max(bleed, width + Math.abs(offset.x), width + Math.abs(offset.y));
+    else bleed = Math.max(bleed, width + Math.abs(offset.x), width + Math.abs(offset.y));
   }
   return Math.ceil(bleed);
 }
@@ -2673,6 +2716,7 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     key,
     layer: key === PREVIEW_STYLE_FILL_LAYER_ID ? null : normalized.layers.find(item => item.id === key)
   }));
+  const fillLayerIndex = orderedSvgLayers.findIndex(item => item.key === PREVIEW_STYLE_FILL_LAYER_ID);
   const svgDrawLayers = [...orderedSvgLayers].reverse();
   svgDrawLayers.forEach(({ key, layer }, index) => {
     if (key === PREVIEW_STYLE_FILL_LAYER_ID) {
@@ -2696,13 +2740,17 @@ function buildStyledOutlineSvgMarkup({ pathData, width, height, label, style = s
     if (!isStrokeLayer(layer)) return;
     const position = resolveStrokePosition(layer);
     const strokeWidth = scalePreviewStylePx(layer.width, unitsPerPx) * (position === "center" ? 1 : 2);
+    const offset = previewStrokeOffset(layer, unitsPerPx);
+    const strokeValue = buildPreviewStrokeValue(layer, defsParts, `${position}-${index}`);
+    const layerIndex = orderedSvgLayers.findIndex(item => item.key === key);
+    const coversFill = fillLayerIndex >= 0 && layerIndex >= 0 && layerIndex < fillLayerIndex;
     let clipAttr = "";
     if (position === "inside") {
       const clipId = `preview-clip-${index}`;
       defsParts.push(`<clipPath id="${clipId}"><use href="#${pathId}"/></clipPath>`);
       clipAttr = ` clip-path="url(#${clipId})"`;
     }
-    body += usePath(`${clipAttr} fill="none" stroke="${buildPreviewStrokeValue(layer, defsParts, `${position}-${index}`)}" stroke-width="${formatOutlineNumber(strokeWidth)}" stroke-linejoin="round" stroke-linecap="round"`);
+    body += usePath(`${clipAttr} fill="${coversFill ? strokeValue : "none"}" stroke="${strokeValue}" stroke-width="${formatOutlineNumber(strokeWidth)}" stroke-linejoin="round" stroke-linecap="round" transform="translate(${formatOutlineNumber(offset.x)} ${formatOutlineNumber(offset.y)})"`);
   });
   const defsBlock = defsParts.length ? `<defs>${defsParts.join("")}</defs>` : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatOutlineNumber(width)} ${formatOutlineNumber(height)}" overflow="visible" role="img" aria-label="${label}">\n${defsBlock}\n  <g>${body}</g>\n</svg>`;
@@ -2987,6 +3035,53 @@ function applyShadowAngleChange(layerId, angle) {
   if (!layer || layer.type !== "dropShadow") return;
   layer.angle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
   refreshShadowAngleDial(layer.id, layer.angle);
+  syncCardPreviewStyleFooter();
+  renderCardPreviewStyleModalPreview();
+}
+
+function renderStrokeOffsetAngleDial(angle, layerId) {
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = shadowAngleDialPoint(value);
+  return `<div class="preview-gradient-angle-field preview-style-field">
+    <span>偏移角度</span>
+    <div class="preview-gradient-angle-control">
+      <button type="button" class="preview-gradient-angle-dial preview-stroke-offset-angle-dial" data-stroke-offset-field="offsetAngle" data-layer-id="${escapeHtml(layerId)}" data-preview-status-hint="${escapeHtml(PREVIEW_STYLE_STATUS_HINTS.strokeOffsetAngle)}" aria-label="轮廓偏移角度" aria-valuemin="0" aria-valuemax="360" aria-valuenow="${value}">
+        <svg viewBox="0 0 40 40" aria-hidden="true" class="preview-gradient-angle-dial-svg">
+          <circle cx="20" cy="20" r="15.5" fill="var(--paper)" stroke="var(--line)" stroke-width="1"/>
+          <line x1="20" y1="20" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="${tip.x.toFixed(2)}" cy="${tip.y.toFixed(2)}" r="3.2" fill="var(--accent)" stroke="#fff" stroke-width="1"/>
+        </svg>
+      </button>
+      <span class="preview-gradient-angle-value" data-stroke-offset-angle-value="${escapeHtml(layerId)}">${value}°</span>
+    </div>
+  </div>`;
+}
+
+function refreshStrokeOffsetAngleDial(layerId, angle) {
+  const panel = $("#cardPreviewStyleParams");
+  const dial = panel?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(layerId)}"]`);
+  if (!dial) return;
+  const value = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  const tip = shadowAngleDialPoint(value);
+  dial.setAttribute("aria-valuenow", String(value));
+  const line = dial.querySelector("line");
+  const knob = dial.querySelector("circle:last-of-type");
+  if (line) {
+    line.setAttribute("x2", tip.x.toFixed(2));
+    line.setAttribute("y2", tip.y.toFixed(2));
+  }
+  if (knob) {
+    knob.setAttribute("cx", tip.x.toFixed(2));
+    knob.setAttribute("cy", tip.y.toFixed(2));
+  }
+  panel.querySelector(`[data-stroke-offset-angle-value="${CSS.escape(layerId)}"]`)?.replaceChildren(document.createTextNode(`${value}°`));
+}
+
+function applyStrokeOffsetAngleChange(layerId, angle) {
+  const layer = cardPreviewStyleDraft?.layers.find(entry => entry.id === layerId);
+  if (!layer || !isStrokeLayer(layer)) return;
+  layer.offsetAngle = ((Math.round(Number(angle) || 0) % 360) + 360) % 360;
+  refreshStrokeOffsetAngleDial(layer.id, layer.offsetAngle);
   syncCardPreviewStyleFooter();
   renderCardPreviewStyleModalPreview();
 }
@@ -3405,6 +3500,7 @@ function renderStrokeStyleParams(layer) {
     ? ""
     : renderStyleRangeField(meta.fields.find(field => field.key === "opacity"), layer.opacity, 'data-layer-field="opacity" aria-label="轮廓不透明度"');
   const sizeFields = meta.fields.filter(field => field.key !== "color" && field.key !== "opacity" && field.key !== "position").map(field => {
+    if (field.key === "offsetAngle") return renderStrokeOffsetAngleDial(layer.offsetAngle, layer.id);
     const value = layer[field.key];
     if (field.type === "select") {
       return renderStyleSelectField(field, value, `data-layer-field="${field.key}" aria-label="${escapeHtml(field.label)}"`);
@@ -4246,6 +4342,15 @@ function wireCardPreviewStyleModal() {
       applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(shadowDial, event.clientX, event.clientY));
       return;
     }
+    const strokeOffsetDial = event.target.closest(".preview-stroke-offset-angle-dial");
+    if (strokeOffsetDial && cardPreviewStyleDraft) {
+      event.preventDefault();
+      draggingStrokeOffsetAngleLayerId = strokeOffsetDial.dataset.layerId || cardPreviewStyleSelectedLayerId;
+      strokeOffsetDial.classList.add("is-dragging");
+      strokeOffsetDial.setPointerCapture(event.pointerId);
+      applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, shadowAngleFromPointer(strokeOffsetDial, event.clientX, event.clientY));
+      return;
+    }
     const dial = event.target.closest(".preview-gradient-angle-dial");
     if (dial && cardPreviewStyleDraft) {
       event.preventDefault();
@@ -4274,6 +4379,11 @@ function wireCardPreviewStyleModal() {
       if (dial) applyShadowAngleChange(draggingShadowAngleLayerId, shadowAngleFromPointer(dial, event.clientX, event.clientY));
       return;
     }
+    if (draggingStrokeOffsetAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(draggingStrokeOffsetAngleLayerId)}"]`);
+      if (dial) applyStrokeOffsetAngleChange(draggingStrokeOffsetAngleLayerId, shadowAngleFromPointer(dial, event.clientX, event.clientY));
+      return;
+    }
     if (draggingGradientAngleScope) {
       const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-gradient-angle-dial[data-gradient-scope="${draggingGradientAngleScope}"]`);
       if (dial) applyGradientAngleChange(draggingGradientAngleScope, gradientAngleFromPointer(dial, event.clientX, event.clientY));
@@ -4288,6 +4398,13 @@ function wireCardPreviewStyleModal() {
       if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
       dial?.classList.remove("is-dragging");
       draggingShadowAngleLayerId = null;
+      return;
+    }
+    if (draggingStrokeOffsetAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(draggingStrokeOffsetAngleLayerId)}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingStrokeOffsetAngleLayerId = null;
       return;
     }
     if (draggingGradientAngleScope) {
@@ -4306,6 +4423,13 @@ function wireCardPreviewStyleModal() {
       if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
       dial?.classList.remove("is-dragging");
       draggingShadowAngleLayerId = null;
+      return;
+    }
+    if (draggingStrokeOffsetAngleLayerId) {
+      const dial = $("#cardPreviewStyleParams")?.querySelector(`.preview-stroke-offset-angle-dial[data-layer-id="${CSS.escape(draggingStrokeOffsetAngleLayerId)}"]`);
+      if (dial?.hasPointerCapture?.(event.pointerId)) dial.releasePointerCapture(event.pointerId);
+      dial?.classList.remove("is-dragging");
+      draggingStrokeOffsetAngleLayerId = null;
       return;
     }
     if (draggingGradientAngleScope) {
