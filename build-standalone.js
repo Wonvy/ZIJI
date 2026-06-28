@@ -11,6 +11,6 @@ const standalone = html
   .replace(/\s*<link rel="stylesheet" href="styles\.css" \/>/, `\n  <style>\n${css}\n  </style>`)
   .replace(/\s*<script src="i18n\.js"><\/script>\s*<script src="app\.js"><\/script>/, `\n  <script>\n${i18n}\n${js}\n  </script>`);
 
-const output = path.join(root, "webfonts-standalone.html");
+const output = path.join(root, "ZIJI.html");
 fs.writeFileSync(output, standalone, "utf8");
 console.log(`Generated ${output}`);
