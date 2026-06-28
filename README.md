@@ -16,7 +16,7 @@
 | --- | --- |
 | 在线使用（推荐） | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
 | 下载最新 Release | [releases/latest/download/ZIJI.html](https://github.com/Wonvy/ZIJI/releases/latest/download/ZIJI.html) |
-| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)（需在仓库 Settings → Pages 中将 Source 设为 **GitHub Actions** 后生效） |
+| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)（首次需在 [Settings → Pages](https://github.com/Wonvy/ZIJI/settings/pages) 将 Source 设为 **Deploy from a branch**，Branch 选 **gh-pages** / **/ (root)**） |
 
 ## 预览
 

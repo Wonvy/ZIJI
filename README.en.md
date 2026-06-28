@@ -16,7 +16,7 @@ No clone required — open this link in **Chrome / Edge** (HTTPS, satisfies the 
 | --- | --- |
 | Online (recommended) | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
 | Download latest Release | [releases/latest/download/ZIJI.html](https://github.com/Wonvy/ZIJI/releases/latest/download/ZIJI.html) |
-| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/) (enable **GitHub Actions** as the Pages source under Settings → Pages) |
+| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/) (first-time setup: [Settings → Pages](https://github.com/Wonvy/ZIJI/settings/pages) → Source **Deploy from a branch** → Branch **gh-pages** / **/ (root)**) |
 
 ## Preview
 
