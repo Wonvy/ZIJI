@@ -10,13 +10,13 @@ A fully local, browser-based tool for browsing, searching, and previewing system
 
 No clone required — open this link in **Chrome / Edge** (HTTPS, satisfies the Local Font Access API):
 
-**[Open ZIJI.html online](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html)**
+**[https://wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)**
 
 | Method | Link |
 | --- | --- |
-| Online (recommended) | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
+| Online (recommended) | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/) |
+| jsDelivr mirror | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
 | Download latest Release | [releases/latest/download/ZIJI.html](https://github.com/Wonvy/ZIJI/releases/latest/download/ZIJI.html) |
-| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/) (first-time setup: [Settings → Pages](https://github.com/Wonvy/ZIJI/settings/pages) → Source **Deploy from a branch** → Branch **gh-pages** / **/ (root)**) |
 
 ## Preview
 
@@ -55,7 +55,7 @@ Then open <http://localhost:4173> in the latest **Chrome** or **Edge**, click **
 
 ## Standalone Build
 
-The repo includes a single-file `ZIJI.html` with all styles and scripts inlined. The easiest way to use it is the **[online link](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html)** above; you can also build locally:
+The repo includes a single-file `ZIJI.html` with all styles and scripts inlined. The easiest way to use it is the **[online link](https://wonvy.github.io/ZIJI/)** above; you can also build locally:
 
 ```powershell
 node build-standalone.js

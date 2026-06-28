@@ -10,13 +10,13 @@
 
 无需克隆仓库，在 **Chrome / Edge** 中打开以下链接即可使用（HTTPS，满足系统字体 API 要求）：
 
-**[在线打开 ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html)**
+**[https://wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)**
 
 | 方式 | 链接 |
 | --- | --- |
-| 在线使用（推荐） | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
+| 在线使用（推荐） | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/) |
+| jsDelivr 镜像 | [cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html) |
 | 下载最新 Release | [releases/latest/download/ZIJI.html](https://github.com/Wonvy/ZIJI/releases/latest/download/ZIJI.html) |
-| GitHub Pages | [wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)（首次需在 [Settings → Pages](https://github.com/Wonvy/ZIJI/settings/pages) 将 Source 设为 **Deploy from a branch**，Branch 选 **gh-pages** / **/ (root)**） |
 
 ## 预览
 
@@ -55,7 +55,7 @@ node server.js
 
 ## 单文件版本
 
-项目已内置单文件版 `ZIJI.html`（样式与脚本全部内联）。推荐通过上方 **[在线链接](https://cdn.jsdelivr.net/gh/Wonvy/ZIJI@main/ZIJI.html)** 直接使用；也可自行构建：
+项目已内置单文件版 `ZIJI.html`（样式与脚本全部内联）。推荐通过上方 **[在线链接](https://wonvy.github.io/ZIJI/)** 直接使用；也可自行构建：
 
 ```powershell
 node build-standalone.js
