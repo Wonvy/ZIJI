@@ -6,6 +6,14 @@
 
 [English README](./README.en.md)
 
+## 直接使用
+
+无需克隆仓库，在 **Chrome / Edge** 中打开以下链接即可使用（GitHub Pages 提供 HTTPS，满足系统字体 API 要求）：
+
+**[https://wonvy.github.io/ZIJI/](https://wonvy.github.io/ZIJI/)**
+
+也可 [下载最新 Release 版 ZIJI.html](https://github.com/Wonvy/ZIJI/releases/latest/download/ZIJI.html)，或 [在仓库中查看该文件](https://github.com/Wonvy/ZIJI/blob/main/ZIJI.html)。
+
 ## 预览
 
 ![字己界面（中文）](./docs/screenshots/zh.png)
@@ -43,13 +51,13 @@ node server.js
 
 ## 单文件版本
 
-可将项目打包为单个 HTML 文件，便于离线分发：
+项目已内置单文件版 `ZIJI.html`（样式与脚本全部内联）。推荐通过上方 **[在线链接](https://wonvy.github.io/ZIJI/)** 直接使用；也可自行构建：
 
 ```powershell
 node build-standalone.js
 ```
 
-生成 `ZIJI.html`，内含全部样式与脚本。仍需通过本地服务器或 HTTPS 访问才能调用系统字体 API。
+本地构建后，仍需通过 `node server.js` 或 HTTPS 访问才能调用系统字体 API。Release 版本见 [Releases](https://github.com/Wonvy/ZIJI/releases)。
 
 ## 隐私
 
